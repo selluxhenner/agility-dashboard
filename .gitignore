@@ -1,0 +1,168 @@
+# ============================================================
+# SECRETS & CREDENTIALS — never commit. Ask Kevin if unsure.
+# ============================================================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.jks
+*.keystore
+id_rsa*
+id_ed25519*
+*.gpg
+*.asc
+secrets/
+secrets.*
+credentials.*
+*credentials*.json
+*service-account*.json
+*serviceAccount*.json
+firebase-adminsdk*.json
+.aws/
+.gcloud/
+.azure/
+.npmrc
+.pypirc
+.netrc
+.htpasswd
+*.token
+auth.json
+kubeconfig
+*.kubeconfig
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
+# ============================================================
+# USER CONTENT / DATA — anything users upload or the app stores
+# ============================================================
+uploads/
+storage/
+data/
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+dump.rdb
+*.sql.gz
+*.dump
+*.bak
+*.backup
+
+# ============================================================
+# DEPENDENCIES
+# ============================================================
+node_modules/
+.pnp
+.pnp.js
+jspm_packages/
+bower_components/
+vendor/
+venv/
+.venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+Pipfile.lock.bak
+
+# ============================================================
+# BUILD OUTPUT
+# ============================================================
+dist/
+build/
+out/
+.next/
+.nuxt/
+.svelte-kit/
+.output/
+.vercel/
+.netlify/
+.turbo/
+.parcel-cache/
+.cache/
+*.tsbuildinfo
+coverage/
+.nyc_output/
+storybook-static/
+
+# ============================================================
+# LOGS & RUNTIME
+# ============================================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.pid
+*.seed
+*.pid.lock
+.eslintcache
+.stylelintcache
+
+# ============================================================
+# DOCKER / LOCAL INFRA OVERRIDES
+# ============================================================
+docker-compose.override.yml
+docker-compose.local.yml
+.docker/
+*.local.yml
+*.local.yaml
+
+# ============================================================
+# AI TOOLING — local state, not shared config
+# ============================================================
+.claude/settings.local.json
+.claude/*.local.*
+.claude/projects/
+.claude/memory/
+.impeccable/
+.cursor/
+.aider*
+.codeium/
+CLAUDE.local.md
+
+# ============================================================
+# EDITORS & OS
+# ============================================================
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# ============================================================
+# MISC
+# ============================================================
+*.tmp
+*.temp
+.tmp/
+.temp/
+*.orig
+*.rej
+.scratch/
+scratch/
+TODO.local.md
+NOTES.local.md
