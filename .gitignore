@@ -166,3 +166,4 @@ $RECYCLE.BIN/
 scratch/
 TODO.local.md
 NOTES.local.md
+.github/ci/out/

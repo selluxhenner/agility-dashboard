@@ -1,1 +1,13 @@
-* @selluxhenner
+# Every file needs Kevin's approval before merging.
+# GitHub reads the LAST matching line, so keep the catch-all first and put
+# any more specific rules below it.
+*                       @selluxhenner
+
+# Places where a change has a large blast radius — listed separately so it's
+# visible in the diff of this file when ownership ever gets split up.
+/support.js             @selluxhenner
+/index.html             @selluxhenner
+/.github/               @selluxhenner
+/.gitignore             @selluxhenner
+/CLAUDE.md              @selluxhenner
+/CONTRIBUTING.md        @selluxhenner

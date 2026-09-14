@@ -1,0 +1,187 @@
+# CI for the NextHub dashboard (static site, no build step).
+#
+# Three jobs, all must pass before a PR can merge:
+#   guard   — no secrets / forbidden files / edits to generated code
+#   syntax  — every JS file parses, index.html has its runtime wiring
+#   smoke   — real Chromium loads the page: no JS errors, dashboard renders,
+#             all three roles switch, demo-data toggle works, mobile width OK
+#
+# When a package.json arrives, add lint/typecheck/test jobs here and make
+# them required in the ruleset. Kevin owns this file.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    name: guard · secrets & forbidden files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: List changed files
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git diff --name-only --diff-filter=ACMR "origin/${{ github.base_ref }}...HEAD" > changed.txt
+          else
+            git diff --name-only --diff-filter=ACMR HEAD~1 HEAD > changed.txt || : > changed.txt
+          fi
+          echo "Changed files:"; cat changed.txt
+
+      - name: Block forbidden files
+        shell: bash
+        run: |
+          fail=0
+          # Must never land in the repo, regardless of .gitignore.
+          FORBIDDEN='(^|/)\.env($|\.)|\.pem$|\.key$|\.p12$|\.pfx$|\.jks$|\.keystore$|(^|/)id_rsa|(^|/)id_ed25519|credentials.*\.json$|service-?account.*\.json$|firebase-adminsdk.*\.json$|(^|/)node_modules/|\.sqlite3?$|\.db$|(^|/)\.claude/settings\.local\.json$|(^|/)uploads/.*\.(png|jpe?g|gif|webp|heic|mp4|mov)$'
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            [ "$f" = ".env.example" ] && continue
+            if echo "$f" | grep -Eiq "$FORBIDDEN"; then
+              echo "::error file=$f::Forbidden file in PR: $f  (secrets, credentials, databases, dependencies and media uploads must not be committed — see CLAUDE.md)"
+              fail=1
+            fi
+          done < changed.txt
+          exit $fail
+
+      - name: Block edits to generated runtime and protected config
+        shell: bash
+        run: |
+          fail=0
+          if grep -qx 'support.js' changed.txt; then
+            echo "::error file=support.js::support.js is generated. Do not edit it — ask Kevin. (Kevin: merge with bypass if this is an intended runtime update.)"
+            fail=1
+          fi
+          # Author check is advisory, not security — the ruleset is the real gate.
+          if [ "${{ github.actor }}" != "selluxhenner" ]; then
+            for p in '^\.github/' '^\.gitignore$' '^CLAUDE\.md$' '^CONTRIBUTING\.md$'; do
+              if grep -Eq "$p" changed.txt; then
+                echo "::error::Changes matching '$p' are owned by Kevin. Please remove them from this PR and ask."
+                fail=1
+              fi
+            done
+          fi
+          exit $fail
+
+      - name: Block oversized files (> 1 MB)
+        shell: bash
+        run: |
+          fail=0
+          while IFS= read -r f; do
+            { [ -z "$f" ] || [ ! -f "$f" ]; } && continue
+            size=$(stat -c%s "$f")
+            if [ "$size" -gt 1048576 ]; then
+              echo "::error file=$f::$f is $((size/1024)) KB. Files over 1 MB don't belong in git — ask Kevin where it should live."
+              fail=1
+            fi
+          done < changed.txt
+          exit $fail
+
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  syntax:
+    name: syntax · JS parses, HTML wiring intact
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Every JS file must parse
+        shell: bash
+        run: |
+          set -e
+          for f in support.js js/*.js; do
+            echo "node --check $f"
+            node --check "$f"
+          done
+
+      - name: index.html must keep its runtime wiring
+        shell: bash
+        run: |
+          set -e
+          need() { grep -qF -- "$1" index.html || { echo "::error file=index.html::missing: $1"; exit 1; }; }
+          need '<script src="./support.js"></script>'
+          need '<script src="./js/data.js"></script>'
+          need '<script src="./js/dashboard.js"></script>'
+          need '<x-dc>'
+          need '</x-dc>'
+          need 'data-dc-script'
+          need 'window.createDashboardComponent(DCLogic)'
+          echo "ok"
+
+      - name: No obvious API keys in source
+        shell: bash
+        run: |
+          # Belt-and-braces on top of gitleaks: common key prefixes in tracked text files.
+          if grep -rnE '(sk-[A-Za-z0-9]{20,}|sk-ant-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35})' \
+               --include='*.js' --include='*.html' --include='*.css' --include='*.md' --include='*.json' --include='*.yml' . \
+               --exclude-dir=.git --exclude-dir=node_modules; then
+            echo "::error::Something that looks like an API key is in the source. Remove it and rotate the key."
+            exit 1
+          fi
+          echo "ok"
+
+  smoke:
+    name: smoke · page renders in Chromium
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Playwright (Chromium only)
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw"
+          npm init -y >/dev/null
+          npm i --no-audit --no-fund playwright@1.47.2 >/dev/null
+          npx playwright install --with-deps chromium
+
+      - name: Serve the page
+        shell: bash
+        run: |
+          python -m http.server 8765 >server.log 2>&1 &
+          for i in $(seq 1 20); do
+            curl -sf http://localhost:8765/index.html >/dev/null && break
+            sleep 0.5
+          done
+          curl -sf http://localhost:8765/index.html >/dev/null || { echo "server did not start"; cat server.log; exit 1; }
+
+      - name: Run smoke test
+        shell: bash
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/ci/smoke.cjs
+
+      - name: Upload screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-screenshots
+          path: .github/ci/out/*.png
+          if-no-files-found: ignore
