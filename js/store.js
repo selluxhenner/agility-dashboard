@@ -259,16 +259,20 @@ const NHStore = (function () {
   const cosignedBy = (state, handle) => state.ideas.filter(i => i.cosigners.some(x => x.name === handle));
 
   // What did `name` last do to this case that took it off their desk?
+  // A question only counts while it is still unanswered — once the sender
+  // replies the case is back on the desk.
   function actedBy(c, name) {
     for (let k = c.history.length - 1; k >= 0; k--) {
       const ev = c.history[k];
       if (ev.actor !== name) continue;
       if (ev.type === T.CASE_DECIDED) return 'decided';
       if (ev.type === T.CASE_HANDED) return 'handed';
-      if (ev.type === T.CASE_ASKED) return 'asked';
+      if (ev.type === T.CASE_ASKED) return c.status === 'asked' ? 'asked' : null;
     }
     return null;
   }
+  // Open cases on someone's desk: live ones plus the ones paused on a question.
+  const deskFor = (state, name) => state.cases.filter(c => c.assignee === name && (c.open || c.status === 'asked'));
   const clearedBy = (state, name) => state.cases.filter(c => actedBy(c, name) !== null);
 
   // Session-created cases as CASES rows (with their history as seedEvents),
@@ -284,5 +288,5 @@ const NHStore = (function () {
     return rows.length ? '// paste into CASES in js/data.js\n' + rows.join(',\n') + ',' : '';
   }
 
-  return { T, KEY, load, save, reset, append, reduce, propose, inboxFor, mineFor, cosignedBy, actedBy, clearedBy, exportSnippet, newId };
+  return { T, KEY, load, save, reset, append, reduce, propose, inboxFor, deskFor, mineFor, cosignedBy, actedBy, clearedBy, exportSnippet, newId };
 })();

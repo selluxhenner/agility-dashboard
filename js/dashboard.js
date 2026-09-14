@@ -38,6 +38,7 @@ window.createDashboardComponent = function (DCLogic) {
         pid: 'p1', iid: 'i1', tid: 't3', cid: 'c1', sort: 'people',
         demo: props.demoData !== false, dev: false,
         q: '', pop: null, draft: '', log: NHStore.load(), toast: null,
+        sheet: null, // the one input sheet: { kind, id, text, picked, people } — see sheetVals()
         mobile: false, menu: false
       };
       this.onKey = this.onKey.bind(this);
@@ -105,9 +106,18 @@ window.createDashboardComponent = function (DCLogic) {
       } else if (e.key === 'Escape') {
         const el = document.getElementById('nh-search');
         if (el) el.blur();
-        this.setState({ pop: null, q: '', menu: false });
+        this.setState({ pop: null, q: '', menu: false, sheet: null });
       }
     }
+
+    // ── the input sheet ──────────────────────────────────────────────────
+    // One modal serves every action that needs input: a reason (pick one),
+    // a line of text, or a set of people. `kind` decides which parts show and
+    // what confirming does. Helpers add UI by opening a sheet, never by
+    // inventing new state.
+    openSheet(kind, id, init) { this.setState({ sheet: Object.assign({ kind, id, text: '', picked: null, people: [] }, init || {}), pop: null }); }
+    closeSheet() { this.set('sheet', null); }
+    patchSheet(patch) { this.setState({ sheet: Object.assign({}, this.state.sheet, patch) }); }
 
     // ── colours / small style helpers ───────────────────────────────────
     accent() { return this.props.accent || '#ff5a1f'; }
@@ -120,6 +130,14 @@ window.createDashboardComponent = function (DCLogic) {
       clearTimeout(this.toastTimer);
       this.setState({ toast: msg });
       this.toastTimer = setTimeout(() => this.setState({ toast: null }), 3600);
+    }
+
+    btn(kind) {
+      const base = { flex: 1, textAlign: 'center', borderRadius: '10px', padding: '10px 14px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' };
+      if (kind === 'primary') return Object.assign(base, { background: INK, color: '#fff' });
+      if (kind === 'accent') return Object.assign(base, { background: this.accent(), color: '#1a1a17', fontWeight: 800 });
+      if (kind === 'disabled') return Object.assign(base, { background: '#f0efea', color: '#a0a099', cursor: 'default' });
+      return Object.assign(base, { background: '#faf9f7', border: '1px solid #e6e5e0', color: '#5b5b5b' });
     }
 
     pill(bg, fg, weight) {
@@ -269,12 +287,16 @@ window.createDashboardComponent = function (DCLogic) {
               : c.overdue ? c.clock + ' days waiting — ' + days(c.clock - P) + ' past the promise.' + (c.escalated ? ' Moved to ' + c.escalated.to + ' automatically.' : '')
                 : c.read !== null ? c.assignee + ' read this ' + f(c.read) + '. They owe you a yes, a no or a question by ' + f(c.dueDay) + '.'
                   : 'Sent to ' + c.assignee + '. They owe you a yes, a no or a question by ' + f(c.dueDay) + '.';
+      const answered = q && q.answer && !dec;
       const reply = dec ? (dec.note || (dec.answer === 'yes' ? 'Yes — we are doing this.' : 'No.' + (dec.reason ? ' Reason: ' + dec.reason + '.' : '')))
-        : c.status === 'asked' ? (q.text || 'One question for you before this can be decided.')
-          : 'No reply yet. ' + c.assignee + ' has been told; if they miss the date it moves to ' + deputy + ' automatically.';
-      const replyBy = dec ? dec.by + ' · ' + f(dec.day) : c.status === 'asked' ? q.by + ' · ' + f(q.day) : 'the ' + P + '-day clock started ' + f(c.raisedDay);
+        : c.status === 'asked' ? '“' + (q.text || 'One question for you before this can be decided.') + '”'
+          : answered ? '“' + (q.text || 'One question.') + '” — you answered: “' + q.answer.text + '”. The clock is running again.'
+            : c.handed.length ? 'Handed from ' + c.handed[c.handed.length - 1].from + ' to ' + c.assignee + ' ' + f(c.handed[c.handed.length - 1].day) + '. The clock kept running.'
+              : 'No reply yet. ' + c.assignee + ' has been told; if they miss the date it moves to ' + deputy + ' automatically.';
+      const replyBy = dec ? dec.by + ' · ' + f(dec.day) : c.status === 'asked' ? q.by + ' · ' + f(q.day) : answered ? q.by + ' · ' + f(q.day) + ', you · ' + f(q.answer.day) : 'the ' + P + '-day clock started ' + f(c.raisedDay);
       return {
         id: c.id, sortDay: c.raisedDay, title: c.title, status, overdue: c.overdue,
+        canReply: c.status === 'asked', replyTo: q ? q.by : '',
         submitted: 'You raised this ' + f(c.raisedDay) + ' · ' + c.from,
         clock, steps, reply, replyBy,
         outcome: sh ? sh.outcome : b && b.expected ? 'expected ' + b.expected : 'pending',
@@ -304,6 +326,112 @@ window.createDashboardComponent = function (DCLogic) {
         outcome: ap ? 'approved' : i.status === 'Shipped' ? i.expected : 'pending',
         outcomeNote: i.upside && i.upside !== 'not modelled' ? i.upside + ' / yr expected' + (ap || i.status === 'Shipped' ? '' : ' if approved') : 'upside not modelled yet'
       };
+    }
+
+    // View model for the input sheet. Returns a closed sheet when none is open.
+    sheetVals(S, who) {
+      const sh = this.state.sheet;
+      const none = { open: false, eyebrow: '', title: '', sub: '', hasOptions: false, options: [], hasText: false, text: '', onText: () => {}, textLabel: '', placeholder: '',
+        hasPeople: false, people: [], primaryLabel: '', primaryStyle: this.btn('disabled'), onConfirm: () => {}, onCancel: () => this.closeSheet(), note: '' };
+      if (!sh) return none;
+      const c = S.cases.find(x => x.id === sh.id), i = S.ideas.find(x => x.id === sh.id);
+      const text = (sh.text || '').trim();
+      const optStyle = on => ({ display: 'block', borderRadius: '10px', padding: '10px 12px', cursor: 'pointer', border: '1px solid ' + (on ? INK : '#e6e5e0'), background: on ? '#1a1a17' : '#faf9f7' });
+      const optLabel = on => ({ fontSize: '12.5px', fontWeight: 700, color: on ? '#fff' : '#141414', lineHeight: 1.35 });
+      const optSub = on => ({ fontSize: '11px', color: on ? '#c9c8c0' : '#8c8c88', marginTop: '3px', lineHeight: 1.4 });
+      const options = list => list.map(o => ({ label: o.label, sub: o.sub || '', style: optStyle(sh.picked === o.id), labelStyle: optLabel(sh.picked === o.id), subStyle: optSub(sh.picked === o.id), onSel: () => this.patchSheet({ picked: o.id }) }));
+      const chip = on => ({ display: 'inline-flex', alignItems: 'center', gap: '7px', borderRadius: '999px', padding: '6px 11px 6px 6px', cursor: 'pointer', fontSize: '12px', fontWeight: 700,
+        border: '1px solid ' + (on ? INK : '#e6e5e0'), background: on ? '#1a1a17' : '#faf9f7', color: on ? '#fff' : '#141414' });
+      const ini = on => ({ width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: MONO, fontSize: '9px', background: on ? '#fff' : INK, color: on ? INK : '#fff' });
+      const people = names => names.map(n => { const on = sh.people.indexOf(n) >= 0; return { name: n, ini: this.ini(n), style: chip(on), iniStyle: ini(on),
+        onSel: () => this.patchSheet({ people: on ? sh.people.filter(x => x !== n) : sh.people.concat([n]) }) }; });
+      const onText = e => this.patchSheet({ text: e.target.value });
+      const done = (msg, extra) => { this.setState(Object.assign({ sheet: null }, extra || {})); this.toast(msg); };
+      const base = Object.assign({}, none, { open: true, onText });
+
+      if (sh.kind === 'no' && c) {
+        const ok = !!sh.picked;
+        return Object.assign(base, {
+          eyebrow: 'No, and why', title: c.title, sub: c.from + ' is told today. A no with a reason beats silence; pick the one that is true.',
+          hasOptions: true, options: options([
+            { id: 'not now', label: 'Not now', sub: 'a real no from you — say why below' },
+            { id: 'wrong department', label: 'Wrong department', sub: 'it belongs to someone else — consider handing it over instead' },
+            { id: 'not responsible', label: 'Nobody owns this', sub: 'the map has no entry — it goes back to the department head' },
+            { id: 'no time', label: 'No time this quarter', sub: 'you would take it, the plan is full' },
+            { id: 'is it important', label: 'Does not rank', sub: 'against what the team has on, it is not the next thing' }
+          ]),
+          hasText: true, text: sh.text, textLabel: 'One line for ' + c.from + ' (optional)', placeholder: 'e.g. Q4 at the earliest — the fixture team is on the 4-series until then',
+          primaryLabel: ok ? 'Send the no' : 'Pick a reason', primaryStyle: this.btn(ok ? 'primary' : 'disabled'),
+          onConfirm: () => { if (!ok) return; this.act.decide(c.id, 'no', sh.picked, text); done('Answered “no” in ' + c.clock + ' days — ' + sh.picked + '. ' + c.from + ' has been told.'); }
+        });
+      }
+      if (sh.kind === 'ask' && c) {
+        const ok = text.length >= 4;
+        return Object.assign(base, {
+          eyebrow: 'Ask one question', title: c.title, sub: 'One question, not a form. The clock pauses until ' + c.from + ' answers; it lands in their My cases.',
+          hasText: true, text: sh.text, textLabel: 'Your question', placeholder: 'e.g. Which belt size — the 40 mm or the 60 mm?',
+          primaryLabel: ok ? 'Send the question' : 'Type the question', primaryStyle: this.btn(ok ? 'primary' : 'disabled'),
+          onConfirm: () => { if (!ok) return; this.act.ask(c.id, text); done('Question sent to ' + c.from + '. The clock is paused at ' + c.clock + ' d.'); }
+        });
+      }
+      if (sh.kind === 'reply' && c && c.question) {
+        const ok = text.length >= 2;
+        return Object.assign(base, {
+          eyebrow: 'Answer ' + c.question.by, title: '“' + (c.question.text || 'One question.') + '”', sub: 'Your answer goes straight back; the clock on ' + c.question.by + ' starts again the moment you send it.',
+          hasText: true, text: sh.text, textLabel: 'Your answer', placeholder: 'Short is fine.',
+          primaryLabel: ok ? 'Send the answer' : 'Type your answer', primaryStyle: this.btn(ok ? 'accent' : 'disabled'),
+          onConfirm: () => { if (!ok) return; this.act.answer(c.id, text); done('Answered. ' + c.question.by + '’s clock is running again.'); }
+        });
+      }
+      if (sh.kind === 'hand' && c) {
+        const route = c.route;
+        const cands = [];
+        const add = (name, sub) => { if (name && name !== who.name && !cands.some(x => x.id === name)) cands.push({ id: name, label: name, sub }); };
+        if (route) {
+          if (route.owner.name !== who.name) add(route.owner.name, 'the map’s owner · ' + route.owner.role + ', ' + this.deptName(route.owner.dept));
+          add(route.deputy, route.owner.name === who.name ? 'your deputy for this row' : 'deputy on this row');
+          add((route.buddy || '').split(' · ')[0], 'buddy for this row · ' + ((route.buddy || '').split(' · ')[1] || ''));
+        }
+        BUDDIES.forEach(b => add(b.name, 'your buddy in ' + b.dept + ' · ' + b.note));
+        const ok = !!sh.picked;
+        return Object.assign(base, {
+          eyebrow: 'Hand over', title: c.title, sub: 'Sideways, not up. Whoever you pick gets it in their inbox with the clock still running; ' + c.from + ' is told who has it now.',
+          hasOptions: true, options: options(cands),
+          hasText: true, text: sh.text, textLabel: 'Why them (optional)', placeholder: 'e.g. Quality owns the gauge — we only see the symptom',
+          primaryLabel: ok ? 'Hand to ' + sh.picked : 'Pick a person', primaryStyle: this.btn(ok ? 'accent' : 'disabled'),
+          onConfirm: () => { if (!ok) return; this.act.hand(c.id, sh.picked, text); done('Handed to ' + sh.picked + '. Both of you and ' + c.from + ' have been told. The clock keeps running.'); }
+        });
+      }
+      if (sh.kind === 'assign' && i) {
+        const funded = i.status === 'Unfunded';
+        const names = [];
+        const add = n => { if (n && n !== '—' && n !== 'Anonymous' && names.indexOf(n) < 0) names.push(n); };
+        i.team.forEach(add);
+        const p = S.problems.find(x => x.id === i.problem);
+        ROUTES.filter(r => p && p.depts.indexOf(r.owner.dept) >= 0).forEach(r => { add(r.owner.name); add(r.deputy); });
+        BUDDIES.forEach(b => add(b.name));
+        const ok = sh.people.length > 0;
+        return Object.assign(base, {
+          eyebrow: funded ? 'Fund a trial' : 'Approve and assign', title: i.title,
+          sub: (funded ? 'A trial needs people more than money. ' : 'Approving stops the clock; naming the team is what makes it real. ') + 'Pick who runs it — they are told today, and the proposer is credited.',
+          hasPeople: true, people: people(names),
+          hasText: true, text: sh.text, textLabel: 'One line to the team (optional)', placeholder: funded ? 'e.g. Four weeks, one site, measure the wait before and after' : 'e.g. Start with the two pilot sites; report on Thursday',
+          primaryLabel: ok ? (funded ? 'Fund it with ' : 'Approve with ') + sh.people.length + (sh.people.length === 1 ? ' person' : ' people') : 'Pick at least one person',
+          primaryStyle: this.btn(ok ? 'accent' : 'disabled'),
+          onConfirm: () => { if (!ok) return; (funded ? this.act.fund : this.act.approve)(i.id, sh.people, text); done((funded ? 'Trial funded. ' : 'Approved. ') + sh.people.join(', ') + (sh.people.length === 1 ? ' has' : ' have') + ' been told; the clock is stopped.'); }
+        });
+      }
+      if (sh.kind === 'askIdea' && i) {
+        const to = i.team[0] === '—' ? 'the proposer' : i.team[0];
+        const ok = text.length >= 4;
+        return Object.assign(base, {
+          eyebrow: 'Ask a question', title: i.title, sub: 'Goes to ' + to + '. It shows under the idea for everyone, so the answer is asked once.',
+          hasText: true, text: sh.text, textLabel: 'Your question', placeholder: 'e.g. What happened at the two pilot sites when a purchase went wrong?',
+          primaryLabel: ok ? 'Ask ' + to : 'Type the question', primaryStyle: this.btn(ok ? 'primary' : 'disabled'),
+          onConfirm: () => { if (!ok) return; this.act.askIdea(i.id, text); done('Question posted under “' + i.title + '”. ' + to + ' has been told.'); }
+        });
+      }
+      return none;
     }
 
     renderVals() {
@@ -342,6 +470,7 @@ window.createDashboardComponent = function (DCLogic) {
 
       // ── rail ──
       const openCases = D.cases.filter(c => c.assignee === who.name && c.open);
+      const deskCases = D.cases.filter(c => c.assignee === who.name && (c.open || c.status === 'asked'));
       const mineCases = D.cases.filter(c => c.from === who.handle);
       const mineCount = mineCases.length + D.ideas.filter(i => i.cosigners.some(x => x.name === who.handle)).length;
       const navDefs = isEmployee
@@ -429,20 +558,22 @@ window.createDashboardComponent = function (DCLogic) {
         primaryBtnLabel: isEmployee ? (cosigned ? 'Co-signed ✓' : 'Co-sign this idea') : decidable ? 'Approve and assign' : fundable ? 'Fund a trial' : 'Open the trial',
         onPrimary: () => {
           if (isEmployee) { this.act.cosign(si0.id); this.toast(cosigned ? 'Co-sign withdrawn from “' + si0.title + '”.' : 'You co-signed “' + si0.title + '”. Credit follows your handle.'); }
-          else if (decidable) { this.act.approve(si0.id); this.toast('Approved. ' + (si0.team[0] === '—' ? 'The proposer' : si0.team[0]) + ' has been told and the clock is stopped.'); }
-          else if (fundable) { this.act.fund(si0.id); this.toast('Trial funded. ' + (si0.team[0] === '—' ? 'A team still needs to be named.' : si0.team[0] + ' has been told.')); }
+          else if (decidable || fundable) this.openSheet('assign', si0.id, { people: si0.team.filter(n => n !== '—' && n !== 'Anonymous') });
           else this.toast('Opened ' + si0.title + '.');
         },
         primaryBtnStyle: { flex: 1, textAlign: 'center', background: (decidable || fundable) && !isEmployee ? this.accent() : cosigned ? '#f0efea' : INK, color: cosigned ? '#5b5b5b' : (decidable || fundable) && !isEmployee ? '#1a1a17' : '#fff', borderRadius: '10px',
           padding: '10px 14px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' },
-        onAsk: () => this.toast('Your question goes to ' + (si0.team[0] === '—' ? 'the proposer' : si0.team[0]) + '. The clock pauses until they answer.'),
+        onAsk: () => this.openSheet('askIdea', si0.id),
+        hasThread: si0.thread.length > 0,
+        thread: si0.thread.map(t => ({ text: '“' + t.text + '”', by: t.by + ' · ' + this.fmtDay(t.day, S), ini: this.ini(t.by) })),
+        approvedNote: si0.approved ? (si0.approved.funded ? 'Trial funded ' : 'Approved ') + this.fmtDay(si0.approved.day, S) + ' by ' + si0.approved.by + (si0.approved.note ? ' — “' + si0.approved.note + '”' : '') : '',
         team: si0.team.map(n => ({ name: n === '—' ? 'Nobody assigned' : n, ini: this.ini(n) })), teamNote: si0.teamNote
       } : {
         title: 'No idea to show', status: '', statusStyle: {}, waitLabel: '',
         rationale: demo ? 'No ideas are tied to problems in this department yet.' : 'Ideas appear here as step three of a case — once a problem exists, whoever raised it (or anyone else) can propose the fix.',
         upside: '—', effort: '—', problemTitle: '—', problemSub: '', onOpenProblem: () => {},
         primaryBtnLabel: 'Nothing to decide', onPrimary: () => {}, primaryBtnStyle: { flex: 1, textAlign: 'center', background: '#f0efea', color: '#a0a099', borderRadius: '10px', padding: '10px 14px', fontSize: '12.5px', fontWeight: 700 },
-        onAsk: () => {}, team: [], teamNote: '', cosigners: 0, cosignLabel: ''
+        onAsk: () => {}, team: [], teamNote: '', cosigners: 0, cosignLabel: '', hasThread: false, thread: [], approvedNote: ''
       };
 
       // ── collaboration ──
@@ -554,6 +685,7 @@ window.createDashboardComponent = function (DCLogic) {
         .concat(D.ideas.filter(i => i.cosigners.some(x => x.name === who.handle)).map(i => this.cosignRow(i, S, who.handle)))
         .sort((a, b) => b.sortDay - a.sortDay);
       const myIdeas = mine.map(m => ({
+        canReply: !!m.canReply, replyLabel: 'Answer ' + m.replyTo, onReply: () => this.openSheet('reply', m.id),
         title: m.title, submitted: m.submitted, status: m.status, statusStyle: this.statusStyle(m.status),
         clock: m.clock,
         clockStyle: { fontSize: '12px', fontWeight: 600, lineHeight: 1.5, marginTop: '13px', padding: '9px 11px', borderRadius: '9px',
@@ -612,15 +744,20 @@ window.createDashboardComponent = function (DCLogic) {
       ];
 
       // ── team leader: inbox ──
-      const inboxSorted = openCases.slice().sort((a, b) => b.clock - a.clock || b.age - a.age);
+      // Live cases first (oldest clock on top), then the ones paused on a question.
+      const inboxSorted = deskCases.slice().sort((a, b) => (a.open === b.open ? 0 : a.open ? -1 : 1) || b.clock - a.clock || b.age - a.age);
       const decorateCase = c => {
+        const paused = c.status === 'asked';
         const late = c.clock > PROMISE_DAYS, soon = c.clock >= PROMISE_DAYS - 2 && !late;
         return {
-          id: c.id, title: c.title, from: c.from + ' · ' + c.fromDept, age: c.clock + ' d', reason: c.reason, reasonStyle: this.reasonStyle(c.reason),
-          clock: late ? (c.clock - PROMISE_DAYS) + ' d past the promise' : (PROMISE_DAYS - c.clock) + ' d left',
+          id: c.id, title: c.title, from: c.from + ' · ' + c.fromDept, age: c.clock + ' d', reason: paused ? 'waiting on ' + c.from : c.reason, reasonStyle: paused ? this.pill('#f0efea', '#5b5b5b', 600) : this.reasonStyle(c.reason),
+          clock: paused ? 'clock paused' : late ? (c.clock - PROMISE_DAYS) + ' d past the promise' : (PROMISE_DAYS - c.clock) + ' d left',
           clockStyle: { fontFamily: MONO, fontSize: '11px', fontWeight: 700, whiteSpace: 'nowrap', borderRadius: '6px', padding: '4px 8px',
-            background: late ? this.accent() : soon ? this.accentSoft() : '#f0efea', color: late ? '#1a1a17' : soon ? this.accentInk() : '#5b5b5b' },
-          rowStyle: this.row(s.cid === c.id), markStyle: this.mark(s.cid === c.id), onOpen: () => this.set('cid', c.id)
+            background: paused ? 'transparent' : late ? this.accent() : soon ? this.accentSoft() : '#f0efea', color: paused ? '#a0a099' : late ? '#1a1a17' : soon ? this.accentInk() : '#5b5b5b',
+            border: paused ? '1px dashed #dedcd5' : 'none' },
+          rowStyle: Object.assign(this.row(s.cid === c.id), paused ? { opacity: 0.72 } : {}), markStyle: this.mark(s.cid === c.id),
+          // Opening a case is the "read by a human" moment the sender's tracker shows.
+          onOpen: () => { if (c.read === null) this.act.read(c.id); this.set('cid', c.id); }
         };
       };
       const inbox = inboxSorted.map(decorateCase);
@@ -636,35 +773,50 @@ window.createDashboardComponent = function (DCLogic) {
         routeOwner: !scRoute ? 'Triage desk' : scMine ? 'You · ' + scRoute.owner.role : scRoute.owner.name + ' · ' + scRoute.owner.role + ', ' + this.deptName(scRoute.owner.dept),
         routeDeputy: scRoute ? scRoute.deputy : '—', routeBuddy: scRoute ? scRoute.buddy : '—',
         handLabel: scMine ? 'Hand to ' + handTo : 'Pass to ' + handTo,
-        // Phase 2 replaces these bare events with sheets that capture the reason / question text.
+        canAct: sc0.open,
+        paused: sc0.status === 'asked',
+        pausedNote: sc0.status === 'asked' ? 'Waiting for ' + sc0.from + ' to answer. The clock is paused at ' + sc0.clock + (sc0.clock === 1 ? ' day' : ' days') + '; it resumes when they reply.' : '',
+        hasQuestion: !!sc0.question,
+        question: sc0.question ? '“' + (sc0.question.text || 'One question.') + '”' : '',
+        questionBy: sc0.question ? 'you asked ' + this.fmtDay(sc0.question.day, S) : '',
+        hasAnswer: !!(sc0.question && sc0.question.answer),
+        answer: sc0.question && sc0.question.answer ? '“' + sc0.question.answer.text + '”' : '',
+        answerBy: sc0.question && sc0.question.answer ? sc0.from + ' answered ' + this.fmtDay(sc0.question.answer.day, S) : '',
+        handedNote: sc0.handed.length ? 'Came to you from ' + sc0.handed[sc0.handed.length - 1].from + ' ' + this.fmtDay(sc0.handed[sc0.handed.length - 1].day, S) + (sc0.handed[sc0.handed.length - 1].why ? ' — “' + sc0.handed[sc0.handed.length - 1].why + '”' : '') + '.' : '',
         onYes: () => { this.act.decide(sc0.id, 'yes'); this.toast('Answered “yes” in ' + sc0.clock + ' days. ' + sc0.from + ' has been told; the clock is stopped.'); },
-        onNo: () => { this.act.decide(sc0.id, 'no', sc0.reason); this.toast('Answered “no” with your reason. ' + sc0.from + ' has been told — a no in ' + sc0.clock + ' days beats silence.'); },
-        onHand: () => { this.act.hand(sc0.id, handTo); this.toast('Handed to ' + handTo + '. Both of you and ' + sc0.from + ' have been told. The clock keeps running.'); },
-        onAsk: () => { this.act.ask(sc0.id, ''); this.toast('One question sent to ' + sc0.from + '. The clock pauses until they answer.'); }
+        onNo: () => this.openSheet('no', sc0.id),
+        onHand: () => this.openSheet('hand', sc0.id, { picked: handTo }),
+        onAsk: () => this.openSheet('ask', sc0.id)
       } : {
         title: demo ? 'Inbox empty' : 'Nothing addressed to you yet', body: demo ? 'Nothing is waiting on you. That is the goal by the end of every day.' : 'When someone on your team, or in a neighbouring one, raises a problem the map routes to you, it lands here with a ' + PROMISE_DAYS + '-day clock.',
         from: '', fromDept: '', fromIni: '', age: '', reason: '', reasonStyle: {}, upside: '',
         routeEyebrow: '', routeType: '', routeOwner: '', routeDeputy: '', routeBuddy: '', handLabel: '',
+        canAct: false, paused: false, pausedNote: '', hasQuestion: false, question: '', questionBy: '', hasAnswer: false, answer: '', answerBy: '', handedNote: '',
         onYes: () => {}, onNo: () => {}, onHand: () => {}, onAsk: () => {}
       };
 
-      const cleared = D.cases.map(c => ({ c, did: NHStore.actedBy(c, who.name) })).filter(x => x.did).map(({ c, did }) => ({
+      const cleared = D.cases.map(c => ({ c, did: NHStore.actedBy(c, who.name) })).filter(x => x.did === 'decided' || x.did === 'handed').map(({ c, did }) => ({
         title: c.title,
-        what: did === 'decided' && c.decided ? 'Decided · ' + c.decided.answer : did === 'handed' ? 'Handed over · ' + c.assignee : CASE_ACTIONS[did],
-        style: this.pill(did === 'asked' ? '#f0efea' : INK, did === 'asked' ? '#5b5b5b' : '#fff', 600)
+        what: did === 'decided' && c.decided ? 'Decided · ' + c.decided.answer + (c.decided.reason && c.decided.answer === 'no' ? ' · ' + c.decided.reason : '') : 'Handed over · ' + c.assignee,
+        style: this.pill(did === 'handed' ? '#f0efea' : INK, did === 'handed' ? '#5b5b5b' : '#fff', 600)
       }));
 
       const overdueCases = openCases.filter(c => c.overdue).length;
       const inboxStats = [
-        { v: String(openCases.length), l: 'open, addressed to you' },
+        { v: String(deskCases.length), l: openCases.length === deskCases.length ? 'open, addressed to you' : 'open, addressed to you · ' + (deskCases.length - openCases.length) + ' paused' },
         { v: String(overdueCases), l: 'past the ' + PROMISE_DAYS + '-day promise', hot: overdueCases > 0 },
         { v: dash(METRICS.lead.medianAnswer), l: 'your median time to answer' },
         { v: dash(METRICS.lead.withinPromise), l: 'answered within the promise, Q3' }
       ].map(x => ({ v: x.v, l: x.l, vStyle: { fontSize: '19px', fontWeight: 800, letterSpacing: '-0.025em', color: x.hot ? this.accentInk() : '#141414' } }));
 
-      const waitingOn = D.waitingOn.map(w => ({
+      const myDeptName = this.deptName(role.dept);
+      const deptOfPerson = name => { const r = ROUTES.find(x => x.owner.name === name); return r ? this.deptName(r.owner.dept) : (BUDDIES.find(b => b.name === name) || {}).dept || '—'; };
+      const liveWaiting = D.cases
+        .filter(c => (c.open || c.status === 'asked') && c.assignee !== who.name && c.fromDept.indexOf(myDeptName) === 0)
+        .map(c => ({ title: c.title, owner: c.assignee, dept: deptOfPerson(c.assignee), age: c.clock, promised: PROMISE_DAYS, paused: c.status === 'asked' }));
+      const waitingOn = liveWaiting.concat(D.waitingOn).map(w => ({
         title: w.title, owner: w.owner + ' · ' + w.dept, age: w.age + ' d',
-        state: w.age > w.promised ? (w.age - w.promised) + ' d past the promise · escalated' : 'answer owed in ' + (w.promised - w.age) + ' d',
+        state: w.paused ? 'paused · they asked the sender a question' : w.age > w.promised ? (w.age - w.promised) + ' d past the promise · escalated' : 'answer owed in ' + (w.promised - w.age) + ' d',
         stateStyle: { fontFamily: MONO, fontSize: '10.5px', fontWeight: 600, color: w.age > w.promised ? this.accentInk() : '#a0a099' }
       }));
 
@@ -754,7 +906,11 @@ window.createDashboardComponent = function (DCLogic) {
 
       const mv = (label, now, was, spark) => ({ label, now: dash(now), was: demo ? was : 'measured in pilot', bars: demo ? this.bars(spark) : this.flatBars() });
 
+      const sheet = this.sheetVals(S, who);
+
       return {
+        sheet, sheetOpen: sheet.open,
+        replyBtn: this.btn('accent'),
         // rail + shell
         navItems, scopeItems, sorts,
         viewTitle: view.title, viewSub: view.sub.replace('{signals}', demo ? fmt(METRICS.signals) : '0'),

@@ -36,8 +36,18 @@ to `NHStore` (`js/store.js`); the page renders `reduce(seed, events)`.
   facts (who, which day, which route); build the sentence at render time —
   see `mineRow()` / `cosignRow()` for the pattern.
 - **Never call `localStorage` directly.** The store owns persistence.
-- Reducer tests live in `.github/ci/store.test.cjs` and run in CI. If your
-  change makes them fail, the change is wrong, not the test.
+- **Need input from the user (a reason, a line of text, people)? Use the
+  sheet.** `this.openSheet('yourKind', id)` + a branch in `sheetVals()` that
+  returns title / options / text / people and an `onConfirm` that calls
+  `this.act.*`. Do not add a second modal, popover or inline form; the one in
+  `index.html` (`.nh-sheet`) already handles keyboard, scrim and mobile.
+- Do not `setState` new keys for domain data. Component state is for UI only
+  (which tab, which row is selected, what is typed in a field, `sheet`).
+- Tests: `.github/ci/store.test.cjs` (reducer), `.github/ci/smoke.cjs`
+  (renders), `.github/ci/flow.test.cjs` (the whole inbox loop through the UI).
+  All run in CI. If your change makes one fail, the change is wrong, not the
+  test — unless you changed copy the test asserts on; then update the
+  assertion in the same PR and say so.
 
 ## Git rules (non-negotiable)
 

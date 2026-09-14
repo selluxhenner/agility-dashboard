@@ -105,6 +105,17 @@ test('case.asked pauses the clock; case.answered resumes it', () => {
   assert.strictEqual(NHStore.inboxFor(S, 'T. Vogel').some(x => x.id === 'c2'), true, 'answered case is back in the inbox');
 });
 
+test('a question is "off the desk" only while unanswered; deskFor keeps paused cases', () => {
+  const asked = NHStore.reduce(SEED, logOf(ev(T.CASE_ASKED, 'T. Vogel', 'c2', { text: 'Which belt?' })));
+  const c = asked.cases.find(x => x.id === 'c2');
+  assert.strictEqual(NHStore.actedBy(c, 'T. Vogel'), 'asked');
+  assert.strictEqual(NHStore.inboxFor(asked, 'T. Vogel').length, 5, 'paused case is not in the live inbox');
+  assert.strictEqual(NHStore.deskFor(asked, 'T. Vogel').length, 6, 'but it is still on the desk');
+  const back = NHStore.reduce(SEED, logOf(ev(T.CASE_ASKED, 'T. Vogel', 'c2', { text: 'Which belt?' }), ev(T.CASE_ANSWERED, 'S. Dahl', 'c2', { text: '40 mm' }, 1)));
+  assert.strictEqual(NHStore.actedBy(back.cases.find(x => x.id === 'c2'), 'T. Vogel'), null, 'answered → back on the desk, not cleared');
+  assert.strictEqual(NHStore.clearedBy(back, 'T. Vogel').length, 0);
+});
+
 test('day.advanced ages every open case; a fresh case crosses the promise', () => {
   const log = { events: [ev(T.CASE_RAISED, 'Anonymous #4471', 'c_x', { title: 'x', routeId: 'r6', assignee: 'T. Vogel' }, 0)], day: PROMISE_DAYS + 1 };
   const c = NHStore.reduce(SEED, log).cases.find(x => x.id === 'c_x');

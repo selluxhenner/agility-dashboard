@@ -54,7 +54,12 @@ as live actions (that is how the employee's shipped and in-build cases exist).
 
 UI code changes state only through `this.act.*` in `js/dashboard.js`
 (`raise`, `decide`, `hand`, `ask`, `answer`, `cosign`, `approve`, `fund`,
-`advanceDay`, …). Add a row to the seed and the counts follow:
+`advanceDay`, …). Actions that need input — a reason, a line of text, people —
+go through one **input sheet**: `this.openSheet(kind, id)` opens it,
+`sheetVals()` decides what it shows and what confirming does, the markup lives
+once in `index.html` (`.nh-sheet`, a bottom sheet on phones).
+
+Add a row to the seed and the counts follow:
 
 | Add a … | to | link it via |
 |---|---|---|
@@ -73,7 +78,10 @@ Everything done in the browser survives a reload (it is the event log).
 **Copy for data.js** in the dev panel exports the cases raised this session as
 `CASES` rows, history included, to paste into the file.
 
-Reducer tests: `node .github/ci/store.test.cjs` (also run in CI).
+Tests (all run in CI): `node .github/ci/store.test.cjs` (reducer, no browser);
+with the page served on :8765, `node .github/ci/smoke.cjs` (renders, roles,
+mobile) and `node .github/ci/flow.test.cjs` (the whole inbox loop through the
+real UI — needs `npm i playwright` on `NODE_PATH`).
 
 ## Dev panel
 

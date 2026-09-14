@@ -70,6 +70,10 @@ a:hover {
   .nh-clock { white-space: normal !important; text-align: right; max-width: 118px; line-height: 1.35; }
 
   .nh-toast { left: 12px !important; right: 12px !important; bottom: 66px !important; transform: none !important; max-width: none !important; }
+  .nh-sheet {
+    top: auto !important; bottom: 0 !important; left: 0 !important; right: 0 !important; transform: none !important;
+    width: auto !important; max-height: 88dvh !important; border-radius: 16px 16px 0 0 !important; padding-bottom: 22px !important;
+  }
   .nh-dev { right: 12px !important; bottom: 12px !important; }
   .nh-devpanel { width: min(280px, calc(100vw - 24px)) !important; }
 

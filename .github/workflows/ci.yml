@@ -5,7 +5,8 @@
 #   syntax  — every JS file parses, index.html has its runtime wiring,
 #             the store reducer passes its unit tests
 #   smoke   — real Chromium loads the page: no JS errors, dashboard renders,
-#             all three roles switch, demo-data toggle works, mobile width OK
+#             all three roles switch, demo-data toggle works, mobile width OK;
+#             then the end-to-end flow test drives the whole inbox loop
 #
 # When a package.json arrives, add lint/typecheck/test jobs here and make
 # them required in the ruleset. Kevin owns this file.
@@ -183,6 +184,12 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node .github/ci/smoke.cjs
+
+      - name: Run the end-to-end flow (raise → question → answer → no → hand-over → approve)
+        shell: bash
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node .github/ci/flow.test.cjs
 
       - name: Upload screenshots on failure
         if: failure()
