@@ -184,8 +184,6 @@
                       style="font-family:'IBM Plex Mono',monospace; color:#5b5b5b;">{{ who.handle }}</span>
                   </div>
                 </div>
-                <div style="font-size:11px; color:#a0a099; margin-top:12px; line-height:1.5;">Switch role from the developer panel,
-                  bottom left.</div>
               </div>
             </sc-if>
           </div>
@@ -813,7 +811,7 @@
                     <div>
                       <div
                         style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.12em; text-transform:uppercase; color:#a0a099;">
-                        Discovery round 2</div>
+                        {{ discoveryRound }}</div>
                       <div style="font-size:12.5px; color:#141414; font-weight:700; margin-top:5px;">{{ discovery.done }}</div>
                     </div>
                     <div style="flex:1; min-width:150px;">
@@ -1355,6 +1353,15 @@
               <span style="{{ demoTrack }}">
                 <span style="width:13px; height:13px; border-radius:50%; background:#fbfbf9; display:block;"></span>
               </span>
+            </div>
+
+            <div onClick="{{ copySnippet }}"
+              style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px; padding:9px 2px 0; border-top:1px solid #2c2c27; cursor:pointer;">
+              <span style="display:flex; flex-direction:column; gap:2px;">
+                <span style="font-size:12.5px; font-weight:700; color:#fbfbf9;">Copy for data.js</span>
+                <span style="font-size:10.5px; color:#7d7c73;">{{ newCount }} · pastes into MY_IDEAS</span>
+              </span>
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#a3a29a;">⧉</span>
             </div>
 
             <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-top:12px; padding:9px 2px 0; border-top:1px solid #2c2c27;">

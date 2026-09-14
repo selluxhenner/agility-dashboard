@@ -1,6 +1,17 @@
-// NextHub dashboard — demo data.
+// NextHub dashboard — demo data. This file is the store.
+//
 // Plain top-level constants: the runtime evaluates the component logic in
 // global scope, so everything declared here is visible to js/dashboard.js.
+//
+// Every count on the page is derived from these arrays — add a problem to
+// PROBLEMS, an idea to IDEAS, a team to INITIATIVES, a case to CASES and the
+// rail counts, funnel, "All N →" links, decisions waiting, contributors and
+// stalled lists update by themselves. Only figures that have no underlying
+// rows (medians, € values, survey coverage) live in METRICS at the bottom.
+//
+// Linking rules: idea.problem → problem.id; problem.ideas → [idea.id];
+// case.routeId → route.id; signal.by / proposedBy / members[].name are the
+// names the contributors list counts.
 
 const INK = '#141414', MUTE = '#8c8c88';
 
@@ -259,11 +270,36 @@ const LEDGER = {
   escalated: 7, handedOver: 19, overrides: '11%', overridesNote: 'of proposed owners were overruled — the map is right 9 times in 10'
 };
 
+// ── Aggregates with no underlying rows ──────────────────────────────────
+// Everything here is a measured (or, in the demo, invented) figure. When
+// demo data is off the page shows "measured in pilot" instead of these.
+const METRICS = {
+  // Discovery interviews (the total is the sum of DEPTS.people).
+  discovery: { round: 2, interviewed: 1180, note: 'Production and Field Service still under 50%' },
+  // Raw signals before clustering — more than the quotes kept per problem.
+  signals: 412,
+  // Manager overview KPIs and movement since the baseline survey.
+  ideaToDecision: { now: '11d', was: 'was 34d', spark: [0.95, 1, 0.9, 0.6, 0.45, 0.35, 0.3] },
+  valueBooked: { now: '€1.42M', delta: '+€1.15M', was: 'was €270k', sub: '€880k of it recurring', spark: [0.18, 0.2, 0.19, 0.45, 0.62, 0.82, 1] },
+  waitingDaysSaved: { now: '1,240 d', spark: [0.1, 0.2, 0.3, 0.45, 0.6, 0.8, 1] },
+  shippedWas: 'was 1', shippedSpark: [0.25, 0.3, 0.22, 0.5, 0.7, 0.85, 1],
+  noOwnerWas: 'was 4', noOwnerSpark: [0.4, 0.42, 0.5, 0.55, 0.62, 0.7, 0.8],
+  contributing: { now: '64%', was: 'was 21%', spark: [0.2, 0.22, 0.21, 0.4, 0.52, 0.6, 0.64] },
+  stoppedEarly: 38,
+  nextCall: 'Thursday 14:00 · 25 min',
+  // Progress → "Did anyone answer them".
+  answered: { replied: '91%', median: '6d', credited: 214 },
+  // Employee → "Your contribution".
+  you: { medianWait: '4 d' },
+  // Team leader → inbox stats.
+  lead: { medianAnswer: '3 d', withinPromise: '9 / 11' }
+};
+
 const VIEWS = {
   mine: { title: 'What happened to what you sent', sub: 'Every problem or idea you raised, who is answering it, when they owe you that answer, and what it changed once it shipped.' },
   inbox: { title: 'Addressed to you', sub: 'Open items sorted by age. Each one takes one action: decide, hand it to your deputy, or ask one question. Empty by end of day is the whole ritual.' },
   overview: { title: 'Where the organisation is stuck', sub: 'One screen: what is blocked on you, how the system is performing, and what people are saying this quarter.' },
-  problems: { title: 'Problems named by employees', sub: 'Root problems clustered from 412 signals. People choose whether to sign their name.' },
+  problems: { title: 'Problems named by employees', sub: 'Root problems clustered from {signals} signals. People choose whether to sign their name.' },
   ideas: { title: 'Ideas from the organisation', sub: 'Score weighs expected outcome against effort and the size of the problem it solves.' },
   network: { title: 'Collaboration across departments', sub: 'Cross-department work in motion — who is joined up, for what, and what is waiting.' },
   progress: { title: 'Does the system actually move', sub: 'Twelve months of flow, where ideas stall, and whether people got an answer.' }
