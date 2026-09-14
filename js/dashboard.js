@@ -36,9 +36,11 @@ window.createDashboardComponent = function (DCLogic) {
       const role = ROLES.find(r => r.id === (props.defaultRole || 'manager')) || ROLES[2];
       this.state = {
         role: role.id, tab: props.defaultView || role.home, dept: role.dept,
-        pid: 'p1', iid: 'i1', tid: 't3', cid: 'c1', sort: 'people',
+        pid: 'p1', iid: 'i1', tid: 't3', cid: 'c1',
+        // list tools: sort + filter for the problems and ideas views
+        sort: 'people', pTrend: 'All', pOwner: 'All', iSort: 'score', iStatus: 'All',
         demo: props.demoData !== false, dev: false,
-        q: '', pop: null, draft: '', sent: loadStore().sent || [], cases: loadStore().cases || {}, toast: null,
+        q: '', cursor: 0, pop: null, draft: '', sent: loadStore().sent || [], cases: loadStore().cases || {}, toast: null,
         mobile: false, menu: false
       };
       this.onKey = this.onKey.bind(this);
@@ -68,9 +70,117 @@ window.createDashboardComponent = function (DCLogic) {
         this.setState({ pop: 'search' });
       } else if (e.key === 'Escape') {
         const el = document.getElementById('nh-search');
+        if (el && e.target === el) return; // handled by onSearchKey: clear the text first, close on the second press
         if (el) el.blur();
         this.setState({ pop: null, q: '', menu: false });
       }
+    }
+
+    focusSearch() {
+      const el = document.getElementById('nh-search');
+      if (el) { el.focus(); el.select(); }
+      this.setState({ pop: 'search', menu: false });
+    }
+
+    // ── search engine ────────────────────────────────────────────────────
+    // Every token has to appear somewhere in the item's text ("hay"); title
+    // matches rank above body matches. Highlighting reuses the same tokens.
+    tokens(q) { return (q || '').trim().toLowerCase().split(/\s+/).filter(Boolean); }
+    hits(hay, toks) { return toks.every(t => hay.indexOf(t) >= 0); }
+
+    hl(text, toks) {
+      if (!toks.length || !text) return [{ t: text || '', hit: false }];
+      const esc = t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp('(' + toks.map(esc).join('|') + ')', 'ig');
+      const isHit = new RegExp('^(' + toks.map(esc).join('|') + ')$', 'i');
+      return String(text).split(re).filter(x => x !== '').map(x => ({ t: x, hit: isHit.test(x) }));
+    }
+
+    problemHay(p) {
+      return [p.title, p.sub, p.detail, p.trend, p.age, this.ownerLabel(p.owner), p.depts.map(d => this.deptName(d)).join(' '),
+        (p.signals || []).map(x => x.by + ' ' + x.quote).join(' ')].join(' ').toLowerCase();
+    }
+    ideaHay(i) {
+      const pr = PROBLEMS.find(p => p.id === i.problem) || {};
+      return [i.title, i.rationale, i.status, i.proposedBy, i.expected, i.upside, i.effort, (i.team || []).join(' '), pr.title || '',
+        (pr.depts || []).map(d => this.deptName(d)).join(' ')].join(' ').toLowerCase();
+    }
+    teamHay(t) {
+      return [t.name, t.why, t.status, t.stage, t.depts.map(d => this.deptName(d)).join(' '), t.members.map(m => m.name + ' ' + m.role).join(' ')].join(' ').toLowerCase();
+    }
+    caseHay(c) { return [c.title, c.from, c.fromDept, c.body, c.reason].filter(Boolean).join(' ').toLowerCase(); }
+
+    // People come from initiative members, idea teams and proposers, signal authors and the buddy list.
+    people(demo) {
+      const map = {};
+      const add = (name, role, ref) => {
+        name = (name || '').trim();
+        if (!name || name === '—' || name.startsWith('Anonymous') || /^\d/.test(name)) return;
+        const e = map[name] || (map[name] = { name, roles: [], teams: [], ideas: [] });
+        if (role && e.roles.indexOf(role) < 0) e.roles.push(role);
+        if (ref && ref.team && e.teams.indexOf(ref.team) < 0) e.teams.push(ref.team);
+        if (ref && ref.idea && e.ideas.indexOf(ref.idea) < 0) e.ideas.push(ref.idea);
+      };
+      if (demo) {
+        INITIATIVES.forEach(t => t.members.forEach(m => add(m.name, m.role, { team: t.id })));
+        IDEAS.forEach(i => {
+          (i.team || []).forEach(n => add(n, '', { idea: i.id }));
+          const pb = (i.proposedBy || '').split(',');
+          add(pb[0], (pb[1] || '').trim(), { idea: i.id });
+        });
+        PROBLEMS.forEach(p => (p.signals || []).forEach(x => { const b = x.by.split('·'); add(b[0], (b[1] || '').trim(), null); }));
+      }
+      (typeof BUDDIES !== 'undefined' ? BUDDIES : []).forEach(b => add(b.name, b.dept, null));
+      return Object.keys(map).sort().map(k => map[k]);
+    }
+
+    searchIndex(D, isLead, cleared) {
+      const idx = [];
+      D.problems.forEach(p => idx.push({ kind: 'Problem', group: 0, title: p.title, sub: p.sub, hay: this.problemHay(p),
+        right: p.people + ' people', go: { tab: 'problems', pid: p.id } }));
+      D.ideas.forEach(i => idx.push({ kind: 'Idea', group: 1, title: i.title,
+        sub: 'solves: ' + ((PROBLEMS.find(p => p.id === i.problem) || {}).title || '—'), hay: this.ideaHay(i),
+        right: i.status, go: { tab: 'ideas', iid: i.id } }));
+      D.initiatives.forEach(t => idx.push({ kind: 'Team', group: 2, title: t.name, sub: t.why, hay: this.teamHay(t),
+        right: t.status, go: { tab: 'network', tid: t.id } }));
+      if (isLead) D.cases.filter(c => !cleared[c.id]).forEach(c => idx.push({ kind: 'Case', group: 3, title: c.title, sub: 'from ' + c.from,
+        hay: this.caseHay(c), right: c.age + ' d', go: { tab: 'inbox', cid: c.id } }));
+      this.people(D.problems.length > 0).forEach(pe => {
+        const where = [pe.teams.length ? pe.teams.length + (pe.teams.length === 1 ? ' team' : ' teams') : '',
+          pe.ideas.length ? pe.ideas.length + (pe.ideas.length === 1 ? ' idea' : ' ideas') : ''].filter(Boolean).join(' · ');
+        idx.push({ kind: 'Person', group: 4, title: pe.name, sub: [pe.roles[0] || '', where].filter(Boolean).join(' · '),
+          hay: (pe.name + ' ' + pe.roles.join(' ')).toLowerCase(), right: pe.teams.length ? 'open team' : pe.ideas.length ? 'open idea' : '',
+          go: pe.teams.length ? { tab: 'network', tid: pe.teams[0] } : pe.ideas.length ? { tab: 'ideas', iid: pe.ideas[0] } : null });
+      });
+      return idx;
+    }
+
+    runSearch(idx, q) {
+      const toks = this.tokens(q);
+      if (!toks.length) return [];
+      const lower = q.trim().toLowerCase();
+      const scored = idx.filter(x => this.hits(x.hay, toks)).map(x => {
+        const t = x.title.toLowerCase();
+        let score = 0;
+        if (t === lower) score += 40;
+        else if (t.indexOf(lower) === 0) score += 24;
+        else if (t.indexOf(lower) >= 0) score += 16;
+        toks.forEach(k => { if (t.indexOf(k) >= 0) score += 6; else if ((x.sub || '').toLowerCase().indexOf(k) >= 0) score += 2; });
+        return { x, score };
+      }).sort((a, b) => b.score - a.score || a.x.group - b.x.group);
+      // at most 4 per group, 10 in total, best first
+      const perGroup = {}, out = [];
+      scored.forEach(({ x }) => {
+        perGroup[x.group] = (perGroup[x.group] || 0) + 1;
+        if (perGroup[x.group] <= 4 && out.length < 10) out.push(x);
+      });
+      return out;
+    }
+
+    pick(r) {
+      const el = document.getElementById('nh-search');
+      if (el) el.blur();
+      this.setState(Object.assign({ pop: null, q: '', cursor: 0, menu: false }, r.go || {}));
     }
 
     // ── colours / small style helpers ───────────────────────────────────
@@ -258,10 +368,6 @@ window.createDashboardComponent = function (DCLogic) {
           onSel: () => this.setState({ dept: id, menu: false }), style: this.scopeStyle(active), countStyle: this.countStyle(active) };
       });
 
-      const sorts = [['people', 'Most people'], ['trend', 'Getting worse'], ['age', 'Longest open']].map(([id, label]) => ({
-        label, onSel: () => this.set('sort', id), style: this.chip(s.sort === id)
-      }));
-
       const openIdea = id => () => this.setState({ tab: 'ideas', iid: id, pop: null, q: '' });
       const openProblem = id => () => this.setState({ tab: 'problems', pid: id, pop: null, q: '' });
       const openInitiative = id => () => this.setState({ tab: 'network', tid: id, pop: null, q: '' });
@@ -278,13 +384,33 @@ window.createDashboardComponent = function (DCLogic) {
         rowStyle: this.row(s.iid === i.id), markStyle: this.mark(s.iid === i.id), onOpen: openIdea(i.id)
       });
 
-      const ideaPool = D.ideas.filter(i => this.matches((PROBLEMS.find(p => p.id === i.problem) || { depts: [] }).depts));
-      const ideas = ideaPool.slice().sort((a, b) => b.score - a.score).map(decorateIdea);
+      // ── query + filters + sort ──
+      // While you type, the search box also narrows the problems / ideas /
+      // collaboration lists; picking a result clears it again.
+      const toks = this.tokens(s.q);
+      const hasQuery = toks.length > 0;
+      const listTab = s.tab === 'problems' || s.tab === 'ideas' || s.tab === 'network';
+      const qFilter = hay => !listTab || !hasQuery || this.hits(hay, toks);
 
-      const problemPool = D.problems.filter(p => this.matches(p.depts));
+      const ideaScope = D.ideas.filter(i => this.matches((PROBLEMS.find(p => p.id === i.problem) || { depts: [] }).depts));
+      const ideaSearched = ideaScope.filter(i => qFilter(this.ideaHay(i)));
+      const ideaPool = ideaSearched.filter(i => s.iStatus === 'All' || i.status === s.iStatus);
+      const upsideNum = v => { const m = /€\s*([\d.]+)\s*(k|M)?/i.exec(v || ''); return m ? parseFloat(m[1]) * (m[2] === 'M' ? 1000 : 1) : -1; };
+      const ideaSorted = ideaPool.slice().sort((a, b) => {
+        if (s.iSort === 'wait') return (b.wait || 0) - (a.wait || 0) || b.score - a.score;
+        if (s.iSort === 'upside') return upsideNum(b.upside) - upsideNum(a.upside) || b.score - a.score;
+        if (s.iSort === 'title') return a.title.localeCompare(b.title);
+        return b.score - a.score;
+      });
+      const ideas = ideaSorted.map(decorateIdea);
+
+      const problemScope = D.problems.filter(p => this.matches(p.depts));
+      const problemSearched = problemScope.filter(p => qFilter(this.problemHay(p)));
+      const problemPool = problemSearched.filter(p => (s.pTrend === 'All' || p.trend === s.pTrend) && (s.pOwner === 'All' || p.owner === s.pOwner));
       const sorted = problemPool.slice().sort((a, b) => {
         if (s.sort === 'people') return b.people - a.people;
         if (s.sort === 'trend') return (b.spark[6] - b.spark[0]) - (a.spark[6] - a.spark[0]);
+        if (s.sort === 'title') return a.title.localeCompare(b.title);
         return (b.months || 0) - (a.months || 0);
       });
 
@@ -338,7 +464,7 @@ window.createDashboardComponent = function (DCLogic) {
       };
 
       // ── collaboration ──
-      const activeIds = D.initiatives.filter(t => this.matches(t.depts)).map(t => t.id);
+      const activeIds = D.initiatives.filter(t => this.matches(t.depts) && qFilter(this.teamHay(t))).map(t => t.id);
       const initiatives = D.initiatives.map(t => ({
         id: t.id, name: t.name, status: t.status, statusStyle: this.statusStyle(t.status),
         deptLabel: t.depts.map(d => this.deptName(d)).join(' × '),
@@ -561,25 +687,85 @@ window.createDashboardComponent = function (DCLogic) {
       }));
 
       // ── top bar: search, decisions popover, user menu ──
-      const q = s.q.trim().toLowerCase();
-      const hit = t => q.length >= 2 && (t || '').toLowerCase().indexOf(q) >= 0;
-      const people = {};
-      INITIATIVES.forEach(t => t.members.forEach(m => { if (!m.name.startsWith('Anonymous')) people[m.name] = { name: m.name, meta: m.role, tid: t.id }; }));
-      BUDDIES.forEach(b => { people[b.name] = people[b.name] || { name: b.name, meta: b.dept }; });
-      const results = [];
-      if (demo) {
-        PROBLEMS.filter(p => hit(p.title) || hit(p.sub)).slice(0, 4).forEach(p => results.push({ kind: 'Problem', title: p.title, meta: p.people + ' people · ' + p.trend, onOpen: openProblem(p.id) }));
-        IDEAS.filter(i => hit(i.title)).slice(0, 4).forEach(i => results.push({ kind: 'Idea', title: i.title, meta: i.status + ' · score ' + i.score, onOpen: openIdea(i.id) }));
-        INITIATIVES.filter(t => hit(t.name)).slice(0, 3).forEach(t => results.push({ kind: 'Team', title: t.name, meta: t.status, onOpen: openInitiative(t.id) }));
-        if (isLead) CASES.filter(c => hit(c.title) && !s.cases[c.id]).slice(0, 3).forEach(c => results.push({ kind: 'Case', title: c.title, meta: c.age + ' d · ' + c.from, onOpen: openCase(c.id) }));
-      }
-      Object.keys(people).filter(n => hit(n)).slice(0, 3).forEach(n => {
-        const p = people[n];
-        results.push({ kind: 'Person', title: p.name, meta: p.meta, onOpen: p.tid ? openInitiative(p.tid) : () => this.setState({ pop: null, q: '' }) });
+      const q = s.q.trim();
+      const searchOpen = s.pop === 'search' && q.length >= 2;
+      const results = searchOpen ? this.runSearch(this.searchIndex(D, isLead, s.cases), q) : [];
+      const cursor = Math.min(s.cursor, Math.max(results.length - 1, 0));
+      const kindPill = k => Object.assign({
+        Problem: this.pill('#f0efea', '#5b5b5b', 700), Idea: this.pill(this.accentSoft(), this.accentInk(), 700),
+        Team: this.pill('#dcf3e3', '#116634', 700), Case: this.pill('#e8e4ff', '#4b3bb3', 700), Person: this.pill(INK, '#fff', 700)
+      }[k], { minWidth: '54px', textAlign: 'center', boxSizing: 'border-box', flex: 'none' });
+      const groupNames = ['Problems', 'Ideas', 'Teams', 'Your inbox', 'People'];
+      const resultGroups = [];
+      results.forEach((r, idx) => {
+        const label = groupNames[r.group];
+        let g = resultGroups.find(x => x.label === label);
+        if (!g) { g = { label, items: [] }; resultGroups.push(g); }
+        g.items.push({
+          kind: r.kind, kindStyle: kindPill(r.kind), meta: r.sub, right: r.right,
+          parts: this.hl(r.title, toks).map(x => ({ t: x.t, cls: x.hit ? 'nh-hit' : '' })),
+          rowClass: 'nh-result' + (idx === cursor ? ' nh-result--active' : ''),
+          onPick: () => this.pick(r), onHover: () => { if (s.cursor !== idx) this.set('cursor', idx); }
+        });
       });
-      const searchResults = results.slice(0, 8).map(r => Object.assign(r, {
-        kindStyle: { fontFamily: MONO, fontSize: '9.5px', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#a0a099', minWidth: '52px' }
+      const onSearchKey = e => {
+        if (e.key === 'ArrowDown') { e.preventDefault(); this.setState({ pop: 'search', cursor: results.length ? (cursor + 1) % results.length : 0 }); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); this.setState({ pop: 'search', cursor: results.length ? (cursor - 1 + results.length) % results.length : 0 }); }
+        else if (e.key === 'Enter') { if (results[cursor]) this.pick(results[cursor]); }
+        else if (e.key === 'Escape') {
+          e.preventDefault();
+          if (s.q) this.setState({ q: '', cursor: 0 }); else { e.target.blur(); this.setState({ pop: null, menu: false }); }
+        }
+      };
+
+      // ── sort + filter menus (problems and ideas views) ──
+      const isProblems = s.tab === 'problems', isIdeas = s.tab === 'ideas';
+      const hasListTools = isProblems || isIdeas;
+      const sortDefs = isProblems
+        ? [['people', 'Most people affected'], ['trend', 'Getting worse fastest'], ['age', 'Longest open'], ['title', 'A → Z']]
+        : [['score', 'Highest score'], ['wait', 'Longest waiting'], ['upside', 'Biggest upside'], ['title', 'A → Z']];
+      const sortKey = isProblems ? 'sort' : 'iSort';
+      const sortOptions = sortDefs.map(([id, label]) => ({
+        label, check: s[sortKey] === id ? '✓' : '', onSel: () => this.setState({ [sortKey]: id, pop: null }),
+        rowClass: 'nh-opt' + (s[sortKey] === id ? ' nh-opt--on' : '')
       }));
+      const sortLabel = (sortDefs.find(d => d[0] === s[sortKey]) || sortDefs[0])[1];
+
+      const countBy = (list, fn) => list.reduce((n, x) => n + (fn(x) ? 1 : 0), 0);
+      const facet = (key, label, opts, list, get) => ({
+        label,
+        options: [['All', 'All']].concat(opts).map(([id, name]) => {
+          const on = s[key] === id;
+          const count = id === 'All' ? list.length : countBy(list, x => get(x) === id);
+          return { label: name, count: String(count), onSel: () => this.set(key, id),
+            chipClass: 'nh-fchip' + (on ? ' nh-fchip--on' : '') + (count === 0 && !on ? ' nh-fchip--empty' : '') };
+        })
+      });
+      const filterGroups = isProblems ? [
+        facet('pTrend', 'Trend', [['Worsening', 'Worsening'], ['Flat', 'Flat'], ['Improving', 'Improving']],
+          problemSearched.filter(p => s.pOwner === 'All' || p.owner === s.pOwner), p => p.trend),
+        facet('pOwner', 'Ownership', [['none', 'No owner'], ['ideas', 'Ideas submitted'], ['trial', 'Fix in trial']],
+          problemSearched.filter(p => s.pTrend === 'All' || p.trend === s.pTrend), p => p.owner)
+      ] : isIdeas ? [
+        facet('iStatus', 'Status', [['Awaiting decision', 'Awaiting decision'], ['In trial', 'In trial'], ['Building', 'Building'], ['Unfunded', 'Unfunded'], ['Shipped', 'Shipped']],
+          ideaSearched, i => i.status)
+      ] : [];
+      const filterCount = isProblems ? (s.pTrend !== 'All' ? 1 : 0) + (s.pOwner !== 'All' ? 1 : 0) : isIdeas ? (s.iStatus !== 'All' ? 1 : 0) : 0;
+      const clearFilters = () => this.setState(isProblems ? { pTrend: 'All', pOwner: 'All' } : { iStatus: 'All' });
+      const clearAll = () => this.setState({ q: '', pTrend: 'All', pOwner: 'All', iStatus: 'All', cursor: 0 });
+
+      const shown = isProblems ? sorted.length : ideaSorted.length;
+      const total = isProblems ? problemScope.length : ideaScope.length;
+      const filtered = hasListTools && (filterCount > 0 || hasQuery) && total > 0;
+      const activeChips = [];
+      if (hasQuery && listTab) activeChips.push({ label: '“' + q + '”', onRemove: () => this.setState({ q: '', cursor: 0 }) });
+      if (isProblems && s.pTrend !== 'All') activeChips.push({ label: s.pTrend, onRemove: () => this.set('pTrend', 'All') });
+      if (isProblems && s.pOwner !== 'All') activeChips.push({ label: this.ownerLabel(s.pOwner), onRemove: () => this.set('pOwner', 'All') });
+      if (isIdeas && s.iStatus !== 'All') activeChips.push({ label: s.iStatus, onRemove: () => this.set('iStatus', 'All') });
+
+      const toolBtn = on => ({ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '7px 11px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+        cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', background: on ? INK : '#fff', color: on ? '#fff' : '#3d3d3a',
+        border: '1px solid ' + (on ? INK : '#e6e5e0'), position: 'relative', zIndex: 31 });
 
       const overdueMine = D.mine.filter(m => m.overdue);
       const dropItems = isManager
@@ -648,7 +834,7 @@ window.createDashboardComponent = function (DCLogic) {
 
       return {
         // rail + shell
-        navItems, scopeItems, sorts,
+        navItems, scopeItems,
         viewTitle: view.title, viewSub: view.sub.replace('{signals}', demo ? fmt(METRICS.signals) : '0'),
         scoped: s.dept !== 'All', scopeLabel: this.deptName(s.dept),
         clearScope: () => this.set('dept', 'All'),
@@ -664,11 +850,28 @@ window.createDashboardComponent = function (DCLogic) {
         menuOpen: s.menu, toggleMenu: () => this.setState({ menu: !s.menu, pop: null }), closeMenu: () => this.set('menu', false),
 
         // top bar
-        q: s.q, onQ: e => this.setState({ q: e.target.value, pop: 'search' }),
-        onQFocus: () => this.set('pop', 'search'),
-        searchOpen: s.pop === 'search' && q.length >= 2, searchResults, noResults: searchResults.length === 0,
+        q: s.q, hasQuery,
+        onQ: e => this.setState({ q: e.target.value, pop: 'search', cursor: 0 }),
+        onQFocus: () => this.setState({ pop: 'search', menu: false }),
+        onSearchKey,
+        clearQuery: () => { this.setState({ q: '', cursor: 0 }); this.focusSearch(); },
+        kbdHint: searchOpen ? 'esc' : '⌘K',
+        searchOpen, resultGroups, noResults: results.length === 0,
+        resultCountLabel: results.length === 1 ? '1 result' : results.length + ' results',
+        searchClass: 'nh-search' + (s.pop === 'search' ? ' nh-search--focus' : ''),
         searchWrapStyle: { flex: '1 1 90px', minWidth: 0, maxWidth: '340px', position: 'relative', display: 'flex', alignItems: 'center', gap: '8px',
-          background: s.pop === 'search' ? '#fff' : '#f4f3f0', border: '1px solid ' + (s.pop === 'search' ? INK : '#e6e5e0'), borderRadius: '9px', padding: '7px 10px', boxSizing: 'border-box' },
+          background: s.pop === 'search' ? '#fff' : '#f4f3f0', border: '1px solid ' + (s.pop === 'search' ? INK : '#e6e5e0'), borderRadius: '9px', padding: '0 10px', height: '34px', boxSizing: 'border-box',
+          zIndex: s.pop === 'search' ? 31 : 'auto' },
+
+        // list tools (problems + ideas)
+        hasListTools,
+        sortLabel, sortOptions, sortOpen: s.pop === 'sort', toggleSort: () => this.setState({ pop: s.pop === 'sort' ? null : 'sort' }),
+        sortBtnStyle: toolBtn(s.pop === 'sort'),
+        filterGroups, filterOpen: s.pop === 'filter', toggleFilter: () => this.setState({ pop: s.pop === 'filter' ? null : 'filter' }),
+        filterBtnStyle: toolBtn(s.pop === 'filter' || filterCount > 0),
+        filterCount: String(filterCount), hasFilters: filterCount > 0, clearFilters, clearAll,
+        filtered, activeChips,
+        showingLabel: 'Showing ' + shown + ' of ' + total + (isProblems ? ' problems' : ' ideas'),
         decisionBtnLabel, decisionShort: !demo && !dropCount ? '0' : String(dropCount), dropdown, noDropdown: dropdown.length === 0,
         dropdownEmpty: isManager ? 'Nothing is waiting on you.' : isLead ? 'Nothing in your inbox is close to its deadline.' : 'Everything you sent has been answered on time.',
         dropdownTitle: isManager ? 'Waiting on a decision' : isLead ? 'Answer owed this week' : 'Answers owed to you',
@@ -709,9 +912,13 @@ window.createDashboardComponent = function (DCLogic) {
 
         // problems / ideas / collaboration
         problems, topProblems: problems.slice(0, 5), sp, noProblems: problems.length === 0,
-        emptyProblemTitle: demo ? 'Nobody in ' + (s.dept === 'All' ? 'the company' : this.deptName(s.dept)) + ' has named a problem yet' : 'No problems recorded yet',
-        emptyProblemSub: demo ? 'Either nothing here is broken, or nobody has said so yet. Silence from a whole department is usually the second one.'
+        emptyProblemTitle: filtered ? 'No problems match'
+          : demo ? 'Nobody in ' + (s.dept === 'All' ? 'the company' : this.deptName(s.dept)) + ' has named a problem yet' : 'No problems recorded yet',
+        emptyProblemSub: filtered ? 'Try fewer words, or clear the search and filters to see everything in scope.'
+          : demo ? 'Either nothing here is broken, or nobody has said so yet. Silence from a whole department is usually the second one.'
           : 'Problems arrive two ways: a forwarded email thread, or one field in the app. The first interview round clusters them into root problems.',
+        emptyIdeaTitle: filtered ? 'No ideas match' : 'No ideas yet',
+        emptyIdeaSub: filtered ? 'Try fewer words, or clear the search and filters to see everything in scope.' : si.rationale,
         discovery: (() => {
           const done = demo ? METRICS.discovery.interviewed : 0, pct = Math.round(done / N.people * 100);
           return { done: fmt(done) + ' of ' + fmt(N.people) + ' interviewed', w: { width: pct + '%', height: '7px', borderRadius: '999px', background: INK },
