@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dcdbd6; font-family:"Manrope", system-ui, sans-serif; -webkit-font-smoothing:antialiased; }
+  a { color:#141414; text-decoration:none; }
+  a:hover { color:#5b5b5b; }
+  ::-webkit-scrollbar { width:9px; height:9px; }
+  ::-webkit-scrollbar-thumb { background:#cfcec9; border-radius:999px; border:3px solid transparent; background-clip:content-box; }
+</style>
+</helmet>
+
+<div style="padding:30px 26px 44px; display:flex; flex-direction:column; align-items:center; gap:14px; box-sizing:border-box;">
+
+  <div style="width:100%; max-width:1620px; display:flex; flex-direction:column; align-items:center;">
+    <div style="width:100%; background:#22221f; border-radius:18px; padding:12px; box-sizing:border-box; box-shadow:0 40px 80px -44px rgba(20,20,20,0.6);">
+      <div style="background:#f4f3f0; border-radius:8px; height:884px; overflow:hidden; display:flex; box-sizing:border-box;">
+
+        <!-- ░░ RAIL ░░ -->
+        <div style="width:246px; flex:none; background:#1a1a17; display:flex; flex-direction:column; padding:20px 14px 16px; box-sizing:border-box; overflow:auto;">
+          <div style="display:flex; align-items:center; gap:10px; padding:0 8px 20px;">
+            <span style="width:28px; height:28px; border-radius:8px; background:#f4f3f0; color:#1a1a17; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; flex:none;">K</span>
+            <span style="display:flex; flex-direction:column; min-width:0;">
+              <span style="font-size:14px; font-weight:700; color:#fbfbf9; letter-spacing:-0.01em;">Kessler</span>
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:#7d7c73;">Antriebstechnik</span>
+            </span>
+          </div>
+
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.16em; text-transform:uppercase; color:#a3a29a; padding:0 8px 8px;">Views</div>
+          <div style="display:flex; flex-direction:column; gap:2px;">
+            <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="5">
+              <div onClick="{{ n.onSel }}" style="{{ n.style }}">
+                <span>{{ n.label }}</span>
+                <span style="{{ n.countStyle }}">{{ n.count }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="height:1px; background:#2c2c27; margin:20px 8px 16px;"></div>
+
+          <div style="display:flex; align-items:baseline; justify-content:space-between; padding:0 8px 8px; gap:8px;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.16em; text-transform:uppercase; color:#a3a29a;">Scope</span>
+            <span onClick="{{ clearScope }}" style="{{ clearScopeStyle }}">clear</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:2px;">
+            <sc-for list="{{ scopeItems }}" as="d" hint-placeholder-count="9">
+              <div onClick="{{ d.onSel }}" style="{{ d.style }}">
+                <span>{{ d.label }}</span>
+                <span style="{{ d.countStyle }}">{{ d.people }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="margin-top:auto; padding-top:22px;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.16em; text-transform:uppercase; color:#a3a29a; padding:0 8px 8px;">Viewing as</div>
+            <div style="display:grid; grid-template-columns:repeat(2,1fr); background:#232320; border-radius:10px; padding:3px; gap:3px;">
+              <sc-for list="{{ roles }}" as="r" hint-placeholder-count="4">
+                <span onClick="{{ r.onSel }}" style="{{ r.style }}">{{ r.label }}</span>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <!-- ░░ MAIN ░░ -->
+        <div style="flex:1; min-width:0; display:flex; flex-direction:column;">
+
+          <div style="height:58px; flex:none; display:flex; align-items:center; gap:16px; padding:0 22px; background:#fff; border-bottom:1px solid #e6e5e0; box-sizing:border-box;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:#a0a099; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:0 1 auto; min-width:0;">Innovation &amp; agility · Q3 2026</span>
+            <div style="flex:1 1 90px; min-width:0; max-width:340px; display:flex; align-items:center; gap:8px; background:#f4f3f0; border:1px solid #e6e5e0; border-radius:9px; padding:7px 10px; box-sizing:border-box; overflow:hidden;">
+              <span style="width:11px; height:11px; border:1.5px solid #a0a099; border-radius:50%; flex:none;"></span>
+              <span style="font-size:12.5px; color:#a0a099; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Search problems, ideas, people</span>
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#b8b7b0; margin-left:auto;">⌘K</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; margin-left:auto; flex:none;">
+              <span onClick="{{ goDecisions }}" style="{{ decisionBtnStyle }}">
+                <span style="{{ decisionDotStyle }}"></span>{{ decisionBtnLabel }}
+              </span>
+              <span style="width:28px; height:28px; border-radius:50%; background:#1a1a17; color:#fff; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:10px; flex:none;">JS</span>
+            </div>
+          </div>
+
+          <div style="flex:1; overflow:auto; padding:20px 22px 32px; box-sizing:border-box;">
+            <div style="min-width:0; display:flex; flex-direction:column; gap:14px;">
+
+              <!-- page head -->
+              <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+                <div style="min-width:0;">
+                  <div style="font-size:23px; font-weight:800; color:#141414; letter-spacing:-0.028em; line-height:1.15;">{{ viewTitle }}</div>
+                  <div style="font-size:13px; color:#8c8c88; margin-top:5px; line-height:1.45; max-width:640px;">{{ viewSub }}</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:7px; flex-wrap:wrap;">
+                  <sc-if value="{{ scoped }}" hint-placeholder-val="{{ false }}">
+                    <span onClick="{{ clearScope }}" style="display:flex; align-items:center; gap:7px; background:#1a1a17; color:#fff; border-radius:8px; padding:7px 11px; font-size:12px; font-weight:700; cursor:pointer;">{{ scopeLabel }}<span style="color:#a0a099;">×</span></span>
+                  </sc-if>
+                  <sc-if value="{{ isProblems }}" hint-placeholder-val="{{ false }}">
+                    <sc-for list="{{ sorts }}" as="s" hint-placeholder-count="3">
+                      <span onClick="{{ s.onSel }}" style="{{ s.style }}">{{ s.label }}</span>
+                    </sc-for>
+                  </sc-if>
+                </div>
+              </div>
+
+              <!-- ░░ MY IDEAS (EMPLOYEE) ░░ -->
+              <sc-if value="{{ isMine }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; align-items:start;">
+
+                  <div style="display:flex; flex-direction:column; gap:10px;">
+                    <sc-for list="{{ myIdeas }}" as="m" hint-placeholder-count="3">
+                      <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:18px 18px 16px;">
+                        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+                          <div style="min-width:0;">
+                            <div style="font-size:15px; font-weight:800; color:#141414; letter-spacing:-0.015em; line-height:1.3;">{{ m.title }}</div>
+                            <div style="font-size:12px; color:#a0a099; margin-top:5px;">{{ m.submitted }}</div>
+                          </div>
+                          <span style="{{ m.statusStyle }}">{{ m.status }}</span>
+                        </div>
+
+                        <div style="display:flex; gap:4px; margin-top:16px;">
+                          <sc-for list="{{ m.steps }}" as="s" hint-placeholder-count="4">
+                            <div style="flex:1; min-width:0;">
+                              <div style="{{ s.barStyle }}"></div>
+                              <div style="{{ s.labelStyle }}">{{ s.label }}</div>
+                              <div style="font-size:10.5px; color:#a0a099; margin-top:2px; line-height:1.35;">{{ s.when }}</div>
+                            </div>
+                          </sc-for>
+                        </div>
+
+                        <div style="{{ m.clockStyle }}">{{ m.clock }}</div>
+
+                        <div style="border-left:2px solid #dedcd5; padding:2px 0 2px 12px; margin-top:14px;">
+                          <div style="font-size:12.5px; color:#141414; line-height:1.55;">{{ m.reply }}</div>
+                          <div style="font-size:11px; color:#a0a099; margin-top:6px;">{{ m.replyBy }}</div>
+                        </div>
+
+                        <div style="display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-top:14px; padding-top:12px; border-top:1px solid #f0efea;">
+                          <span style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099;">Outcome</span>
+                          <span style="font-size:12.5px; font-weight:700; color:#141414;">{{ m.outcome }}</span>
+                          <span style="font-size:12px; color:#8c8c88;">{{ m.outcomeNote }}</span>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+
+                  <div style="position:sticky; top:0; display:flex; flex-direction:column; gap:12px;">
+                    <div style="background:#1a1a17; border-radius:14px; padding:18px 20px 20px;">
+                      <div style="font-size:15px; font-weight:800; color:#fbfbf9; letter-spacing:-0.015em;">Nothing you send disappears</div>
+                      <div style="font-size:12.5px; color:#a3a29a; margin-top:6px; line-height:1.55;">Every idea has a named person answering it and a date they owe you that answer by. Miss it and it moves up a level, not into a drawer.</div>
+                      <div style="display:flex; flex-direction:column; gap:8px; margin-top:15px;">
+                        <sc-for list="{{ promises }}" as="p" hint-placeholder-count="3">
+                          <div style="display:flex; align-items:baseline; gap:10px;">
+                            <span style="font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:700; color:#fbfbf9; min-width:52px;">{{ p.n }}</span>
+                            <span style="font-size:12.5px; color:#c9c8c0; line-height:1.45;">{{ p.label }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                      <span style="{{ submitBtnStyle }}">Raise a problem or an idea</span>
+                    </div>
+
+                    <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:18px 18px 16px;">
+                      <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099;">Your contribution</div>
+                      <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:11px;">
+                        <sc-for list="{{ myStats }}" as="k" hint-placeholder-count="4">
+                          <div style="background:#faf9f7; border:1px solid #eeede8; border-radius:11px; padding:12px 14px;">
+                            <div style="font-size:19px; font-weight:800; color:#141414; letter-spacing:-0.025em;">{{ k.v }}</div>
+                            <div style="font-size:11.5px; color:#8c8c88; margin-top:2px; line-height:1.35;">{{ k.l }}</div>
+                          </div>
+                        </sc-for>
+                      </div>
+                      <div style="font-size:11.5px; color:#a0a099; margin-top:12px; line-height:1.5;">You post as <span style="font-family:'IBM Plex Mono',monospace; color:#5b5b5b;">Anonymous #4471</span>. The handle stays yours, so credit still follows you.</div>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+
+              <!-- ░░ OVERVIEW ░░ -->
+              <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex; flex-direction:column; gap:14px;">
+
+                  <div style="background:#1a1a17; border-radius:14px; padding:18px 20px 20px;">
+                    <div style="display:flex; align-items:baseline; justify-content:space-between; gap:14px; flex-wrap:wrap;">
+                      <span style="font-size:15px; font-weight:800; color:#fbfbf9; letter-spacing:-0.015em;">Answer owed — the 14-day clock is running</span>
+                      <span onClick="{{ goIdeas }}" style="font-size:12.5px; font-weight:600; color:#c9c8c0; cursor:pointer;">All ideas →</span>
+                    </div>
+                    <div style="font-size:12.5px; color:#a3a29a; margin-top:5px; line-height:1.45;">Every idea gets a yes, a no or a question within 14 days. Past that it escalates one level up — automatically.</div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:9px; margin-top:15px;">
+                      <sc-for list="{{ decisions }}" as="d" hint-placeholder-count="3">
+                        <div onClick="{{ d.onOpen }}" style="background:#232320; border-radius:11px; padding:14px 15px; cursor:pointer; display:flex; flex-direction:column; gap:9px;">
+                          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">
+                            <span style="font-size:13.5px; font-weight:700; color:#fbfbf9; line-height:1.35;">{{ d.title }}</span>
+                            <span style="{{ d.dayStyle }}">{{ d.days }}</span>
+                          </div>
+                          <span style="{{ d.dueStyle }}">{{ d.dueLabel }}</span>
+                          <span style="font-size:12px; color:#a3a29a; line-height:1.45;">{{ d.blocker }}</span>
+                          <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#d6d5cd;">{{ d.upside }} expected upside</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:14px; padding-top:13px; border-top:1px solid #33332e;">
+                      <span style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a3a29a;">Next decision call</span>
+                      <span style="font-size:12.5px; font-weight:700; color:#fbfbf9;">Thursday 14:00 · 25 min</span>
+                      <span style="font-size:12.5px; color:#a3a29a;">Agenda is built from the three items above — nothing else on it.</span>
+                    </div>
+                  </div>
+
+                  <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:10px;">
+                    <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+                      <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:15px 17px 14px;">
+                        <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099;">{{ k.label }}</div>
+                        <div style="display:flex; align-items:baseline; gap:8px; margin-top:9px; flex-wrap:wrap;">
+                          <span style="font-size:30px; font-weight:800; color:#141414; letter-spacing:-0.035em; line-height:1;">{{ k.value }}</span>
+                          <span style="{{ k.deltaStyle }}">{{ k.delta }}</span>
+                        </div>
+                        <div style="font-size:12px; color:#8c8c88; margin-top:6px; line-height:1.4;">{{ k.sub }}</div>
+                        <div style="display:flex; align-items:flex-end; gap:3px; height:22px; margin-top:12px;">
+                          <sc-for list="{{ k.bars }}" as="b" hint-placeholder-count="7">
+                            <div style="{{ b.style }}"></div>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+
+                  <sc-if value="{{ isBoard }}" hint-placeholder-val="{{ false }}">
+                    <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:20px 22px;">
+                      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:14px; flex-wrap:wrap;">
+                        <span style="font-size:15px; font-weight:800; color:#141414; letter-spacing:-0.015em;">Movement since the baseline survey</span>
+                        <span style="font-size:12.5px; color:#8c8c88;">grey quarters = before · dark = since</span>
+                      </div>
+                      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px; margin-top:15px;">
+                        <sc-for list="{{ movement }}" as="m" hint-placeholder-count="4">
+                          <div style="background:#faf9f7; border:1px solid #eeede8; border-radius:11px; padding:15px 16px;">
+                            <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.12em; text-transform:uppercase; color:#a0a099;">{{ m.label }}</div>
+                            <div style="display:flex; align-items:baseline; gap:8px; margin-top:9px; flex-wrap:wrap;">
+                              <span style="font-size:25px; font-weight:800; color:#141414; letter-spacing:-0.03em; line-height:1;">{{ m.now }}</span>
+                              <span style="font-size:12px; color:#8c8c88;">{{ m.was }}</span>
+                            </div>
+                            <div style="display:flex; align-items:flex-end; gap:4px; height:30px; margin-top:13px;">
+                              <sc-for list="{{ m.bars }}" as="b" hint-placeholder-count="7">
+                                <div style="{{ b.style }}"></div>
+                              </sc-for>
+                            </div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-if>
+
+                  <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; align-items:start;">
+
+                    <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:20px 20px 16px;">
+                      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px;">
+                        <span style="font-size:15px; font-weight:800; color:#141414; letter-spacing:-0.015em;">What people say is broken</span>
+                        <span onClick="{{ goProblems }}" style="font-size:12.5px; font-weight:600; color:#8c8c88; cursor:pointer;">All 38 →</span>
+                      </div>
+                      <div style="font-size:12.5px; color:#8c8c88; margin-top:4px; line-height:1.45;">Ranked by people affected. Unowned means no team is on it.</div>
+                      <div style="display:flex; flex-direction:column; margin-top:12px;">
+                        <sc-for list="{{ topProblems }}" as="p" hint-placeholder-count="5">
+                          <div onClick="{{ p.onOpen }}" style="border-top:1px solid #f0efea; padding:12px 0 11px; cursor:pointer;">
+                            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+                              <span style="font-size:13.5px; font-weight:700; color:#141414; line-height:1.35;">{{ p.title }}</span>
+                              <span style="font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:700; color:#141414; white-space:nowrap;">{{ p.peopleLabel }}</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:7px; margin-top:8px; flex-wrap:wrap;">
+                              <span style="{{ p.trendStyle }}">{{ p.trend }}</span>
+                              <span style="{{ p.ownerStyle }}">{{ p.ownerLabel }}</span>
+                              <span style="font-size:11.5px; color:#a0a099;">{{ p.deptLabel }}</span>
+                            </div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+
+                    <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:20px 20px 16px;">
+                      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px;">
+                        <span style="font-size:15px; font-weight:800; color:#141414; letter-spacing:-0.015em;">Ideas people have</span>
+                        <span onClick="{{ goIdeas }}" style="font-size:12.5px; font-weight:600; color:#8c8c88; cursor:pointer;">All 147 →</span>
+                      </div>
+                      <div style="font-size:12.5px; color:#8c8c88; margin-top:4px; line-height:1.45;">Each one is tied to a problem above and to an expected outcome.</div>
+                      <div style="display:flex; flex-direction:column; margin-top:12px;">
+                        <sc-for list="{{ topIdeas }}" as="i" hint-placeholder-count="5">
+                          <div onClick="{{ i.onOpen }}" style="border-top:1px solid #f0efea; padding:12px 0 11px; cursor:pointer;">
+                            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+                              <span style="font-size:13.5px; font-weight:700; color:#141414; line-height:1.35;">{{ i.title }}</span>
+                              <span style="font-family:'IBM Plex Mono',monospace; font-size:14px; font-weight:800; color:#141414;">{{ i.score }}</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:7px; margin-top:8px; flex-wrap:wrap;">
+                              <span style="{{ i.statusStyle }}">{{ i.status }}</span>
+                              <span style="font-size:11.5px; color:#a0a099;">{{ i.expectedShort }}</span>
+                            </div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+
+                    <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:20px 20px 16px;">
+                      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px;">
+                        <span style="font-size:15px; font-weight:800; color:#141414; letter-spacing:-0.015em;">Who is working with who</span>
+                        <span onClick="{{ goNetwork }}" style="font-size:12.5px; font-weight:600; color:#8c8c88; cursor:pointer;">Map →</span>
+                      </div>
+                      <div style="font-size:12.5px; color:#8c8c88; margin-top:4px; line-height:1.45;">Cross-department work in motion, and what it is for.</div>
+                      <div style="display:flex; flex-direction:column; margin-top:12px;">
+                        <sc-for list="{{ initiatives }}" as="t" hint-placeholder-count="6">
+                          <div onClick="{{ t.onOpen }}" style="border-top:1px solid #f0efea; padding:12px 0 11px; cursor:pointer;">
+                            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+                              <span style="font-size:13.5px; font-weight:700; color:#141414; line-height:1.35;">{{ t.name }}</span>
+                              <span style="{{ t.statusStyle }}">{{ t.status }}</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:7px; margin-top:8px; flex-wrap:wrap;">
+                              <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.05em; color:#8c8c88;">{{ t.deptLabel }}</span>
+                              <span style="font-size:11.5px; color:#a0a099;">{{ t.peopleLabel }}</span>
+                            </div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+
+              <!-- ░░ PROBLEMS ░░ -->
+              <sc-if value="{{ isProblems }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; align-items:start;">
+
+                  <div style="display:flex; flex-direction:column; gap:12px;">
+                    <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:14px 17px;">
+                      <div>
+                        <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.12em; text-transform:uppercase; color:#a0a099;">Discovery round 2</div>
+                        <div style="font-size:12.5px; color:#141414; font-weight:700; margin-top:5px;">1,180 of 1,840 interviewed</div>
+                      </div>
+                      <div style="flex:1; min-width:150px;">
+                        <div style="height:7px; border-radius:999px; background:#eeede8; overflow:hidden;"><div style="width:64%; height:7px; border-radius:999px; background:#141414;"></div></div>
+                        <div style="font-size:11.5px; color:#8c8c88; margin-top:6px;">64% coverage · Production and Field Service still under 50%</div>
+                      </div>
+                      <div style="font-size:11.5px; color:#a0a099; line-height:1.5; max-width:240px;">Interviews run twice a year. Between rounds the same problems keep arriving through the app — that is what moves the trend.</div>
+                    </div>
+
+                    <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:6px 18px 12px;">
+                      <sc-if value="{{ noProblems }}" hint-placeholder-val="{{ false }}">
+                        <div style="padding:26px 4px;">
+                          <div style="font-size:14.5px; font-weight:700; color:#141414; line-height:1.4;">{{ emptyProblemTitle }}</div>
+                          <div style="font-size:12.5px; color:#8c8c88; margin-top:7px; line-height:1.55;">Either nothing here is broken, or nobody has said so yet. Silence from a whole department is usually the second one.</div>
+                        </div>
+                      </sc-if>
+                      <div style="display:flex; flex-direction:column;">
+                        <sc-for list="{{ problems }}" as="p" hint-placeholder-count="7">
+                          <div onClick="{{ p.onOpen }}" style="{{ p.rowStyle }}">
+                            <div style="{{ p.markStyle }}"></div>
+                            <div style="flex:1; min-width:0;">
+                              <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:14px;">
+                                <div style="flex:1 1 220px; min-width:170px;">
+                                  <div style="font-size:14.5px; font-weight:700; color:#141414; line-height:1.35;">{{ p.title }}</div>
+                                  <div style="font-size:12.5px; color:#8c8c88; margin-top:4px; line-height:1.45;">{{ p.sub }}</div>
+                                </div>
+                                <div style="display:flex; align-items:flex-end; gap:14px;">
+                                  <div style="text-align:right;">
+                                    <div style="font-family:'IBM Plex Mono',monospace; font-size:15px; font-weight:800; color:#141414;">{{ p.people }}</div>
+                                    <div style="font-size:10.5px; color:#a0a099;">people</div>
+                                  </div>
+                                  <div style="display:flex; align-items:flex-end; gap:3px; height:26px;">
+                                    <sc-for list="{{ p.bars }}" as="b" hint-placeholder-count="7">
+                                      <div style="{{ b.style }}"></div>
+                                    </sc-for>
+                                  </div>
+                                </div>
+                              </div>
+                              <div style="display:flex; align-items:center; gap:7px; margin-top:10px; flex-wrap:wrap;">
+                                <span style="{{ p.trendStyle }}">{{ p.trend }}</span>
+                                <span style="{{ p.ownerStyle }}">{{ p.ownerLabel }}</span>
+                                <span style="font-size:11.5px; color:#a0a099;">{{ p.deptLabel }} · {{ p.source }} · first raised {{ p.age }}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style="position:sticky; top:0; background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:20px 20px 18px;">
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099;">{{ sp.eyebrow }}</div>
+                    <div style="font-size:17.5px; font-weight:800; color:#141414; letter-spacing:-0.02em; line-height:1.3; margin-top:9px;">{{ sp.title }}</div>
+                    <div style="font-size:12.5px; color:#5b5b5b; margin-top:8px; line-height:1.55;">{{ sp.detail }}</div>
+
+                    <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:16px;">
+                      <div style="background:#faf9f7; border:1px solid #eeede8; border-radius:11px; padding:12px 14px;">
+                        <div style="font-size:20px; font-weight:800; color:#141414; letter-spacing:-0.025em;">{{ sp.people }}</div>
+                        <div style="font-size:11.5px; color:#8c8c88; margin-top:2px;">people affected</div>
+                      </div>
+                      <div style="background:#faf9f7; border:1px solid #eeede8; border-radius:11px; padding:12px 14px;">
+                        <div style="font-size:20px; font-weight:800; color:#141414; letter-spacing:-0.025em;">{{ sp.timeLost }}</div>
+                        <div style="font-size:11.5px; color:#8c8c88; margin-top:2px;">est. time lost / month</div>
+                      </div>
+                    </div>
+
+                    <sc-if value="{{ showQuotes }}" hint-placeholder-val="{{ true }}">
+                      <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099; margin-top:20px;">In their words</div>
+                      <div style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
+                        <sc-for list="{{ sp.signals }}" as="s" hint-placeholder-count="3">
+                          <div style="border-left:2px solid #dedcd5; padding:2px 0 2px 12px;">
+                            <div style="font-size:12.5px; color:#141414; line-height:1.55;">{{ s.quote }}</div>
+                            <div style="font-size:11px; color:#a0a099; margin-top:6px;">{{ s.by }}</div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099; margin-top:20px;">Ideas against this problem</div>
+                    <div style="display:flex; flex-direction:column; gap:7px; margin-top:10px;">
+                      <sc-for list="{{ sp.linked }}" as="l" hint-placeholder-count="2">
+                        <div onClick="{{ l.onOpen }}" style="display:flex; align-items:center; justify-content:space-between; gap:12px; background:#faf9f7; border:1px solid #eeede8; border-radius:11px; padding:11px 13px; cursor:pointer;">
+                          <span style="font-size:12.5px; font-weight:700; color:#141414; line-height:1.35;">{{ l.title }}</span>
+                          <span style="{{ l.statusStyle }}">{{ l.status }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+
+              <!-- ░░ IDEAS ░░ -->
+              <sc-if value="{{ isIdeas }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; align-items:start;">
+
+                  <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:6px 18px 12px;">
+                    <div style="display:flex; flex-direction:column;">
+                      <sc-for list="{{ ideas }}" as="i" hint-placeholder-count="8">
+                        <div onClick="{{ i.onOpen }}" style="{{ i.rowStyle }}">
+                          <div style="{{ i.markStyle }}"></div>
+                          <div style="flex:1; min-width:0;">
+                            <div style="display:flex; align-items:flex-start; gap:14px;">
+                              <div style="{{ i.scoreStyle }}">{{ i.score }}</div>
+                              <div style="flex:1 1 200px; min-width:160px;">
+                                <div style="font-size:14.5px; font-weight:700; color:#141414; line-height:1.35;">{{ i.title }}</div>
+                                <div style="font-size:12.5px; color:#8c8c88; margin-top:4px; line-height:1.45;">solves: {{ i.problemTitle }}</div>
+                              </div>
+                              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+                                <span style="{{ i.statusStyle }}">{{ i.status }}</span>
+                                <span style="font-size:11.5px; color:#a0a099; text-align:right;">{{ i.effort }}</span>
+                              </div>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:7px; margin-top:10px; flex-wrap:wrap;">
+                              <span style="font-size:11.5px; color:#5b5b5b; font-weight:600;">{{ i.expected }}</span>
+                              <span style="font-size:11.5px; color:#a0a099;">· raised by {{ i.proposedBy }}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+
+                  <div style="position:sticky; top:0; background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:20px 20px 18px;">
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099;">Selected idea</div>
+                    <div style="font-size:17.5px; font-weight:800; color:#141414; letter-spacing:-0.02em; line-height:1.3; margin-top:9px;">{{ si.title }}</div>
+                    <div style="display:flex; align-items:center; gap:9px; margin-top:11px; flex-wrap:wrap;">
+                      <span style="{{ si.statusStyle }}">{{ si.status }}</span>
+                      <span style="font-size:12.5px; color:#8c8c88;">{{ si.waitLabel }}</span>
+                    </div>
+                    <div style="font-size:12.5px; color:#5b5b5b; margin-top:13px; line-height:1.55;">{{ si.rationale }}</div>
+
+                    <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:16px;">
+                      <div style="background:#faf9f7; border:1px solid #eeede8; border-radius:11px; padding:12px 14px;">
+                        <div style="font-size:19px; font-weight:800; color:#141414; letter-spacing:-0.025em;">{{ si.upside }}</div>
+                        <div style="font-size:11.5px; color:#8c8c88; margin-top:2px;">expected upside / yr</div>
+                      </div>
+                      <div style="background:#faf9f7; border:1px solid #eeede8; border-radius:11px; padding:12px 14px;">
+                        <div style="font-size:19px; font-weight:800; color:#141414; letter-spacing:-0.025em;">{{ si.effort }}</div>
+                        <div style="font-size:11.5px; color:#8c8c88; margin-top:2px;">to find out if it works</div>
+                      </div>
+                    </div>
+
+                    <div style="display:flex; gap:8px; margin-top:14px;">
+                      <span style="{{ si.primaryBtnStyle }}">{{ si.primaryBtnLabel }}</span>
+                      <span style="flex:1; text-align:center; background:#faf9f7; border:1px solid #e6e5e0; border-radius:10px; padding:10px 14px; font-size:12.5px; font-weight:700; color:#5b5b5b; cursor:pointer;">Ask a question</span>
+                    </div>
+
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099; margin-top:20px;">Problem it answers</div>
+                    <div onClick="{{ si.onOpenProblem }}" style="background:#faf9f7; border:1px solid #eeede8; border-radius:11px; padding:12px 14px; margin-top:10px; cursor:pointer;">
+                      <div style="font-size:12.5px; font-weight:700; color:#141414; line-height:1.4;">{{ si.problemTitle }}</div>
+                      <div style="font-size:11.5px; color:#8c8c88; margin-top:5px; line-height:1.45;">{{ si.problemSub }}</div>
+                    </div>
+
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099; margin-top:20px;">Who would run it</div>
+                    <div style="display:flex; flex-wrap:wrap; gap:7px; margin-top:10px;">
+                      <sc-for list="{{ si.team }}" as="m" hint-placeholder-count="3">
+                        <span style="display:flex; align-items:center; gap:8px; background:#faf9f7; border:1px solid #eeede8; border-radius:999px; padding:5px 13px 5px 6px; font-size:11.5px; font-weight:600; color:#141414;">
+                          <span style="width:21px; height:21px; border-radius:50%; background:#1a1a17; color:#fff; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:9.5px;">{{ m.ini }}</span>
+                          {{ m.name }}
+                        </span>
+                      </sc-for>
+                    </div>
+                    <div style="font-size:11.5px; color:#a0a099; margin-top:11px; line-height:1.5;">{{ si.teamNote }}</div>
+                  </div>
+                </div>
+              </sc-if>
+
+              <!-- ░░ COLLABORATION ░░ -->
+              <sc-if value="{{ isNetwork }}" hint-placeholder-val="{{ false }}">
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(310px,1fr)); gap:14px; align-items:start;">
+
+                  <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:20px 20px 14px;">
+                    <div style="font-size:15px; font-weight:800; color:#141414; letter-spacing:-0.015em;">Who is connected with who, and for what</div>
+                    <div style="font-size:12.5px; color:#8c8c88; margin-top:4px; line-height:1.45;">One cluster per project. Every line joins two people who work on it together. Click a project, a person or a line.</div>
+
+                    <svg viewBox="0 0 620 520" style="width:100%; height:auto; margin-top:6px; display:block; overflow:visible;">
+                      <sc-for list="{{ clusters }}" as="c" hint-placeholder-count="8">
+                        <g onClick="{{ c.onSel }}" style="cursor:pointer;" opacity="{{ c.op }}">
+                          <rect x="{{ c.rx }}" y="{{ c.ry }}" width="{{ c.rw }}" height="{{ c.rh }}" rx="14" fill="{{ c.fill }}" stroke="{{ c.stroke }}" strokeWidth="1.2"></rect>
+                          <text x="{{ c.labelX }}" y="{{ c.labelY }}" textAnchor="middle" fontFamily="Manrope, sans-serif" fontSize="11.5" fontWeight="700" fill="#141414">{{ c.label }}</text>
+                          <text x="{{ c.metaX }}" y="{{ c.metaY }}" textAnchor="middle" fontFamily="IBM Plex Mono, monospace" fontSize="10" fill="#a0a099">{{ c.meta }}</text>
+                        </g>
+                      </sc-for>
+                      <sc-for list="{{ edges }}" as="e" hint-placeholder-count="20">
+                        <path d="{{ e.d }}" fill="none" stroke="{{ e.stroke }}" strokeWidth="{{ e.w }}" strokeDasharray="{{ e.dash }}" strokeLinecap="round" opacity="{{ e.op }}" onClick="{{ e.onOpen }}" style="cursor:pointer;"></path>
+                      </sc-for>
+                      <sc-for list="{{ nodes }}" as="n" hint-placeholder-count="18">
+                        <g onClick="{{ n.onSel }}" style="cursor:pointer;" opacity="{{ n.op }}">
+                          <circle cx="{{ n.x }}" cy="{{ n.y }}" r="{{ n.r }}" fill="{{ n.fill }}" stroke="#141414" strokeWidth="1.2"></circle>
+                          <text x="{{ n.x }}" y="{{ n.y }}" dy="4" textAnchor="middle" fontFamily="IBM Plex Mono, monospace" fontSize="9.5" fontWeight="700" fill="{{ n.textFill }}">{{ n.ini }}</text>
+                          <text x="{{ n.x }}" y="{{ n.y }}" dy="26" textAnchor="middle" fontFamily="Manrope, sans-serif" fontSize="10.5" fontWeight="700" fill="#141414">{{ n.title }}</text>
+                          <text x="{{ n.x }}" y="{{ n.y }}" dy="38" textAnchor="middle" fontFamily="IBM Plex Mono, monospace" fontSize="9" fill="#a0a099">{{ n.meta }}</text>
+                        </g>
+                      </sc-for>
+                    </svg>
+
+                    <div style="display:flex; gap:16px; flex-wrap:wrap; padding-top:12px; border-top:1px solid #f0efea;">
+                      <span style="display:flex; align-items:center; gap:8px; font-size:11.5px; color:#5b5b5b;"><span style="width:20px; height:3px; border-radius:2px; background:#141414;"></span>shipped</span>
+                      <span style="display:flex; align-items:center; gap:8px; font-size:11.5px; color:#5b5b5b;"><span style="width:20px; height:3px; border-radius:2px; background:#8c8c88;"></span>running now</span>
+                      <span style="display:flex; align-items:center; gap:8px; font-size:11.5px; color:#5b5b5b;"><span style="{{ legendAccentStyle }}"></span>waiting on a decision</span>
+                      <span style="display:flex; align-items:center; gap:8px; font-size:11.5px; color:#5b5b5b;"><span style="width:20px; height:0; border-top:3px dashed #b9b9b4;"></span>proposed, nobody assigned</span>
+                    </div>
+                  </div>
+
+                  <div style="display:flex; flex-direction:column; gap:14px;">
+                    <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:20px 20px 18px;">
+                      <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099;">Selected initiative</div>
+                      <div style="font-size:17.5px; font-weight:800; color:#141414; letter-spacing:-0.02em; line-height:1.3; margin-top:9px;">{{ st.name }}</div>
+                      <div style="display:flex; align-items:center; gap:9px; margin-top:11px; flex-wrap:wrap;">
+                        <span style="{{ st.statusStyle }}">{{ st.status }}</span>
+                        <span style="font-size:12.5px; color:#8c8c88;">{{ st.stage }}</span>
+                      </div>
+                      <div style="font-size:12.5px; color:#5b5b5b; margin-top:13px; line-height:1.55;">Started because: {{ st.why }}</div>
+
+                      <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099; margin-top:20px;">Departments joined up</div>
+                      <div style="display:flex; flex-wrap:wrap; gap:7px; margin-top:10px;">
+                        <sc-for list="{{ st.depts }}" as="d" hint-placeholder-count="3">
+                          <span style="background:#faf9f7; border:1px solid #eeede8; border-radius:999px; padding:6px 13px; font-size:11.5px; font-weight:700; color:#141414;">{{ d.name }}</span>
+                        </sc-for>
+                      </div>
+
+                      <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099; margin-top:20px;">People on it</div>
+                      <div style="display:flex; flex-direction:column; gap:6px; margin-top:10px;">
+                        <sc-for list="{{ st.members }}" as="m" hint-placeholder-count="4">
+                          <div style="display:flex; align-items:center; gap:10px; padding:7px 0; border-top:1px solid #f0efea;">
+                            <span style="width:26px; height:26px; border-radius:50%; background:#1a1a17; color:#fff; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:10px; flex:none;">{{ m.ini }}</span>
+                            <span style="font-size:12.5px; font-weight:700; color:#141414;">{{ m.name }}</span>
+                            <span style="font-size:11.5px; color:#a0a099; margin-left:auto;">{{ m.role }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+
+                    <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:20px 18px 12px;">
+                      <div style="font-size:15px; font-weight:800; color:#141414; letter-spacing:-0.015em; padding:0 2px;">All cross-team work</div>
+                      <div style="display:flex; flex-direction:column; margin-top:8px;">
+                        <sc-for list="{{ initiatives }}" as="t" hint-placeholder-count="7">
+                          <div onClick="{{ t.onOpen }}" style="{{ t.rowStyle }}">
+                            <div style="{{ t.markStyle }}"></div>
+                            <div style="flex:1; min-width:0;">
+                              <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                                <span style="font-size:12.5px; font-weight:700; color:#141414; line-height:1.35;">{{ t.name }}</span>
+                                <span style="{{ t.statusStyle }}">{{ t.status }}</span>
+                              </div>
+                              <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.05em; color:#a0a099; margin-top:6px;">{{ t.deptLabel }} · {{ t.peopleLabel }}</div>
+                            </div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+
+              <!-- ░░ PROGRESS ░░ -->
+              <sc-if value="{{ isProgress }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex; flex-direction:column; gap:14px;">
+
+                  <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:20px 22px 18px;">
+                    <div style="display:flex; align-items:baseline; justify-content:space-between; gap:14px; flex-wrap:wrap;">
+                      <div>
+                        <div style="font-size:15px; font-weight:800; color:#141414; letter-spacing:-0.015em;">How ideas actually move</div>
+                        <div style="font-size:12.5px; color:#8c8c88; margin-top:4px;">Twelve months, every stage. Read the width, not the number.</div>
+                      </div>
+                      <span style="font-size:12.5px; color:#8c8c88;">412 in · 23 out</span>
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; gap:12px; margin-top:18px;">
+                      <sc-for list="{{ funnel }}" as="f" hint-placeholder-count="5">
+                        <div>
+                          <div style="display:flex; align-items:baseline; gap:11px; flex-wrap:wrap;">
+                            <span style="font-family:'IBM Plex Mono',monospace; font-size:15px; font-weight:800; color:#141414; min-width:42px;">{{ f.n }}</span>
+                            <span style="font-size:13.5px; font-weight:700; color:#141414;">{{ f.label }}</span>
+                            <span style="font-size:11.5px; color:#a0a099;">{{ f.sub }}</span>
+                          </div>
+                          <div style="height:12px; border-radius:999px; background:#f0efea; margin-top:7px; overflow:hidden;">
+                            <div style="{{ f.w }}"><div style="{{ f.fill }}"></div></div>
+                          </div>
+                          <div style="{{ f.noteStyle }}">{{ f.note }}</div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+
+                  <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:14px; align-items:start;">
+
+                    <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:20px 20px 16px;">
+                      <div style="font-size:15px; font-weight:800; color:#141414; letter-spacing:-0.015em;">Did the shipped ones deliver</div>
+                      <div style="font-size:12.5px; color:#8c8c88; margin-top:4px;">Promised at approval, measured 90 days after launch.</div>
+                      <div style="display:flex; flex-direction:column; margin-top:12px;">
+                        <sc-for list="{{ outcomes }}" as="o" hint-placeholder-count="4">
+                          <div style="border-top:1px solid #f0efea; padding:12px 0 11px;">
+                            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+                              <span style="font-size:13.5px; font-weight:700; color:#141414; line-height:1.35;">{{ o.title }}</span>
+                              <span style="{{ o.style }}">{{ o.verdict }}</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:14px; margin-top:8px; flex-wrap:wrap;">
+                              <span style="font-size:11.5px; color:#a0a099;">promised <span style="font-family:'IBM Plex Mono',monospace; color:#5b5b5b;">{{ o.promised }}</span></span>
+                              <span style="font-size:11.5px; color:#a0a099;">measured <span style="font-family:'IBM Plex Mono',monospace; color:#141414; font-weight:600;">{{ o.actual }}</span></span>
+                            </div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+
+                    <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:20px 20px 16px;">
+                      <div style="font-size:15px; font-weight:800; color:#141414; letter-spacing:-0.015em;">Stuck the longest</div>
+                      <div style="font-size:12.5px; color:#8c8c88; margin-top:4px;">Nothing here is blocked by money or by effort.</div>
+                      <div style="display:flex; flex-direction:column; margin-top:12px;">
+                        <sc-for list="{{ stalled }}" as="x" hint-placeholder-count="4">
+                          <div style="border-top:1px solid #f0efea; padding:12px 0 11px;">
+                            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+                              <span style="font-size:13.5px; font-weight:700; color:#141414; line-height:1.35;">{{ x.title }}</span>
+                              <span style="{{ x.style }}">{{ x.days }}</span>
+                            </div>
+                            <div style="font-size:11.5px; color:#a0a099; margin-top:7px;">{{ x.at }}</div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+
+                    <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:20px 20px 16px;">
+                      <div style="font-size:15px; font-weight:800; color:#141414; letter-spacing:-0.015em;">Did anyone answer them</div>
+                      <div style="font-size:12.5px; color:#8c8c88; margin-top:4px;">People keep contributing only while their input visibly lands.</div>
+
+                      <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:14px;">
+                        <div style="background:#faf9f7; border:1px solid #eeede8; border-radius:11px; padding:13px 15px;">
+                          <div style="font-size:22px; font-weight:800; color:#141414; letter-spacing:-0.025em;">91%</div>
+                          <div style="font-size:11.5px; color:#8c8c88; margin-top:3px;">signals given a human reply</div>
+                        </div>
+                        <div style="background:#faf9f7; border:1px solid #eeede8; border-radius:11px; padding:13px 15px;">
+                          <div style="font-size:22px; font-weight:800; color:#141414; letter-spacing:-0.025em;">6d</div>
+                          <div style="font-size:11.5px; color:#8c8c88; margin-top:3px;">median time to that reply</div>
+                        </div>
+                        <div style="background:#faf9f7; border:1px solid #eeede8; border-radius:11px; padding:13px 15px;">
+                          <div style="font-size:22px; font-weight:800; color:#141414; letter-spacing:-0.025em;">214</div>
+                          <div style="font-size:11.5px; color:#8c8c88; margin-top:3px;">people credited on shipped work</div>
+                        </div>
+                        <div style="background:#faf9f7; border:1px solid #eeede8; border-radius:11px; padding:13px 15px;">
+                          <div style="{{ unansweredStyle }}">23</div>
+                          <div style="font-size:11.5px; color:#8c8c88; margin-top:3px;">unanswered over 14 days</div>
+                        </div>
+                      </div>
+
+                      <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099; margin-top:20px;">Most relied-on contributors</div>
+                      <div style="display:flex; flex-direction:column; margin-top:8px;">
+                        <sc-for list="{{ contributors }}" as="c" hint-placeholder-count="5">
+                          <div style="display:flex; align-items:center; gap:10px; border-top:1px solid #f0efea; padding:9px 0;">
+                            <span style="width:26px; height:26px; border-radius:50%; background:#1a1a17; color:#fff; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:10px; flex:none;">{{ c.ini }}</span>
+                            <div style="flex:1; min-width:0;">
+                              <div style="font-size:12.5px; font-weight:700; color:#141414;">{{ c.name }}</div>
+                              <div style="font-size:11px; color:#a0a099; margin-top:2px;">{{ c.dept }} · {{ c.raised }}</div>
+                            </div>
+                            <span style="font-size:11.5px; color:#5b5b5b; white-space:nowrap;">{{ c.credit }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                      <div style="font-size:11.5px; color:#a0a099; margin-top:11px; line-height:1.5;">Anonymous contributors keep a stable handle, so credit still accrues without revealing who they are.</div>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div style="width:100%; height:11px; background:#2e2e2b; border-radius:0 0 10px 10px;"></div>
+    <div style="width:20%; height:6px; background:#1c1c1a; border-radius:0 0 9px 9px;"></div>
+  </div>
+
+  <div style="font-size:12.5px; color:#9b9a95; max-width:720px; text-align:center; line-height:1.6;">Interactive — switch views in the rail, scope to a department, click any problem, idea, department or connection line.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#ff5a1f&quot;,&quot;options&quot;:[&quot;#ff5a1f&quot;,&quot;#1f6fff&quot;,&quot;#0f8f6c&quot;,&quot;#8c5cff&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Look&quot;},&quot;defaultView&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;overview&quot;,&quot;problems&quot;,&quot;ideas&quot;,&quot;network&quot;,&quot;progress&quot;],&quot;default&quot;:&quot;overview&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Behaviour&quot;},&quot;showQuotes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Behaviour&quot;}}">
+const INK = '#141414', MUTE = '#8c8c88';
+
+const DEPTS = [
+  { id: 'PRD', name: 'Production', people: 640 },
+  { id: 'ENG', name: 'Engineering', people: 210 },
+  { id: 'QUA', name: 'Quality', people: 95 },
+  { id: 'FIN', name: 'Finance', people: 70 },
+  { id: 'OPS', name: 'Ops & Admin', people: 150 },
+  { id: 'HIT', name: 'HR / IT', people: 85 },
+  { id: 'FLD', name: 'Field Service', people: 240 },
+  { id: 'SAL', name: 'Sales', people: 180 }
+];
+
+const PROBLEMS = [
+  { id: 'p1', title: 'Three approval steps for spend under €5k', sub: 'A €400 sensor takes the same route as a €40k machine.',
+    detail: 'Raised independently in Ops, Engineering and Field Service. Every purchase below €5k still passes cost-centre lead, department head and controlling — a median of nine days for items that are already budgeted.',
+    people: 86, depts: ['OPS', 'ENG', 'FLD'], trend: 'Worsening', age: '14 months ago', months: 14, owner: 'ideas', timeLost: '210 h',
+    spark: [0.4, 0.45, 0.5, 0.6, 0.7, 0.85, 1], ideas: ['i1'],
+    signals: [
+      { quote: 'I waited eleven days for a €380 replacement sensor. The line stood still for two of them.', by: 'Anonymous · Production, Line 3' },
+      { quote: 'I have a budget. I am not allowed to spend my own budget without three signatures.', by: 'C. Ilg · Ops & Admin' },
+      { quote: 'We order through a colleague in another department because his approval path is shorter.', by: 'Anonymous · Field Service' }
+    ] },
+  { id: 'p2', title: 'No slack: 97% of capacity is committed', sub: 'Nobody has hours left to try anything new.',
+    detail: 'The strongest signal in the company and the one with no owner. Improvement work is scheduled on top of a full load, so it is the first thing dropped when a delivery date moves.',
+    people: 214, depts: ['PRD', 'ENG', 'QUA', 'SAL', 'FLD', 'OPS', 'FIN'], trend: 'Flat', age: '11 months ago', months: 11, owner: 'none', timeLost: '—',
+    spark: [0.8, 0.82, 0.8, 0.85, 0.83, 0.86, 0.85], ideas: ['i4'],
+    signals: [
+      { quote: 'I was asked to join an improvement team. Nothing was taken off my plate.', by: 'Anonymous · Engineering' },
+      { quote: 'We plan at 97% and then wonder why nothing changes.', by: 'H. Sander · Quality' }
+    ] },
+  { id: 'p3', title: 'People who flag a risk get handed the fix', sub: 'So the second time, they stay quiet.',
+    detail: 'Named twenty-nine times, 71% of it anonymously — which is itself the finding. Raising a concern is treated as volunteering, so early warnings arrive late or not at all.',
+    people: 67, depts: ['PRD', 'QUA', 'HIT'], trend: 'Worsening', age: '9 months ago', months: 9, owner: 'none', timeLost: '—',
+    spark: [0.35, 0.4, 0.5, 0.55, 0.7, 0.8, 0.95], ideas: ['i5'],
+    signals: [
+      { quote: 'I reported a tolerance drift and became the project lead for fixing it. On top of my job.', by: 'Anonymous · Quality' },
+      { quote: 'Nobody is punished for problems here. You are just made responsible for them.', by: 'Anonymous · Production' }
+    ] },
+  { id: 'p4', title: 'Quality data lives in three systems', sub: 'Nobody trusts a number they did not pull themselves.',
+    detail: 'Measurement data sits in the MES, a shared drive and two Access databases. Reconciling a single week costs a full day and the versions still disagree.',
+    people: 58, depts: ['QUA', 'PRD', 'HIT'], trend: 'Flat', age: '2 years ago', months: 24, owner: 'ideas', timeLost: '96 h',
+    spark: [0.6, 0.62, 0.6, 0.63, 0.6, 0.62, 0.61], ideas: ['i6'],
+    signals: [
+      { quote: 'Three systems, three truths. We spend the morning agreeing which one is real.', by: 'H. Sander · Quality' }
+    ] },
+  { id: 'p5', title: 'Sales hears about product changes from customers', sub: 'Engineering ships, nobody tells the field.',
+    detail: 'Three customer escalations last quarter traced to changes Sales did not know had shipped. A weekly change note now runs as a trial between the two departments.',
+    people: 41, depts: ['SAL', 'ENG'], trend: 'Improving', age: '7 months ago', months: 7, owner: 'trial', timeLost: '40 h',
+    spark: [0.9, 0.85, 0.8, 0.6, 0.45, 0.35, 0.25], ideas: ['i7'],
+    signals: [
+      { quote: 'A customer told me about our new firmware. I had to pretend I knew.', by: 'N. Kaya · Sales' }
+    ] },
+  { id: 'p6', title: 'Test rig booked out six weeks ahead', sub: 'Four ideas are waiting on one machine.',
+    detail: 'The only endurance rig is fully booked by series validation. Anything exploratory queues behind it, which quietly kills small experiments before they start.',
+    people: 33, depts: ['ENG', 'QUA'], trend: 'Flat', age: '5 months ago', months: 5, owner: 'ideas', timeLost: '—',
+    spark: [0.5, 0.55, 0.5, 0.6, 0.55, 0.6, 0.58], ideas: ['i2'],
+    signals: [
+      { quote: 'Six weeks to test a two-day change. We stopped asking.', by: 'M. Roth · Engineering' }
+    ] },
+  { id: 'p7', title: 'New hires wait five weeks for system access', sub: 'Paid, onboarded, and unable to work.',
+    detail: 'Access requests are raised per system, sequentially, after the start date. A bundled request template cut this to eleven days at the Ulm site.',
+    people: 24, depts: ['HIT', 'OPS'], trend: 'Improving', age: '3 months ago', months: 3, owner: 'trial', timeLost: '64 h',
+    spark: [0.9, 0.88, 0.7, 0.55, 0.4, 0.3, 0.28], ideas: ['i8'],
+    signals: [
+      { quote: 'My first two weeks were reading PDFs because I had no login.', by: 'L. Brandt · HR / IT' }
+    ] }
+];
+
+const IDEAS = [
+  { id: 'i1', title: 'Team-level spend authority up to €5k', score: 92, problem: 'p1', status: 'Awaiting decision', wait: 41,
+    expected: '−9 days per purchase', upside: '€740k', effort: '2 people · 6 wks', proposedBy: 'C. Ilg, Ops',
+    blocker: 'Needs a CFO signature to leave the two pilot sites.',
+    rationale: 'Give cost-centre teams a standing €5k authority with monthly review instead of pre-approval. Already run at two sites for a quarter: no budget overrun, purchase lead time down from twelve days to two.',
+    team: ['C. Ilg', 'R. Nowak', 'Anonymous'], teamNote: 'Needs a CFO signature to move beyond the two pilot sites — that signature is what the 41 days are.' },
+  { id: 'i2', title: 'Hold 20% of test-rig time for experiments', score: 78, problem: 'p6', status: 'Awaiting decision', wait: 12,
+    expected: 'unblocks 4 queued ideas', upside: '€90k', effort: '1 person · 2 wks', proposedBy: 'M. Roth, Engineering',
+    blocker: 'Engineering and Quality must agree the reserved slot.',
+    rationale: 'Reserve one day a week on the endurance rig for unscheduled trials, bookable the same week. Series validation loses 20% of a machine; four stalled ideas get a way to be tested cheaply.',
+    team: ['M. Roth', 'H. Sander'], teamNote: 'Engineering and Quality both need to agree the reserved slot. No budget required.' },
+  { id: 'i3', title: 'Retrofit kit line for installed machines', score: 86, problem: 'p5', status: 'In trial', wait: 0,
+    expected: '€410k booked so far', upside: '€410k', effort: '5 people · running', proposedBy: '11 people, Sales',
+    rationale: 'Customers repeatedly asked to buy upgrade kits for machines already in the field. Sales, Engineering and Production built two kits for the most-requested models; phase two extends to export markets.',
+    team: ['A. Weber', 'M. Roth', 'J. Klein'], teamNote: 'Day 9 of phase two. First phase shipped in May and is already booked.' },
+  { id: 'i4', title: 'Protect one day a fortnight for improvement work', score: 74, problem: 'p2', status: 'Unfunded', wait: 0,
+    expected: 'capacity for trials', upside: 'not modelled', effort: '≈2% of payroll hours', proposedBy: '31 people, company-wide',
+    rationale: 'Plan improvement time into the schedule instead of on top of it. The most-supported idea in the company and the one nobody can approve below board level, because it changes what the plan assumes.',
+    team: ['—'], teamNote: 'No owner. This is a capacity decision, not a project.' },
+  { id: 'i5', title: 'Blameless review, separate from ownership', score: 71, problem: 'p3', status: 'Unfunded', wait: 0,
+    expected: 'earlier warnings', upside: 'not modelled', effort: '1 person · 4 wks', proposedBy: 'Anonymous, Quality',
+    rationale: 'Split reporting a problem from being assigned it: whoever raises an issue is explicitly not its owner. Cheap to try, and it addresses the signal that 71% of people would only give anonymously.',
+    team: ['—'], teamNote: 'Proposed by Quality and HR / IT jointly. Nobody assigned.' },
+  { id: 'i6', title: 'One measurement record, one place', score: 69, problem: 'p4', status: 'Awaiting decision', wait: 8,
+    expected: '−96 h / month reconciling', upside: '€120k', effort: '3 people · 10 wks', proposedBy: 'H. Sander, Quality',
+    blocker: 'IT capacity is the constraint, not the approach.',
+    rationale: 'Retire the two Access databases and write measurements once, into the MES. Unglamorous, well understood, and blocks four other ideas that need trustworthy quality data.',
+    team: ['H. Sander', 'L. Brandt', 'T. Vogel'], teamNote: 'IT capacity is the constraint, not the approach.' },
+  { id: 'i7', title: 'Weekly change note from Engineering to the field', score: 64, problem: 'p5', status: 'In trial', wait: 0,
+    expected: 'escalations 3 → 0', upside: '€40k', effort: '2 h / week', proposedBy: 'N. Kaya, Sales',
+    rationale: 'One page every Friday: what shipped, what changed, what customers will notice. Running for seven weeks; no customer-side surprises since week two.',
+    team: ['N. Kaya', 'M. Roth'], teamNote: 'Costs nothing but attention. Decide whether it becomes standard.' },
+  { id: 'i8', title: 'Bundle new-hire access into one request', score: 58, problem: 'p7', status: 'Shipped', wait: 0,
+    expected: '5 weeks → 11 days', upside: '€64k', effort: 'shipped in 3 wks', proposedBy: 'L. Brandt, HR / IT',
+    rationale: 'One template raised at contract signature instead of eight sequential tickets after the start date. Live at Ulm, rolling out to the other two sites this quarter.',
+    team: ['L. Brandt', 'B. Ehlers'], teamNote: 'Shipped. Being copied by the other sites without further approval.' }
+];
+
+const INITIATIVES = [
+  { id: 't1', name: 'Retrofit kit line', depts: ['SAL', 'ENG', 'PRD'], people: 5, status: 'In trial', stage: 'day 9 of phase two',
+    why: 'customers kept asking to buy upgrade kits we did not sell',
+    members: [{ name: 'A. Weber', role: 'Sales' }, { name: 'M. Roth', role: 'Engineering' }, { name: 'J. Klein', role: 'Production' }, { name: 'S. Dahl', role: 'Production' }, { name: 'P. Mayer', role: 'Sales' }] },
+  { id: 't2', name: 'Offline job sheets for field service', depts: ['FLD', 'HIT'], people: 2, status: 'Building', stage: 'day 18',
+    why: 'technicians enter the same job data twice, once on paper and once at the hotel',
+    members: [{ name: 'D. Ferraro', role: 'Field Service' }, { name: 'L. Brandt', role: 'HR / IT' }] },
+  { id: 't3', name: 'Team spend authority', depts: ['OPS', 'FIN', 'PRD'], people: 3, status: 'Awaiting decision', stage: 'waiting 41 days',
+    why: 'three approvals were needed for any spend under €5k',
+    members: [{ name: 'C. Ilg', role: 'Ops & Admin' }, { name: 'R. Nowak', role: 'Finance' }, { name: 'Anonymous', role: 'Production' }] },
+  { id: 't4', name: '4-series fixture redesign', depts: ['PRD', 'QUA', 'ENG'], people: 4, status: 'Shipped', stage: 'shipped day 54',
+    why: 'rework on the 4-series housing was accepted as normal',
+    members: [{ name: 'T. Vogel', role: 'Production' }, { name: 'H. Sander', role: 'Quality' }, { name: 'M. Roth', role: 'Engineering' }, { name: 'Anonymous', role: 'Production' }] },
+  { id: 't5', name: 'Self-serve spare parts quoting', depts: ['SAL', 'HIT'], people: 3, status: 'Shipped', stage: 'shipped day 41',
+    why: 'every spare part was quoted by hand, often twice',
+    members: [{ name: 'N. Kaya', role: 'Sales' }, { name: 'B. Ehlers', role: 'HR / IT' }, { name: 'Anonymous', role: 'Sales' }] },
+  { id: 't6', name: 'Shared test-rig booking', depts: ['ENG', 'QUA'], people: 0, status: 'Proposed', stage: 'nobody assigned',
+    why: 'the only endurance rig is booked six weeks out',
+    members: [{ name: 'M. Roth', role: 'proposed lead' }] },
+  { id: 't7', name: 'Blameless incident reviews', depts: ['QUA', 'HIT'], people: 0, status: 'Proposed', stage: 'nobody assigned',
+    why: 'people who flag a risk get handed the fix, so they stop flagging',
+    members: [{ name: 'Anonymous', role: 'proposed by Quality' }] },
+  { id: 't8', name: 'One measurement record', depts: ['QUA', 'PRD', 'HIT'], people: 3, status: 'Awaiting decision', stage: 'waiting 8 days',
+    why: 'quality data lives in three systems that disagree',
+    members: [{ name: 'H. Sander', role: 'Quality' }, { name: 'L. Brandt', role: 'HR / IT' }, { name: 'T. Vogel', role: 'Production' }] }
+];
+
+const MY_IDEAS = [
+  { title: 'Bundle new-hire access into one request', submitted: 'You raised this 14 March · Anonymous #4471',
+    status: 'Shipped', clock: 'Answered in 6 days. Live at Ulm since 2 July.', overdue: false,
+    steps: [['Sent', '14 Mar', 'done'], ['Read by a human', '15 Mar', 'done'], ['Decided', '20 Mar', 'done'], ['Shipped', '2 Jul', 'done']],
+    reply: 'We are doing this. One template at contract signature, HR raises it, IT pre-provisions. You are credited on the rollout note.',
+    replyBy: 'L. Brandt · HR / IT · 20 March',
+    outcome: '5 weeks → 11 days', outcomeNote: 'measured across 9 new hires' },
+  { title: 'Stop double-entering job data on paper', submitted: 'You raised this 2 June · Anonymous #4471',
+    status: 'Building', clock: 'Answered in 4 days. In build since 18 June — day 18 of 30.', overdue: false,
+    steps: [['Sent', '2 Jun', 'done'], ['Read by a human', '3 Jun', 'done'], ['Decided', '6 Jun', 'done'], ['Shipped', 'due 12 Oct', 'now']],
+    reply: 'Agreed and funded. Two people on it: offline job sheets that sync when you get signal. Want to test the first build with us?',
+    replyBy: 'D. Ferraro · Field Service · 6 June',
+    outcome: 'expected −3 h / week / technician', outcomeNote: 'will be measured 90 days after launch' },
+  { title: 'Let teams spend their own budget under €5k', submitted: 'You co-signed this 28 July · Anonymous #4471',
+    status: 'Awaiting decision', clock: '41 days waiting — 27 days past the promise. Escalated to the board on 11 August.', overdue: true,
+    steps: [['Sent', '28 Jul', 'done'], ['Read by a human', '29 Jul', 'done'], ['Decided', 'overdue', 'late'], ['Shipped', '—', 'todo']],
+    reply: 'Piloted at two sites and it works. It now needs a CFO signature, which is what we are waiting for. I will report back after Thursday.',
+    replyBy: 'C. Ilg · Ops & Admin · 20 August',
+    outcome: 'pending', outcomeNote: '€740k / yr expected if approved' }
+];
+
+const OUTCOMES = [
+  { title: 'Bundle new-hire access into one request', promised: '5 wks → 11 d', actual: '5 wks → 11 d', verdict: 'As promised' },
+  { title: 'Self-serve spare parts quoting', promised: '€180k / yr', actual: '€231k / yr', verdict: 'Beat it' },
+  { title: '4-series fixture redesign', promised: '−40% rework', actual: '−26% rework', verdict: 'Short' },
+  { title: 'Retrofit kit line, phase one', promised: '€300k booked', actual: '€410k booked', verdict: 'Beat it' }
+];
+
+const VIEWS = {
+  mine: { title: 'What happened to your ideas', sub: 'Every idea you sent, who is answering it, when they owe you that answer, and what it changed once it shipped.' },
+  overview: { title: 'Where the organisation is stuck', sub: 'One screen: what is blocked on you, how the system is performing, and what people are saying this quarter.' },
+  problems: { title: 'Problems named by employees', sub: 'Root problems clustered from 412 signals. People choose whether to sign their name.' },
+  ideas: { title: 'Ideas from the organisation', sub: 'Score weighs expected outcome against effort and the size of the problem it solves.' },
+  network: { title: 'Collaboration across departments', sub: 'Cross-department work in motion — who is joined up, for what, and what is waiting.' },
+  progress: { title: 'Does the system actually move', sub: 'Twelve months of flow, where ideas stall, and whether people got an answer.' }
+};
+
+const CX = 310, CY = 262, RAD = 196;
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: props.defaultView || 'overview', dept: 'All', role: 'CEO', pid: 'p1', iid: 'i1', tid: 't3', sort: 'people' };
+  }
+
+  accent() { return this.props.accent || '#ff5a1f'; }
+  accentInk() { return '#b23c07'; }
+  accentSoft() { return '#ffe7dc'; }
+
+  set(k, v) { this.setState({ [k]: v }); }
+
+  pill(bg, fg, weight) {
+    return { background: bg, color: fg, borderRadius: '7px', padding: '4px 9px', fontSize: '11px', fontWeight: weight || 700, whiteSpace: 'nowrap', letterSpacing: '0.01em' };
+  }
+
+  statusStyle(s) {
+    if (s === 'Awaiting decision') return this.pill(this.accentSoft(), this.accentInk());
+    if (s === 'Shipped') return this.pill(INK, '#fff');
+    if (s === 'In trial' || s === 'Building') return this.pill('#ecebe6', '#3d3d3a');
+    return this.pill('transparent', MUTE, 600);
+  }
+
+  trendStyle(t) {
+    if (t === 'Worsening') return this.pill(this.accentSoft(), this.accentInk());
+    if (t === 'Improving') return this.pill('#dcf3e3', '#116634');
+    return this.pill('#f0efea', '#5b5b5b', 600);
+  }
+
+  ownerLabel(o) { return o === 'none' ? 'No owner' : o === 'trial' ? 'Fix in trial' : 'Ideas submitted'; }
+  ownerStyle(o) { return o === 'none' ? this.pill(INK, '#fff') : this.pill('#f0efea', '#5b5b5b', 600); }
+
+  chip(active) {
+    return { padding: '7px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+      background: active ? INK : '#fff', color: active ? '#fff' : '#5b5b5b', border: '1px solid ' + (active ? INK : '#e6e5e0'), whiteSpace: 'nowrap' };
+  }
+
+  navStyle(active) {
+    return { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '9px 10px', borderRadius: '9px',
+      fontSize: '13.5px', fontWeight: active ? 700 : 600, cursor: 'pointer',
+      background: active ? '#2e2e28' : 'transparent', color: active ? '#fbfbf9' : '#a3a29a' };
+  }
+
+  scopeStyle(active) {
+    return { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '7px 10px', borderRadius: '8px',
+      fontSize: '12.5px', fontWeight: active ? 700 : 500, cursor: 'pointer',
+      background: active ? '#2e2e28' : 'transparent', color: active ? '#fbfbf9' : '#93928a' };
+  }
+
+  countStyle(active) {
+    return { fontFamily: 'IBM Plex Mono, monospace', fontSize: '10px', color: active ? '#e4e3db' : '#a3a29a' };
+  }
+
+  row(active) {
+    return { display: 'flex', gap: '13px', alignItems: 'stretch', padding: '13px 0 12px', borderTop: '1px solid #f0efea', cursor: 'pointer',
+      background: active ? '#faf9f7' : 'transparent' };
+  }
+
+  mark(active) {
+    return { width: '3px', borderRadius: '999px', flex: 'none', background: active ? INK : 'transparent', marginLeft: active ? '0' : '0' };
+  }
+
+  bars(spark, color) {
+    return spark.map((v, i) => ({ style: { flex: 1, minWidth: '4px', height: (4 + v * 20) + 'px', borderRadius: '2px',
+      background: color || (i < 3 ? '#dedcd5' : INK) } }));
+  }
+
+  ini(name) { return name === 'Anonymous' || name === '—' ? '?' : name.split(' ').map(w => w[0]).join('').slice(0, 2); }
+
+  deptName(id) { const d = DEPTS.find(x => x.id === id); return d ? d.name : id; }
+  deptLabel(ids) { return ids.length > 3 ? ids.slice(0, 3).map(i => this.deptName(i)).join(' · ') + ' +' + (ids.length - 3) : ids.map(i => this.deptName(i)).join(' · '); }
+
+  matches(depts) { return this.state.dept === 'All' || depts.indexOf(this.state.dept) >= 0; }
+
+  edgeLook(status) {
+    if (status === 'Shipped') return { stroke: INK, dash: '0' };
+    if (status === 'Awaiting decision') return { stroke: this.accent(), dash: '0' };
+    if (status === 'Proposed') return { stroke: '#b9b9b4', dash: '7 7' };
+    return { stroke: '#8c8c88', dash: '0' };
+  }
+
+  renderVals() {
+    const s = this.state;
+    const view = VIEWS[s.tab] || VIEWS.overview;
+
+    const roles = ['Board', 'CEO', 'Manager', 'Employee'].map(r => ({
+      label: r, onSel: () => this.setState({ role: r, tab: r === 'Employee' ? 'mine' : (s.tab === 'mine' ? 'overview' : s.tab) }),
+      style: { textAlign: 'center', padding: '7px 6px', borderRadius: '8px', fontSize: '12px', fontWeight: s.role === r ? 700 : 600, cursor: 'pointer',
+        background: s.role === r ? '#f4f3f0' : 'transparent', color: s.role === r ? '#1a1a17' : '#a3a29a' }
+    }));
+
+    const navDefs = s.role === 'Employee'
+      ? [['mine', 'My ideas', '3'], ['problems', 'Problems', '38'], ['ideas', 'Ideas', '147'], ['progress', 'Progress', '']]
+      : [['overview', 'Overview', ''], ['problems', 'Problems', '38'], ['ideas', 'Ideas', '147'],
+        ['network', 'Collaboration', '8'], ['progress', 'Progress', '']];
+    const navItems = navDefs.map(([id, label, count]) => ({
+      label, count, onSel: () => this.set('tab', id), style: this.navStyle(s.tab === id), countStyle: this.countStyle(s.tab === id)
+    }));
+
+    const scopeItems = [{ id: 'All', name: 'All departments', people: '1,840' }].concat(DEPTS).map(d => {
+      const id = d.id || 'All', active = s.dept === id;
+      return { label: d.name, people: typeof d.people === 'number' ? String(d.people) : d.people,
+        onSel: () => this.set('dept', id), style: this.scopeStyle(active), countStyle: this.countStyle(active) };
+    });
+
+    const sorts = [['people', 'Most people'], ['trend', 'Getting worse'], ['age', 'Longest open']].map(([id, label]) => ({
+      label, onSel: () => this.set('sort', id), style: this.chip(s.sort === id)
+    }));
+
+    const openIdea = id => () => this.setState({ tab: 'ideas', iid: id });
+    const openProblem = id => () => this.setState({ tab: 'problems', pid: id });
+
+    const decorateIdea = i => ({
+      id: i.id, title: i.title, score: i.score, status: i.status, effort: i.effort, expected: i.expected,
+      expectedShort: i.expected, proposedBy: i.proposedBy,
+      problemTitle: (PROBLEMS.find(p => p.id === i.problem) || {}).title || '—',
+      statusStyle: this.statusStyle(i.status),
+      scoreStyle: { fontFamily: 'IBM Plex Mono, monospace', fontSize: '15px', fontWeight: 800, color: i.score >= 80 ? '#fff' : '#5b5b5b',
+        background: i.score >= 80 ? INK : '#f0efea', borderRadius: '9px', padding: '7px 9px', minWidth: '38px', textAlign: 'center', flex: 'none' },
+      rowStyle: this.row(s.iid === i.id), markStyle: this.mark(s.iid === i.id), onOpen: openIdea(i.id)
+    });
+
+    const ideaPool = IDEAS.filter(i => this.matches((PROBLEMS.find(p => p.id === i.problem) || { depts: [] }).depts));
+    const ideas = ideaPool.slice().sort((a, b) => b.score - a.score).map(decorateIdea);
+
+    const problemPool = PROBLEMS.filter(p => this.matches(p.depts));
+    const sorted = problemPool.slice().sort((a, b) => {
+      if (s.sort === 'people') return b.people - a.people;
+      if (s.sort === 'trend') return (b.spark[6] - b.spark[0]) - (a.spark[6] - a.spark[0]);
+      return (b.months || 0) - (a.months || 0);
+    });
+
+    const decorateProblem = p => ({
+      id: p.id, title: p.title, sub: p.sub, people: p.people, peopleLabel: p.people + ' ppl', trend: p.trend, age: p.age,
+      trendStyle: this.trendStyle(p.trend), ownerLabel: this.ownerLabel(p.owner), ownerStyle: this.ownerStyle(p.owner),
+      deptLabel: this.deptLabel(p.depts), source: p.months >= 9 ? 'found in interviews' : 'reported in the app',
+      bars: this.bars(p.spark, p.trend === 'Improving' ? '#c9c8c1' : undefined),
+      rowStyle: this.row(s.pid === p.id), markStyle: this.mark(s.pid === p.id), onOpen: openProblem(p.id)
+    });
+
+    const problems = sorted.map(decorateProblem);
+    const sp0 = sorted.some(p => p.id === s.pid) ? PROBLEMS.find(p => p.id === s.pid) : sorted[0];
+    const sp = sp0 ? {
+      eyebrow: 'Selected problem',
+      title: sp0.title, detail: sp0.detail, people: sp0.people, timeLost: sp0.timeLost, signals: sp0.signals,
+      linked: sp0.ideas.map(id => IDEAS.find(i => i.id === id)).filter(Boolean).map(i => ({
+        title: i.title, status: i.status, statusStyle: this.statusStyle(i.status), onOpen: openIdea(i.id)
+      }))
+    } : {
+      eyebrow: 'Nothing selected',
+      title: 'No problem to show', detail: 'No problems are recorded for this department yet. Clear the scope to see the rest of the company.',
+      people: '0', timeLost: '—', signals: [], linked: []
+    };
+
+    const si0 = IDEAS.find(i => i.id === s.iid) || IDEAS[0];
+    const sip = PROBLEMS.find(p => p.id === si0.problem) || {};
+    const decidable = si0.status === 'Awaiting decision';
+    const si = {
+      title: si0.title, status: si0.status, statusStyle: this.statusStyle(si0.status),
+      waitLabel: si0.wait ? 'waiting ' + si0.wait + ' days' : si0.status === 'Shipped' ? 'live' : 'no owner assigned',
+      rationale: si0.rationale, upside: si0.upside, effort: si0.effort,
+      problemTitle: sip.title || '—', problemSub: sip.sub || '',
+      onOpenProblem: sip.id ? openProblem(sip.id) : () => {},
+      primaryBtnLabel: decidable ? 'Approve and assign' : si0.status === 'Unfunded' ? 'Fund a trial' : 'Open the trial',
+      primaryBtnStyle: { flex: 1, textAlign: 'center', background: decidable ? this.accent() : INK, color: '#fff', borderRadius: '10px',
+        padding: '10px 14px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' },
+      team: si0.team.map(n => ({ name: n === '—' ? 'Nobody assigned' : n, ini: this.ini(n) })), teamNote: si0.teamNote
+    };
+
+    const activeIds = INITIATIVES.filter(t => this.matches(t.depts)).map(t => t.id);
+    const initiatives = INITIATIVES.map(t => ({
+      id: t.id, name: t.name, status: t.status, statusStyle: this.statusStyle(t.status),
+      deptLabel: t.depts.map(d => this.deptName(d)).join(' × '),
+      peopleLabel: t.people ? t.people + ' people' : 'nobody assigned',
+      rowStyle: this.row(s.tid === t.id), markStyle: this.mark(s.tid === t.id),
+      onOpen: () => this.setState({ tab: 'network', tid: t.id })
+    })).filter(t => activeIds.indexOf(t.id) >= 0);
+
+    const st0 = INITIATIVES.find(t => t.id === s.tid) || INITIATIVES[0];
+    const st = {
+      name: st0.name, status: st0.status, statusStyle: this.statusStyle(st0.status), stage: st0.stage, why: st0.why,
+      depts: st0.depts.map(d => ({ name: this.deptName(d) })),
+      members: st0.members.map(m => ({ name: m.name, role: m.role, ini: this.ini(m.name) }))
+    };
+
+    const waiting = IDEAS.filter(i => i.status === 'Awaiting decision').sort((a, b) => b.wait - a.wait);
+    const decisions = waiting.map(i => ({
+      title: i.title, days: i.wait + ' days', blocker: i.blocker || i.teamNote, upside: i.upside,
+      dueLabel: i.wait > 14 ? (i.wait - 14) + ' days past the promise · escalated one level up' : 'answer owed in ' + (14 - i.wait) + ' days',
+      dueStyle: { fontFamily: 'IBM Plex Mono, monospace', fontSize: '11px', fontWeight: 600, lineHeight: 1.4,
+        color: i.wait > 14 ? this.accent() : '#c9c8c0' },
+      dayStyle: { fontFamily: 'IBM Plex Mono, monospace', fontSize: '11px', fontWeight: 700, color: i.wait > 20 ? '#1a1a17' : '#d6d5cd',
+        background: i.wait > 20 ? this.accent() : '#33332e', borderRadius: '6px', padding: '4px 8px', whiteSpace: 'nowrap' },
+      onOpen: openIdea(i.id)
+    }));
+
+    const GCOLS = 4, GCELLW = 145, GCELLH = 230, GPADX = 20, GPADY = 60;
+    const clusterCenter = idx => ({ x: GPADX + (idx % GCOLS) * GCELLW + GCELLW / 2, y: GPADY + Math.floor(idx / GCOLS) * GCELLH + GCELLH / 2 });
+
+    const clusters = [];
+    const nodes = [];
+    const edges = [];
+
+    INITIATIVES.forEach((t, idx) => {
+      const c = clusterCenter(idx);
+      const rel = this.matches(t.depts);
+      const active = s.tid === t.id;
+      const op = active ? 1 : rel ? 0.85 : 0.22;
+      const look = this.edgeLook(t.status);
+      const members = t.members.filter(m => m.name !== '—');
+      const count = members.length;
+      const ringR = count <= 1 ? 0 : count <= 4 ? 30 : 38;
+
+      clusters.push({
+        rx: c.x - 62, ry: c.y - 92, rw: 124, rh: 156,
+        fill: active ? '#fff' : '#faf9f7', stroke: active ? INK : '#eeede8', op,
+        labelX: c.x, labelY: c.y - 74, label: t.name,
+        metaX: c.x, metaY: c.y + 68, meta: count ? (count + (count === 1 ? ' person' : ' people')) : 'nobody assigned',
+        onSel: () => this.set('tid', t.id)
+      });
+
+      const pts = members.map((m, i) => {
+        const a = (-90 + i * (360 / Math.max(count, 1))) * Math.PI / 180;
+        return { m, x: c.x + ringR * Math.cos(a), y: c.y + ringR * Math.sin(a) };
+      });
+
+      for (let a = 0; a < pts.length; a++) {
+        for (let b = a + 1; b < pts.length; b++) {
+          edges.push({
+            d: 'M ' + pts[a].x + ' ' + pts[a].y + ' L ' + pts[b].x + ' ' + pts[b].y,
+            stroke: look.stroke, dash: look.dash, w: 1.6, op, onOpen: () => this.set('tid', t.id)
+          });
+        }
+      }
+
+      if (!count) {
+        nodes.push({ ini: '?', x: c.x, y: c.y, r: 16, fill: '#f4f3f0', textFill: '#a0a099', op,
+          title: '', meta: '', onSel: () => this.set('tid', t.id) });
+      } else {
+        pts.forEach(p => {
+          nodes.push({
+            ini: this.ini(p.m.name), x: p.x, y: p.y, r: 15,
+            fill: active ? INK : '#fff', textFill: active ? '#fff' : '#141414',
+            op, title: p.m.name, meta: p.m.role, onSel: () => this.set('tid', t.id)
+          });
+        });
+      }
+    });
+
+    const delta = up => ({ fontSize: '11.5px', fontWeight: 700, color: up ? '#116634' : this.accentInk(),
+      background: up ? '#dcf3e3' : this.accentSoft(), borderRadius: '6px', padding: '3px 7px' });
+
+    const kpis = [
+      { label: 'Idea → decision', value: '11d', delta: 'was 34d', deltaStyle: delta(true), sub: 'median, last 90 days',
+        bars: this.bars([0.95, 1, 0.9, 0.6, 0.45, 0.35, 0.3]) },
+      { label: 'Shipped this year', value: '23', delta: 'was 6', deltaStyle: delta(true), sub: '38 stopped early, on purpose',
+        bars: this.bars([0.25, 0.3, 0.22, 0.5, 0.7, 0.85, 1]) },
+      { label: 'Value booked', value: '€1.42M', delta: '+€1.15M', deltaStyle: delta(true), sub: '€880k of it recurring',
+        bars: this.bars([0.18, 0.2, 0.19, 0.45, 0.62, 0.82, 1]) },
+      { label: 'Waiting days saved', value: '1,240 d', delta: 'vs old route', deltaStyle: delta(true), sub: 'across 147 ideas, since the clock came in',
+        bars: this.bars([0.1, 0.2, 0.3, 0.45, 0.6, 0.8, 1]) },
+      { label: 'Ideas with no owner', value: '14', delta: 'was 9', deltaStyle: delta(false), sub: 'of 147 in play · 6 teams in motion',
+        bars: this.bars([0.4, 0.42, 0.5, 0.55, 0.62, 0.7, 0.8]) }
+    ];
+
+    const stepTone = { done: INK, now: this.accent(), late: this.accent(), todo: '#dedcd5' };
+    const myIdeas = MY_IDEAS.map(m => ({
+      title: m.title, submitted: m.submitted, status: m.status, statusStyle: this.statusStyle(m.status),
+      clock: m.clock,
+      clockStyle: { fontSize: '12px', fontWeight: 600, lineHeight: 1.5, marginTop: '13px', padding: '9px 11px', borderRadius: '9px',
+        background: m.overdue ? this.accentSoft() : '#faf9f7', border: '1px solid ' + (m.overdue ? '#f7d6c5' : '#eeede8'),
+        color: m.overdue ? this.accentInk() : '#5b5b5b' },
+      reply: m.reply, replyBy: m.replyBy, outcome: m.outcome, outcomeNote: m.outcomeNote,
+      steps: m.steps.map(([label, when, tone]) => ({
+        label, when,
+        barStyle: { height: '4px', borderRadius: '999px', background: stepTone[tone] },
+        labelStyle: { fontSize: '11.5px', fontWeight: 700, marginTop: '7px', lineHeight: 1.3,
+          color: tone === 'todo' ? '#a0a099' : tone === 'done' ? INK : this.accentInk() }
+      }))
+    }));
+
+    const promises = [
+      { n: '14 d', label: 'to a yes, a no or a question — from a named person, not a form' },
+      { n: '90 d', label: 'after launch, the outcome is measured and published back to you' },
+      { n: '100%', label: 'of shipped work names everyone who contributed, anonymous handles included' }
+    ];
+
+    const myStats = [
+      { v: '7', l: 'problems you raised' }, { v: '3', l: 'ideas you sent' },
+      { v: '1', l: 'shipped, credited to you' }, { v: '4 d', l: 'your median wait for a reply' }
+    ];
+
+    const outcomes = OUTCOMES.map(o => ({
+      title: o.title, promised: o.promised, actual: o.actual, verdict: o.verdict,
+      style: o.verdict === 'Short' ? this.pill(this.accentSoft(), this.accentInk())
+        : o.verdict === 'Beat it' ? this.pill('#dcf3e3', '#116634') : this.pill('#f0efea', '#5b5b5b', 600)
+    }));
+
+    const movement = [
+      { label: 'Idea → decision', now: '11 days', was: 'was 34', bars: this.bars([0.95, 1, 0.9, 0.6, 0.45, 0.35, 0.3]) },
+      { label: 'Ideas shipped / yr', now: '23', was: 'was 6', bars: this.bars([0.25, 0.3, 0.22, 0.5, 0.7, 0.85, 1]) },
+      { label: 'Value from ideas', now: '€1.42M', was: 'was €270k', bars: this.bars([0.18, 0.2, 0.19, 0.45, 0.62, 0.82, 1]) },
+      { label: 'People contributing', now: '64%', was: 'was 21%', bars: this.bars([0.2, 0.22, 0.21, 0.4, 0.52, 0.6, 0.64]) }
+    ];
+
+    const fnl = (n, label, sub, w, note, gate) => ({
+      n, label, sub, note, w: { width: w },
+      fill: { height: '12px', borderRadius: '999px', background: gate ? this.accent() : INK },
+      noteStyle: { fontSize: '11.5px', color: this.accentInk(), marginTop: '6px', lineHeight: 1.5, display: note ? 'block' : 'none' }
+    });
+
+    return {
+      roles, navItems, scopeItems, sorts, movement, kpis, decisions, clusters,
+      viewTitle: view.title, viewSub: view.sub,
+      scoped: s.dept !== 'All', scopeLabel: this.deptName(s.dept),
+      clearScope: () => this.set('dept', 'All'),
+      clearScopeStyle: { fontFamily: 'IBM Plex Mono, monospace', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase',
+        color: '#c9c8c0', cursor: 'pointer', display: s.dept === 'All' ? 'none' : 'inline' },
+      decisionBtnLabel: s.role === 'Employee' ? '1 answer overdue to you' : waiting.length + ' decisions waiting',
+      decisionBtnStyle: { display: 'flex', alignItems: 'center', gap: '7px', background: '#1a1a17', color: '#fff', borderRadius: '9px',
+        padding: '8px 12px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
+      decisionDotStyle: { width: '6px', height: '6px', borderRadius: '50%', background: this.accent(), flex: 'none' },
+      legendAccentStyle: { width: '20px', height: '3px', borderRadius: '2px', background: this.accent() },
+      unansweredStyle: { fontSize: '22px', fontWeight: 800, color: this.accentInk(), letterSpacing: '-0.025em' },
+      showQuotes: this.props.showQuotes !== false,
+      goDecisions: () => this.setState(s.role === 'Employee' ? { tab: 'mine' } : { tab: 'ideas', iid: waiting.length ? waiting[0].id : 'i1' }),
+      isOverview: s.tab === 'overview', isProblems: s.tab === 'problems', isIdeas: s.tab === 'ideas',
+      isNetwork: s.tab === 'network', isProgress: s.tab === 'progress',
+      funnel: [
+        fnl('412', 'Said out loud', 'signals from interviews and the app', '100%', ''),
+        fnl('38', 'Clustered into root problems', 'duplicates merged, named plainly', '82%', ''),
+        fnl('147', 'Answered with an idea', 'employees proposed the fix themselves', '64%', ''),
+        fnl('61', 'Given a team and a budget', '86 ideas stopped here', '34%', 'This is the hierarchy gate. It is the narrowest point in the system and the only one leadership controls directly.', true),
+        fnl('23', 'Shipped', '38 stopped early on purpose', '18%', '')
+      ],
+      stalled: [
+        { title: 'Team-level spend authority up to €5k', days: '41 days', at: 'waiting on CFO signature', style: this.pill(this.accentSoft(), this.accentInk()) },
+        { title: 'One measurement record, one place', days: '8 days', at: 'waiting on IT capacity', style: this.pill(this.accentSoft(), this.accentInk()) },
+        { title: 'Protect one day a fortnight for improvement', days: 'no owner', at: 'needs a board decision', style: this.pill(INK, '#fff') },
+        { title: 'Blameless review, separate from ownership', days: 'no owner', at: 'nobody assigned in 9 weeks', style: this.pill(INK, '#fff') }
+      ],
+      contributors: [
+        { name: 'H. Sander', ini: 'HS', dept: 'Quality', raised: '9 signals · 3 ideas', credit: '2 shipped' },
+        { name: 'Anonymous #4471', ini: '?', dept: 'Production', raised: '7 signals · 2 ideas', credit: '1 shipped' },
+        { name: 'N. Kaya', ini: 'NK', dept: 'Sales', raised: '6 signals · 4 ideas', credit: '2 shipped' },
+        { name: 'C. Ilg', ini: 'CI', dept: 'Ops & Admin', raised: '5 signals · 1 idea', credit: 'awaiting decision' },
+        { name: 'D. Ferraro', ini: 'DF', dept: 'Field Service', raised: '4 signals · 2 ideas', credit: '1 building' }
+      ],
+      isBoard: s.role !== 'Employee',
+      isMine: s.tab === 'mine',
+      myIdeas, promises, myStats, outcomes,
+      submitBtnStyle: { display: 'block', textAlign: 'center', marginTop: '16px', background: this.accent(), color: '#1a1a17',
+        borderRadius: '10px', padding: '11px 14px', fontSize: '12.5px', fontWeight: 800, cursor: 'pointer' },
+      problems, topProblems: problems.slice(0, 5), sp,
+      ideas, topIdeas: ideas.slice(0, 5), si,
+      initiatives, st, nodes, edges,
+      noProblems: problems.length === 0,
+      emptyProblemTitle: 'Nobody in ' + (s.dept === 'All' ? 'the company' : this.deptName(s.dept)) + ' has named a problem yet',
+      goProblems: () => this.set('tab', 'problems'),
+      goIdeas: () => this.set('tab', 'ideas'),
+      goNetwork: () => this.set('tab', 'network')
+    };
+  }
+}
+</script>
+</body>
+</html>
