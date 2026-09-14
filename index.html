@@ -10,8 +10,9 @@
   <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon.png">
   <!-- dc-runtime: renders the design-component template in <body> (loads React from CDN) -->
   <script src="./support.js"></script>
-  <!-- demo data + component logic (see js/dashboard.js for how they are wired) -->
+  <!-- seed data → event store → component logic (see js/dashboard.js for how they are wired) -->
   <script src="./js/data.js"></script>
+  <script src="./js/store.js"></script>
   <script src="./js/dashboard.js"></script>
 </head>
 
@@ -321,6 +322,11 @@
                         <div style="font-size:12.5px; color:#141414; line-height:1.55;">{{ m.reply }}</div>
                         <div style="font-size:11px; color:#a0a099; margin-top:6px;">{{ m.replyBy }}</div>
                       </div>
+                      <sc-if value="{{ m.canReply }}" hint-placeholder-val="{{ false }}">
+                        <div style="display:flex; gap:8px; margin-top:12px;">
+                          <span onClick="{{ m.onReply }}" style="{{ replyBtn }}">{{ m.replyLabel }}</span>
+                        </div>
+                      </sc-if>
 
                       <div
                         style="display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-top:14px; padding-top:12px; border-top:1px solid #f0efea;">
@@ -572,19 +578,45 @@
                           sc.routeDeputy }}</div>
                       </div>
 
-                      <div
-                        style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099; margin-top:18px;">
-                        One action</div>
-                      <div style="display:flex; gap:8px; margin-top:9px;">
-                        <span onClick="{{ sc.onYes }}" style="{{ actYes }}">Yes, do it</span>
-                        <span onClick="{{ sc.onNo }}" style="{{ actNo }}">No, and why</span>
-                      </div>
-                      <div style="display:flex; gap:8px; margin-top:8px;">
-                        <span onClick="{{ sc.onHand }}" style="{{ actHand }}">{{ sc.handLabel }}</span>
-                        <span onClick="{{ sc.onAsk }}" style="{{ actNo }}">Ask one question</span>
-                      </div>
-                      <div style="font-size:11px; color:#a0a099; margin-top:11px; line-height:1.5;">Whatever you pick, the person who raised it is
-                        told today. A question pauses the clock; a hand-over keeps it running.</div>
+                      <sc-if value="{{ sc.handedNote }}" hint-placeholder-val="{{ false }}">
+                        <div style="font-size:11.5px; color:#5b5b5b; margin-top:10px; line-height:1.5; padding:9px 12px; background:#f4f3f0; border-radius:9px;">{{ sc.handedNote }}</div>
+                      </sc-if>
+
+                      <sc-if value="{{ sc.hasQuestion }}" hint-placeholder-val="{{ false }}">
+                        <div
+                          style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099; margin-top:18px;">
+                          Your question</div>
+                        <div style="border-left:2px solid #dedcd5; padding:2px 0 2px 12px; margin-top:9px;">
+                          <div style="font-size:12.5px; color:#141414; line-height:1.55;">{{ sc.question }}</div>
+                          <div style="font-size:11px; color:#a0a099; margin-top:5px;">{{ sc.questionBy }}</div>
+                        </div>
+                        <sc-if value="{{ sc.hasAnswer }}" hint-placeholder-val="{{ false }}">
+                          <div style="border-left:2px solid #ff5a1f; padding:2px 0 2px 12px; margin-top:10px;">
+                            <div style="font-size:12.5px; color:#141414; line-height:1.55;">{{ sc.answer }}</div>
+                            <div style="font-size:11px; color:#a0a099; margin-top:5px;">{{ sc.answerBy }}</div>
+                          </div>
+                        </sc-if>
+                      </sc-if>
+
+                      <sc-if value="{{ sc.paused }}" hint-placeholder-val="{{ false }}">
+                        <div style="font-size:12px; color:#5b5b5b; margin-top:16px; line-height:1.5; padding:11px 13px; background:#faf9f7; border:1px dashed #dedcd5; border-radius:10px;">{{ sc.pausedNote }}</div>
+                      </sc-if>
+
+                      <sc-if value="{{ sc.canAct }}" hint-placeholder-val="{{ true }}">
+                        <div
+                          style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099; margin-top:18px;">
+                          One action</div>
+                        <div style="display:flex; gap:8px; margin-top:9px;">
+                          <span onClick="{{ sc.onYes }}" style="{{ actYes }}">Yes, do it</span>
+                          <span onClick="{{ sc.onNo }}" style="{{ actNo }}">No, and why</span>
+                        </div>
+                        <div style="display:flex; gap:8px; margin-top:8px;">
+                          <span onClick="{{ sc.onHand }}" style="{{ actHand }}">{{ sc.handLabel }}</span>
+                          <span onClick="{{ sc.onAsk }}" style="{{ actNo }}">Ask one question</span>
+                        </div>
+                        <div style="font-size:11px; color:#a0a099; margin-top:11px; line-height:1.5;">Whatever you pick, the person who raised it is
+                          told today. A question pauses the clock; a hand-over keeps it running.</div>
+                      </sc-if>
                     </div>
                   </div>
                 </div>
@@ -701,13 +733,13 @@
                       <div style="background:#232320; border-radius:11px; padding:13px 15px;">
                         <div style="font-size:26px; font-weight:800; color:#fbfbf9; letter-spacing:-0.03em; line-height:1;">{{
                           ledger.firstAnswer }}</div>
-                        <div style="font-size:11.5px; color:#a3a29a; margin-top:6px; line-height:1.4;">median to first human answer ·
+                        <div style="font-size:11.5px; color:#a3a29a; margin-top:6px; line-height:1.4;">median to the first human answer — a yes, no or question, not yet the decision ·
                           <span style="color:#d6d5cd;">{{ ledger.firstAnswerWas }}</span></div>
                       </div>
                       <div style="background:#232320; border-radius:11px; padding:13px 15px;">
                         <div style="font-size:26px; font-weight:800; color:#fbfbf9; letter-spacing:-0.03em; line-height:1;">{{
                           ledger.withinPromise }}</div>
-                        <div style="font-size:11.5px; color:#a3a29a; margin-top:6px; line-height:1.4;">answered within the 14-day promise ·
+                        <div style="font-size:11.5px; color:#a3a29a; margin-top:6px; line-height:1.4;">answered within the 5-day promise ·
                           <span style="color:#d6d5cd;">{{ ledger.withinPromiseWas }}</span></div>
                       </div>
                     </div>
@@ -817,9 +849,11 @@
                           <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
                             <span style="font-size:13.5px; font-weight:700; color:#141414; line-height:1.35;">{{ i.title
                               }}</span>
-                            <span
-                              style="font-family:'IBM Plex Mono',monospace; font-size:14px; font-weight:800; color:#141414;">{{
-                              i.score }}</span>
+                          </div>
+                          <div style="display:flex; align-items:center; gap:5px; margin-top:7px; flex-wrap:wrap;">
+                            <sc-for list="{{ i.criteria }}" as="t" hint-placeholder-count="2">
+                              <span style="{{ t.style }}">{{ t.label }}</span>
+                            </sc-for>
                           </div>
                           <div style="display:flex; align-items:center; gap:7px; margin-top:8px; flex-wrap:wrap;">
                             <span style="{{ i.statusStyle }}">{{ i.status }}</span>
@@ -1015,8 +1049,12 @@
                         <div style="{{ i.markStyle }}"></div>
                         <div style="flex:1; min-width:0;">
                           <div style="display:flex; align-items:flex-start; gap:14px;">
-                            <div style="{{ i.scoreStyle }}">{{ i.score }}</div>
                             <div style="flex:1 1 200px; min-width:160px;">
+                              <div style="display:flex; align-items:center; gap:5px; margin-bottom:7px; flex-wrap:wrap;">
+                                <sc-for list="{{ i.criteria }}" as="t" hint-placeholder-count="2">
+                                  <span style="{{ t.style }}">{{ t.label }}</span>
+                                </sc-for>
+                              </div>
                               <div style="font-size:14.5px; font-weight:700; color:#141414; line-height:1.35;">{{
                                 i.title }}</div>
                               <div style="font-size:12.5px; color:#8c8c88; margin-top:4px; line-height:1.45;">solves: {{
@@ -1065,12 +1103,32 @@
                     </div>
                   </div>
 
+                  <sc-if value="{{ si.approvedNote }}" hint-placeholder-val="{{ false }}">
+                    <div style="font-size:12px; color:#116634; margin-top:14px; line-height:1.5; padding:9px 12px; background:#dcf3e3; border-radius:9px; font-weight:600;">{{ si.approvedNote }}</div>
+                  </sc-if>
+                  <sc-if value="{{ si.cosignLabel }}" hint-placeholder-val="{{ false }}">
+                    <div style="font-size:11.5px; color:#8c8c88; margin-top:12px;">{{ si.cosignLabel }} from the organisation</div>
+                  </sc-if>
                   <div style="display:flex; gap:8px; margin-top:14px;">
                     <span onClick="{{ si.onPrimary }}" style="{{ si.primaryBtnStyle }}">{{ si.primaryBtnLabel }}</span>
                     <span onClick="{{ si.onAsk }}"
                       style="flex:1; text-align:center; background:#faf9f7; border:1px solid #e6e5e0; border-radius:10px; padding:10px 14px; font-size:12.5px; font-weight:700; color:#5b5b5b; cursor:pointer;">Ask
                       a question</span>
                   </div>
+
+                  <sc-if value="{{ si.hasThread }}" hint-placeholder-val="{{ false }}">
+                    <div
+                      style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099; margin-top:20px;">
+                      Questions asked</div>
+                    <div style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
+                      <sc-for list="{{ si.thread }}" as="t" hint-placeholder-count="1">
+                        <div style="border-left:2px solid #dedcd5; padding:2px 0 2px 12px;">
+                          <div style="font-size:12.5px; color:#141414; line-height:1.55;">{{ t.text }}</div>
+                          <div style="font-size:11px; color:#a0a099; margin-top:4px;">{{ t.by }} · no answer yet</div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
 
                   <div
                     style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099; margin-top:20px;">
@@ -1334,7 +1392,7 @@
                     <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:14px;">
                       <div style="background:#faf9f7; border:1px solid #eeede8; border-radius:11px; padding:13px 15px;">
                         <div style="font-size:22px; font-weight:800; color:#141414; letter-spacing:-0.025em;">{{ answered.replied }}</div>
-                        <div style="font-size:11.5px; color:#8c8c88; margin-top:3px;">signals given a human reply</div>
+                        <div style="font-size:11.5px; color:#8c8c88; margin-top:3px;">signals given a human reply, by name</div>
                       </div>
                       <div style="background:#faf9f7; border:1px solid #eeede8; border-radius:11px; padding:13px 15px;">
                         <div style="font-size:22px; font-weight:800; color:#141414; letter-spacing:-0.025em;">{{ answered.median }}</div>
@@ -1387,6 +1445,48 @@
       <!-- ░░ POPOVER BACKDROP ░░ (click anywhere else closes search / decisions / user menu) -->
       <sc-if value="{{ popOpen }}" hint-placeholder-val="{{ false }}">
         <div onClick="{{ closePop }}" style="position:fixed; inset:0; z-index:30;"></div>
+      </sc-if>
+
+      <!-- ░░ INPUT SHEET ░░ one modal for every action that needs a reason, a line of text, or people.
+           Driven entirely by `sheet` from js/dashboard.js (sheetVals); helpers open it with this.openSheet(kind, id). -->
+      <sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ sheet.onCancel }}" style="position:fixed; inset:0; z-index:90; background:rgba(20,20,20,0.42);"></div>
+        <div class="nh-sheet"
+          style="position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:95; width:min(460px, calc(100vw - 24px)); max-height:calc(100dvh - 40px); overflow:auto; box-sizing:border-box; background:#fff; border-radius:16px; padding:20px 20px 18px; box-shadow:0 24px 70px rgba(20,20,20,0.35);">
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099;">{{ sheet.eyebrow }}</div>
+          <div style="font-size:16.5px; font-weight:800; color:#141414; letter-spacing:-0.02em; line-height:1.3; margin-top:8px;">{{ sheet.title }}</div>
+          <div style="font-size:12.5px; color:#8c8c88; margin-top:7px; line-height:1.55;">{{ sheet.sub }}</div>
+
+          <sc-if value="{{ sheet.hasOptions }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; gap:7px; margin-top:16px;">
+              <sc-for list="{{ sheet.options }}" as="o" hint-placeholder-count="3">
+                <div onClick="{{ o.onSel }}" style="{{ o.style }}">
+                  <div style="{{ o.labelStyle }}">{{ o.label }}</div>
+                  <div style="{{ o.subStyle }}">{{ o.sub }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ sheet.hasPeople }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-wrap:wrap; gap:7px; margin-top:16px;">
+              <sc-for list="{{ sheet.people }}" as="p" hint-placeholder-count="4">
+                <span onClick="{{ p.onSel }}" style="{{ p.style }}"><span style="{{ p.iniStyle }}">{{ p.ini }}</span>{{ p.name }}</span>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ sheet.hasText }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size:11.5px; font-weight:700; color:#5b5b5b; margin-top:16px;">{{ sheet.textLabel }}</div>
+            <textarea value="{{ sheet.text }}" oninput="{{ sheet.onText }}" rows="2" placeholder="{{ sheet.placeholder }}"
+              style="display:block; width:100%; box-sizing:border-box; margin-top:7px; background:#faf9f7; border:1px solid #e6e5e0; border-radius:10px; padding:10px 12px; font-family:inherit; font-size:12.5px; line-height:1.5; color:#141414; resize:vertical; outline:0;"></textarea>
+          </sc-if>
+
+          <div style="display:flex; gap:8px; margin-top:16px;">
+            <span onClick="{{ sheet.onConfirm }}" style="{{ sheet.primaryStyle }}">{{ sheet.primaryLabel }}</span>
+            <span onClick="{{ sheet.onCancel }}" style="flex:0 0 auto; text-align:center; background:#faf9f7; border:1px solid #e6e5e0; border-radius:10px; padding:10px 14px; font-size:12.5px; font-weight:700; color:#5b5b5b; cursor:pointer;">Cancel</span>
+          </div>
+        </div>
       </sc-if>
 
       <!-- ░░ TOAST ░░ -->

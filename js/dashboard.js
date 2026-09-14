@@ -20,13 +20,12 @@ window.createDashboardComponent = function (DCLogic) {
 
   const MONO = 'IBM Plex Mono, monospace';
   const CASE_ACTIONS = { decided: 'Decided', handed: 'Handed over', asked: 'Question sent' };
-  const STORE_KEY = 'nexthub.demo.v1';
 
-  // Session-created data (cases the employee sent, inbox actions) is kept in
-  // localStorage so it survives a reload. "Copy for data.js" in the dev panel
-  // turns the sent cases into MY_IDEAS entries to paste into js/data.js.
-  const loadStore = () => { try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch (e) { return {}; } };
-  const saveStore = o => { try { localStorage.setItem(STORE_KEY, JSON.stringify(o)); } catch (e) { /* private mode */ } };
+  // Everything that happens in the browser is an event in NHStore (js/store.js).
+  // The seed rows in js/data.js never change; the page renders
+  // reduce(seed, events). "Copy for data.js" exports session cases as rows.
+  const SEED = () => ({ cases: CASES, ideas: IDEAS, problems: PROBLEMS, routes: ROUTES, promiseDays: PROMISE_DAYS });
+  const E = NHStore.T;
   const median = xs => { if (!xs.length) return null; const a = xs.slice().sort((x, y) => x - y); const m = a.length >> 1; return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
   const fmt = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
@@ -40,12 +39,50 @@ window.createDashboardComponent = function (DCLogic) {
         // list tools: sort + filter for the problems and ideas views
         sort: 'people', pTrend: 'All', pOwner: 'All', iSort: 'score', iStatus: 'All',
         demo: props.demoData !== false, dev: false,
-        q: '', cursor: 0, pop: null, draft: '', sent: loadStore().sent || [], cases: loadStore().cases || {}, toast: null,
+        q: '', pop: null, draft: '', log: NHStore.load(), toast: null,
+        sheet: null, // the one input sheet: { kind, id, text, picked, people } — see sheetVals()
         mobile: false, menu: false
       };
       this.onKey = this.onKey.bind(this);
       this.onMedia = this.onMedia.bind(this);
+
+      // ── actions: the only way UI code changes domain state ──────────────
+      // Each appends one event as the current persona and re-renders. UI
+      // pieces (buttons, sheets) call these; they never touch the log or the
+      // reducer directly. Payload shapes: js/store.js, docs/ACTIONS_PLAN.md §2.2.
+      const emit = (type, target, payload) => {
+        const log = NHStore.append(this.state.log, { type, actor: this.actor(), target, payload: payload || {} });
+        this.setState({ log });
+        return log;
+      };
+      this.act = {
+        raise: p => { const id = NHStore.newId('c'); emit(E.CASE_RAISED, id, p); return id; },
+        read: id => emit(E.CASE_READ, id),
+        decide: (id, answer, reason, note) => emit(E.CASE_DECIDED, id, { answer, reason, note }),
+        hand: (id, to, why) => emit(E.CASE_HANDED, id, { to, why }),
+        ask: (id, text) => emit(E.CASE_ASKED, id, { text }),
+        answer: (id, text) => emit(E.CASE_ANSWERED, id, { text }),
+        override: (id, proposed, chosen) => emit(E.ROUTE_OVERRIDDEN, id, { proposed, chosen }),
+        cosign: ideaId => {
+          const i = this.reduce().ideas.find(x => x.id === ideaId);
+          const already = i && i.cosigners.some(x => x.name === this.actor());
+          return emit(already ? E.IDEA_UNCOSIGNED : E.IDEA_COSIGNED, ideaId);
+        },
+        askIdea: (ideaId, text) => emit(E.IDEA_ASKED, ideaId, { text }),
+        approve: (ideaId, team, note) => emit(E.IDEA_APPROVED, ideaId, { team, note }),
+        fund: (ideaId, team, note) => emit(E.IDEA_FUNDED, ideaId, { team, note }),
+        advanceDay: by => emit(E.DAY_ADVANCED, null, { by: by || 1 })
+      };
     }
+
+    // Who is acting: the employee posts under their handle, everyone else by name.
+    actor() {
+      const r = ROLES.find(x => x.id === this.state.role) || ROLES[2];
+      return r.id === 'employee' && r.who.handle ? r.who.handle : r.who.name;
+    }
+
+    // Seed + log → state. Cheap; called once per render.
+    reduce() { return NHStore.reduce(SEED(), this.state.log); }
 
     componentDidMount() {
       window.addEventListener('keydown', this.onKey);
@@ -72,116 +109,18 @@ window.createDashboardComponent = function (DCLogic) {
         const el = document.getElementById('nh-search');
         if (el && e.target === el) return; // handled by onSearchKey: clear the text first, close on the second press
         if (el) el.blur();
-        this.setState({ pop: null, q: '', menu: false });
+        this.setState({ pop: null, q: '', menu: false, sheet: null });
       }
     }
 
-    focusSearch() {
-      const el = document.getElementById('nh-search');
-      if (el) { el.focus(); el.select(); }
-      this.setState({ pop: 'search', menu: false });
-    }
-
-    // ── search engine ────────────────────────────────────────────────────
-    // Every token has to appear somewhere in the item's text ("hay"); title
-    // matches rank above body matches. Highlighting reuses the same tokens.
-    tokens(q) { return (q || '').trim().toLowerCase().split(/\s+/).filter(Boolean); }
-    hits(hay, toks) { return toks.every(t => hay.indexOf(t) >= 0); }
-
-    hl(text, toks) {
-      if (!toks.length || !text) return [{ t: text || '', hit: false }];
-      const esc = t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const re = new RegExp('(' + toks.map(esc).join('|') + ')', 'ig');
-      const isHit = new RegExp('^(' + toks.map(esc).join('|') + ')$', 'i');
-      return String(text).split(re).filter(x => x !== '').map(x => ({ t: x, hit: isHit.test(x) }));
-    }
-
-    problemHay(p) {
-      return [p.title, p.sub, p.detail, p.trend, p.age, this.ownerLabel(p.owner), p.depts.map(d => this.deptName(d)).join(' '),
-        (p.signals || []).map(x => x.by + ' ' + x.quote).join(' ')].join(' ').toLowerCase();
-    }
-    ideaHay(i) {
-      const pr = PROBLEMS.find(p => p.id === i.problem) || {};
-      return [i.title, i.rationale, i.status, i.proposedBy, i.expected, i.upside, i.effort, (i.team || []).join(' '), pr.title || '',
-        (pr.depts || []).map(d => this.deptName(d)).join(' ')].join(' ').toLowerCase();
-    }
-    teamHay(t) {
-      return [t.name, t.why, t.status, t.stage, t.depts.map(d => this.deptName(d)).join(' '), t.members.map(m => m.name + ' ' + m.role).join(' ')].join(' ').toLowerCase();
-    }
-    caseHay(c) { return [c.title, c.from, c.fromDept, c.body, c.reason].filter(Boolean).join(' ').toLowerCase(); }
-
-    // People come from initiative members, idea teams and proposers, signal authors and the buddy list.
-    people(demo) {
-      const map = {};
-      const add = (name, role, ref) => {
-        name = (name || '').trim();
-        if (!name || name === '—' || name.startsWith('Anonymous') || /^\d/.test(name)) return;
-        const e = map[name] || (map[name] = { name, roles: [], teams: [], ideas: [] });
-        if (role && e.roles.indexOf(role) < 0) e.roles.push(role);
-        if (ref && ref.team && e.teams.indexOf(ref.team) < 0) e.teams.push(ref.team);
-        if (ref && ref.idea && e.ideas.indexOf(ref.idea) < 0) e.ideas.push(ref.idea);
-      };
-      if (demo) {
-        INITIATIVES.forEach(t => t.members.forEach(m => add(m.name, m.role, { team: t.id })));
-        IDEAS.forEach(i => {
-          (i.team || []).forEach(n => add(n, '', { idea: i.id }));
-          const pb = (i.proposedBy || '').split(',');
-          add(pb[0], (pb[1] || '').trim(), { idea: i.id });
-        });
-        PROBLEMS.forEach(p => (p.signals || []).forEach(x => { const b = x.by.split('·'); add(b[0], (b[1] || '').trim(), null); }));
-      }
-      (typeof BUDDIES !== 'undefined' ? BUDDIES : []).forEach(b => add(b.name, b.dept, null));
-      return Object.keys(map).sort().map(k => map[k]);
-    }
-
-    searchIndex(D, isLead, cleared) {
-      const idx = [];
-      D.problems.forEach(p => idx.push({ kind: 'Problem', group: 0, title: p.title, sub: p.sub, hay: this.problemHay(p),
-        right: p.people + ' people', go: { tab: 'problems', pid: p.id } }));
-      D.ideas.forEach(i => idx.push({ kind: 'Idea', group: 1, title: i.title,
-        sub: 'solves: ' + ((PROBLEMS.find(p => p.id === i.problem) || {}).title || '—'), hay: this.ideaHay(i),
-        right: i.status, go: { tab: 'ideas', iid: i.id } }));
-      D.initiatives.forEach(t => idx.push({ kind: 'Team', group: 2, title: t.name, sub: t.why, hay: this.teamHay(t),
-        right: t.status, go: { tab: 'network', tid: t.id } }));
-      if (isLead) D.cases.filter(c => !cleared[c.id]).forEach(c => idx.push({ kind: 'Case', group: 3, title: c.title, sub: 'from ' + c.from,
-        hay: this.caseHay(c), right: c.age + ' d', go: { tab: 'inbox', cid: c.id } }));
-      this.people(D.problems.length > 0).forEach(pe => {
-        const where = [pe.teams.length ? pe.teams.length + (pe.teams.length === 1 ? ' team' : ' teams') : '',
-          pe.ideas.length ? pe.ideas.length + (pe.ideas.length === 1 ? ' idea' : ' ideas') : ''].filter(Boolean).join(' · ');
-        idx.push({ kind: 'Person', group: 4, title: pe.name, sub: [pe.roles[0] || '', where].filter(Boolean).join(' · '),
-          hay: (pe.name + ' ' + pe.roles.join(' ')).toLowerCase(), right: pe.teams.length ? 'open team' : pe.ideas.length ? 'open idea' : '',
-          go: pe.teams.length ? { tab: 'network', tid: pe.teams[0] } : pe.ideas.length ? { tab: 'ideas', iid: pe.ideas[0] } : null });
-      });
-      return idx;
-    }
-
-    runSearch(idx, q) {
-      const toks = this.tokens(q);
-      if (!toks.length) return [];
-      const lower = q.trim().toLowerCase();
-      const scored = idx.filter(x => this.hits(x.hay, toks)).map(x => {
-        const t = x.title.toLowerCase();
-        let score = 0;
-        if (t === lower) score += 40;
-        else if (t.indexOf(lower) === 0) score += 24;
-        else if (t.indexOf(lower) >= 0) score += 16;
-        toks.forEach(k => { if (t.indexOf(k) >= 0) score += 6; else if ((x.sub || '').toLowerCase().indexOf(k) >= 0) score += 2; });
-        return { x, score };
-      }).sort((a, b) => b.score - a.score || a.x.group - b.x.group);
-      // at most 4 per group, 10 in total, best first
-      const perGroup = {}, out = [];
-      scored.forEach(({ x }) => {
-        perGroup[x.group] = (perGroup[x.group] || 0) + 1;
-        if (perGroup[x.group] <= 4 && out.length < 10) out.push(x);
-      });
-      return out;
-    }
-
-    pick(r) {
-      const el = document.getElementById('nh-search');
-      if (el) el.blur();
-      this.setState(Object.assign({ pop: null, q: '', cursor: 0, menu: false }, r.go || {}));
-    }
+    // ── the input sheet ──────────────────────────────────────────────────
+    // One modal serves every action that needs input: a reason (pick one),
+    // a line of text, or a set of people. `kind` decides which parts show and
+    // what confirming does. Helpers add UI by opening a sheet, never by
+    // inventing new state.
+    openSheet(kind, id, init) { this.setState({ sheet: Object.assign({ kind, id, text: '', picked: null, people: [] }, init || {}), pop: null }); }
+    closeSheet() { this.set('sheet', null); }
+    patchSheet(patch) { this.setState({ sheet: Object.assign({}, this.state.sheet, patch) }); }
 
     // ── colours / small style helpers ───────────────────────────────────
     accent() { return this.props.accent || '#ff5a1f'; }
@@ -196,13 +135,22 @@ window.createDashboardComponent = function (DCLogic) {
       this.toastTimer = setTimeout(() => this.setState({ toast: null }), 3600);
     }
 
+    btn(kind) {
+      const base = { flex: 1, textAlign: 'center', borderRadius: '10px', padding: '10px 14px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' };
+      if (kind === 'primary') return Object.assign(base, { background: INK, color: '#fff' });
+      if (kind === 'accent') return Object.assign(base, { background: this.accent(), color: '#1a1a17', fontWeight: 800 });
+      if (kind === 'disabled') return Object.assign(base, { background: '#f0efea', color: '#a0a099', cursor: 'default' });
+      return Object.assign(base, { background: '#faf9f7', border: '1px solid #e6e5e0', color: '#5b5b5b' });
+    }
+
     pill(bg, fg, weight) {
       return { background: bg, color: fg, borderRadius: '7px', padding: '4px 9px', fontSize: '11px', fontWeight: weight || 700, whiteSpace: 'nowrap', letterSpacing: '0.01em' };
     }
 
     statusStyle(s) {
-      if (s === 'Awaiting decision' || s === 'Sent') return this.pill(this.accentSoft(), this.accentInk());
+      if (s === 'Awaiting decision' || s === 'Sent' || s === 'Question for you') return this.pill(this.accentSoft(), this.accentInk());
       if (s === 'Shipped') return this.pill(INK, '#fff');
+      if (s === 'Approved') return this.pill('#dcf3e3', '#116634');
       if (s === 'In trial' || s === 'Building') return this.pill('#ecebe6', '#3d3d3a');
       return this.pill('transparent', MUTE, 600);
     }
@@ -257,6 +205,17 @@ window.createDashboardComponent = function (DCLogic) {
     ini(name) { return !name || name.startsWith('Anonymous') || name === '—' ? '?' : name.split(' ').map(w => w[0]).join('').slice(0, 2); }
 
     deptName(id) { const d = DEPTS.find(x => x.id === id); return d ? d.name : id; }
+    // The three case criteria as tags — the KPI tag is the routing criterion and gets the ink.
+    criteriaCount(c) { return (c.fit ? 1 : 0) + (c.urgent ? 1 : 0) + (c.kpi ? 1 : 0); }
+    criteriaTags(c) {
+      const tag = (label, strong) => ({ label, style: this.pill(strong ? INK : '#f0efea', strong ? '#fff' : '#5b5b5b', 600) });
+      const t = [];
+      if (c.fit) t.push(tag('Strategic fit'));
+      if (c.urgent) t.push(tag('Urgent'));
+      if (c.kpi) t.push(tag('Moves: ' + c.kpi, true));
+      if (!t.length) t.push({ label: 'No criterion met', style: this.pill('transparent', '#a0a099', 500) });
+      return t;
+    }
     deptLabel(ids) { return ids.length > 3 ? ids.slice(0, 3).map(i => this.deptName(i)).join(' · ') + ' +' + (ids.length - 3) : ids.map(i => this.deptName(i)).join(' · '); }
 
     matches(depts) { return this.state.dept === 'All' || depts.indexOf(this.state.dept) >= 0; }
@@ -269,17 +228,7 @@ window.createDashboardComponent = function (DCLogic) {
     }
 
     // ── routing: propose (never decide) the owning row for a piece of text ──
-    propose(text) {
-      const t = (text || '').toLowerCase();
-      if (t.trim().length < 8) return null;
-      let best = null, bestHits = 0;
-      ROUTES.forEach(r => {
-        const hits = r.keys.filter(k => t.indexOf(k) >= 0).length;
-        if (hits > bestHits) { best = r; bestHits = hits; }
-      });
-      if (!best) return { route: null, confidence: 0 };
-      return { route: best, confidence: bestHits >= 3 ? 91 : bestHits === 2 ? 78 : 62 };
-    }
+    propose(text) { return NHStore.propose(text); }
 
     todayPlus(days) {
       const d = new Date(); d.setDate(d.getDate() + days);
@@ -293,33 +242,204 @@ window.createDashboardComponent = function (DCLogic) {
     }
 
     resetDemo() {
-      saveStore({});
-      this.setState({ sent: [], cases: {}, draft: '', q: '', pop: null, dev: false });
+      this.setState({ log: NHStore.reset(), draft: '', q: '', pop: null, dev: false });
       this.toast('Demo state reset');
     }
 
-    // Persist the two pieces of session-created state alongside the setState.
-    persist(patch) {
-      this.setState(patch);
-      const cur = loadStore();
-      saveStore({ sent: patch.sent !== undefined ? patch.sent : (cur.sent || this.state.sent), cases: patch.cases !== undefined ? patch.cases : (cur.cases || this.state.cases) });
-    }
-
-    // Sent cases as a snippet for js/data.js (MY_IDEAS entries).
-    exportSnippet() {
-      const rows = this.state.sent.map(m => '  ' + JSON.stringify(m, null, 0).replace(/"(\w+)":/g, '$1: ').replace(/,/g, ', '));
-      return rows.length ? '// paste at the top of MY_IDEAS in js/data.js\n' + rows.join(',\n') + ',' : '';
-    }
+    // Session-created cases as CASES rows (with their history) for js/data.js.
     copySnippet() {
-      const txt = this.exportSnippet();
+      const S = this.reduce();
+      const txt = NHStore.exportSnippet(S);
+      const n = S.cases.filter(c => !c.seed).length;
       if (!txt) { this.toast('Nothing new to copy — raise a case as the employee first.'); return; }
-      const done = () => this.toast('Copied ' + this.state.sent.length + (this.state.sent.length === 1 ? ' entry' : ' entries') + ' — paste into MY_IDEAS in js/data.js.');
+      const done = () => this.toast('Copied ' + n + (n === 1 ? ' case' : ' cases') + ' — paste into CASES in js/data.js.');
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, () => window.prompt('Copy this into js/data.js:', txt));
       else window.prompt('Copy this into js/data.js:', txt);
     }
 
+    // ── derived rows for "My cases": facts in, sentences out ─────────────
+    // A day offset (0 = demo today) as a short date; 'today' / 'yesterday' near now.
+    fmtDay(d, S) {
+      const rel = d - S.day;
+      return rel === 0 ? 'today' : rel === -1 ? 'yesterday' : this.todayPlus(d);
+    }
+
+    // One case, seen by the person who raised it.
+    mineRow(c, S) {
+      const f = d => this.fmtDay(d, S);
+      const P = PROMISE_DAYS, deputy = c.route ? (c.route.owner.name === c.assignee ? c.route.deputy : c.route.owner.name) : 'their deputy';
+      const q = c.question, dec = c.decided, b = c.building, sh = c.shipped;
+      const buildDay = b ? Math.min(b.days, S.day - b.day) : 0;
+      const days = n => n + (n === 1 ? ' day' : ' days');
+      const status = sh ? 'Shipped' : b ? 'Building' : dec ? (dec.answer === 'yes' ? 'Approved' : 'Declined') : c.status === 'asked' ? 'Question for you' : 'Sent';
+      const steps = [
+        ['Sent', f(c.raisedDay), 'done'],
+        ['Read by a human', c.read !== null ? f(c.read) : 'pending', c.read !== null ? 'done' : 'now'],
+        dec ? ['Decided', f(dec.day), 'done']
+          : c.status === 'asked' ? ['Decided', 'question for you', 'now']
+            : c.overdue ? ['Decided', 'overdue', 'late']
+              : ['Decided', 'due ' + f(c.dueDay), c.read !== null ? 'now' : 'todo'],
+        sh ? ['Shipped', f(sh.day), 'done']
+          : b ? ['Shipped', 'due ' + f(b.day + b.days), 'now']
+            : ['Shipped', '—', 'todo']
+      ];
+      const clock = sh ? 'Answered in ' + days(c.clock) + '. Live since ' + f(sh.day) + '.'
+        : b ? 'Answered in ' + days(c.clock) + '. In build since ' + f(b.day) + ' — day ' + buildDay + ' of ' + b.days + '.'
+          : dec ? (dec.answer === 'yes' ? 'Answered “yes” in ' : 'Answered “no” in ') + days(c.clock) + (dec.reason ? ' — ' + dec.reason : '') + '.'
+            : c.status === 'asked' ? q.by + ' asked you a question ' + f(q.day) + '. The clock is paused until you answer.'
+              : c.overdue ? c.clock + ' days waiting — ' + days(c.clock - P) + ' past the promise.' + (c.escalated ? ' Moved to ' + c.escalated.to + ' automatically.' : '')
+                : c.read !== null ? c.assignee + ' read this ' + f(c.read) + '. They owe you a yes, a no or a question by ' + f(c.dueDay) + '.'
+                  : 'Sent to ' + c.assignee + '. They owe you a yes, a no or a question by ' + f(c.dueDay) + '.';
+      const answered = q && q.answer && !dec;
+      const reply = dec ? (dec.note || (dec.answer === 'yes' ? 'Yes — we are doing this.' : 'No.' + (dec.reason ? ' Reason: ' + dec.reason + '.' : '')))
+        : c.status === 'asked' ? '“' + (q.text || 'One question for you before this can be decided.') + '”'
+          : answered ? '“' + (q.text || 'One question.') + '” — you answered: “' + q.answer.text + '”. The clock is running again.'
+            : c.handed.length ? 'Handed from ' + c.handed[c.handed.length - 1].from + ' to ' + c.assignee + ' ' + f(c.handed[c.handed.length - 1].day) + '. The clock kept running.'
+              : 'No reply yet. ' + c.assignee + ' has been told; if they miss the date it moves to ' + deputy + ' automatically.';
+      const replyBy = dec ? dec.by + ' · ' + f(dec.day) : c.status === 'asked' ? q.by + ' · ' + f(q.day) : answered ? q.by + ' · ' + f(q.day) + ', you · ' + f(q.answer.day) : 'the ' + P + '-day clock started ' + f(c.raisedDay);
+      return {
+        id: c.id, sortDay: c.raisedDay, title: c.title, status, overdue: c.overdue,
+        canReply: c.status === 'asked', replyTo: q ? q.by : '',
+        submitted: 'You raised this ' + f(c.raisedDay) + ' · ' + c.from,
+        clock, steps, reply, replyBy,
+        outcome: sh ? sh.outcome : b && b.expected ? 'expected ' + b.expected : 'pending',
+        outcomeNote: sh ? sh.outcomeNote : b ? 'will be measured ' + OUTCOME_DAYS + ' days after launch' : 'measured ' + OUTCOME_DAYS + ' days after launch'
+      };
+    }
+
+    // An idea I co-signed, as a row in My cases.
+    cosignRow(i, S, handle) {
+      const f = d => this.fmtDay(d, S);
+      const P = PROMISE_DAYS, cs = i.cosigners.find(x => x.name === handle), since = cs ? cs.day : 0;
+      const waiting = i.status === 'Awaiting decision', late = waiting && i.wait > P, ap = i.approved;
+      const raised = -(i.wait || 0), lead = i.team[0] === '—' ? 'the proposer' : i.team[0];
+      return {
+        id: i.id, sortDay: since, title: i.title, status: i.status, overdue: late,
+        submitted: 'You co-signed this ' + f(since) + ' · ' + handle,
+        clock: ap ? 'Approved ' + f(ap.day) + ' by ' + ap.by + '.' + (i.team[0] !== '—' ? ' ' + i.team.filter(n => n !== 'Anonymous').join(', ') + ' are on it.' : '')
+          : waiting ? i.wait + ' days waiting' + (late ? ' — ' + (i.wait - P) + ' days past the promise. Escalated one level up.' : '. Answer owed by ' + f(raised + P) + '.')
+            : i.status === 'Shipped' ? 'Shipped. ' + (i.expected || '') : i.status + '. ' + (i.expected || ''),
+        steps: [
+          ['Sent', f(raised), 'done'],
+          ['Read by a human', f(raised + 1), 'done'],
+          ap ? ['Decided', f(ap.day), 'done'] : waiting ? (late ? ['Decided', 'overdue', 'late'] : ['Decided', 'due ' + f(raised + P), 'now']) : ['Decided', '—', i.status === 'Unfunded' ? 'todo' : 'done'],
+          i.status === 'Shipped' ? ['Shipped', 'live', 'done'] : ['Shipped', '—', 'todo']
+        ],
+        reply: i.teamNote, replyBy: lead + ' · proposer',
+        outcome: ap ? 'approved' : i.status === 'Shipped' ? i.expected : 'pending',
+        outcomeNote: i.upside && i.upside !== 'not modelled' ? i.upside + ' / yr expected' + (ap || i.status === 'Shipped' ? '' : ' if approved') : 'upside not modelled yet'
+      };
+    }
+
+    // View model for the input sheet. Returns a closed sheet when none is open.
+    sheetVals(S, who) {
+      const sh = this.state.sheet;
+      const none = { open: false, eyebrow: '', title: '', sub: '', hasOptions: false, options: [], hasText: false, text: '', onText: () => {}, textLabel: '', placeholder: '',
+        hasPeople: false, people: [], primaryLabel: '', primaryStyle: this.btn('disabled'), onConfirm: () => {}, onCancel: () => this.closeSheet(), note: '' };
+      if (!sh) return none;
+      const c = S.cases.find(x => x.id === sh.id), i = S.ideas.find(x => x.id === sh.id);
+      const text = (sh.text || '').trim();
+      const optStyle = on => ({ display: 'block', borderRadius: '10px', padding: '10px 12px', cursor: 'pointer', border: '1px solid ' + (on ? INK : '#e6e5e0'), background: on ? '#1a1a17' : '#faf9f7' });
+      const optLabel = on => ({ fontSize: '12.5px', fontWeight: 700, color: on ? '#fff' : '#141414', lineHeight: 1.35 });
+      const optSub = on => ({ fontSize: '11px', color: on ? '#c9c8c0' : '#8c8c88', marginTop: '3px', lineHeight: 1.4 });
+      const options = list => list.map(o => ({ label: o.label, sub: o.sub || '', style: optStyle(sh.picked === o.id), labelStyle: optLabel(sh.picked === o.id), subStyle: optSub(sh.picked === o.id), onSel: () => this.patchSheet({ picked: o.id }) }));
+      const chip = on => ({ display: 'inline-flex', alignItems: 'center', gap: '7px', borderRadius: '999px', padding: '6px 11px 6px 6px', cursor: 'pointer', fontSize: '12px', fontWeight: 700,
+        border: '1px solid ' + (on ? INK : '#e6e5e0'), background: on ? '#1a1a17' : '#faf9f7', color: on ? '#fff' : '#141414' });
+      const ini = on => ({ width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: MONO, fontSize: '9px', background: on ? '#fff' : INK, color: on ? INK : '#fff' });
+      const people = names => names.map(n => { const on = sh.people.indexOf(n) >= 0; return { name: n, ini: this.ini(n), style: chip(on), iniStyle: ini(on),
+        onSel: () => this.patchSheet({ people: on ? sh.people.filter(x => x !== n) : sh.people.concat([n]) }) }; });
+      const onText = e => this.patchSheet({ text: e.target.value });
+      const done = (msg, extra) => { this.setState(Object.assign({ sheet: null }, extra || {})); this.toast(msg); };
+      const base = Object.assign({}, none, { open: true, onText });
+
+      if (sh.kind === 'no' && c) {
+        const ok = !!sh.picked;
+        return Object.assign(base, {
+          eyebrow: 'No, and why', title: c.title, sub: c.from + ' is told today. A no with a reason beats silence; pick the one that is true.',
+          hasOptions: true, options: options([
+            { id: 'not now', label: 'Not now', sub: 'a real no from you — say why below' },
+            { id: 'wrong department', label: 'Wrong department', sub: 'it belongs to someone else — consider handing it over instead' },
+            { id: 'not responsible', label: 'Nobody owns this', sub: 'the map has no entry — it goes back to the department head' },
+            { id: 'no time', label: 'No time this quarter', sub: 'you would take it, the plan is full' },
+            { id: 'is it important', label: 'Does not rank', sub: 'against what the team has on, it is not the next thing' }
+          ]),
+          hasText: true, text: sh.text, textLabel: 'One line for ' + c.from + ' (optional)', placeholder: 'e.g. Q4 at the earliest — the fixture team is on the 4-series until then',
+          primaryLabel: ok ? 'Send the no' : 'Pick a reason', primaryStyle: this.btn(ok ? 'primary' : 'disabled'),
+          onConfirm: () => { if (!ok) return; this.act.decide(c.id, 'no', sh.picked, text); done('Answered “no” in ' + c.clock + ' days — ' + sh.picked + '. ' + c.from + ' has been told.'); }
+        });
+      }
+      if (sh.kind === 'ask' && c) {
+        const ok = text.length >= 4;
+        return Object.assign(base, {
+          eyebrow: 'Ask one question', title: c.title, sub: 'One question, not a form. The clock pauses until ' + c.from + ' answers; it lands in their My cases.',
+          hasText: true, text: sh.text, textLabel: 'Your question', placeholder: 'e.g. Which belt size — the 40 mm or the 60 mm?',
+          primaryLabel: ok ? 'Send the question' : 'Type the question', primaryStyle: this.btn(ok ? 'primary' : 'disabled'),
+          onConfirm: () => { if (!ok) return; this.act.ask(c.id, text); done('Question sent to ' + c.from + '. The clock is paused at ' + c.clock + ' d.'); }
+        });
+      }
+      if (sh.kind === 'reply' && c && c.question) {
+        const ok = text.length >= 2;
+        return Object.assign(base, {
+          eyebrow: 'Answer ' + c.question.by, title: '“' + (c.question.text || 'One question.') + '”', sub: 'Your answer goes straight back; the clock on ' + c.question.by + ' starts again the moment you send it.',
+          hasText: true, text: sh.text, textLabel: 'Your answer', placeholder: 'Short is fine.',
+          primaryLabel: ok ? 'Send the answer' : 'Type your answer', primaryStyle: this.btn(ok ? 'accent' : 'disabled'),
+          onConfirm: () => { if (!ok) return; this.act.answer(c.id, text); done('Answered. ' + c.question.by + '’s clock is running again.'); }
+        });
+      }
+      if (sh.kind === 'hand' && c) {
+        const route = c.route;
+        const cands = [];
+        const add = (name, sub) => { if (name && name !== who.name && !cands.some(x => x.id === name)) cands.push({ id: name, label: name, sub }); };
+        if (route) {
+          if (route.owner.name !== who.name) add(route.owner.name, 'the map’s owner · ' + route.owner.role + ', ' + this.deptName(route.owner.dept));
+          add(route.deputy, route.owner.name === who.name ? 'your deputy for this row' : 'deputy on this row');
+          add((route.buddy || '').split(' · ')[0], 'buddy for this row · ' + ((route.buddy || '').split(' · ')[1] || ''));
+        }
+        BUDDIES.forEach(b => add(b.name, 'your buddy in ' + b.dept + ' · ' + b.note));
+        const ok = !!sh.picked;
+        return Object.assign(base, {
+          eyebrow: 'Hand over', title: c.title, sub: 'Sideways, not up. Whoever you pick gets it in their inbox with the clock still running; ' + c.from + ' is told who has it now.',
+          hasOptions: true, options: options(cands),
+          hasText: true, text: sh.text, textLabel: 'Why them (optional)', placeholder: 'e.g. Quality owns the gauge — we only see the symptom',
+          primaryLabel: ok ? 'Hand to ' + sh.picked : 'Pick a person', primaryStyle: this.btn(ok ? 'accent' : 'disabled'),
+          onConfirm: () => { if (!ok) return; this.act.hand(c.id, sh.picked, text); done('Handed to ' + sh.picked + '. Both of you and ' + c.from + ' have been told. The clock keeps running.'); }
+        });
+      }
+      if (sh.kind === 'assign' && i) {
+        const funded = i.status === 'Unfunded';
+        const names = [];
+        const add = n => { if (n && n !== '—' && n !== 'Anonymous' && names.indexOf(n) < 0) names.push(n); };
+        i.team.forEach(add);
+        const p = S.problems.find(x => x.id === i.problem);
+        ROUTES.filter(r => p && p.depts.indexOf(r.owner.dept) >= 0).forEach(r => { add(r.owner.name); add(r.deputy); });
+        BUDDIES.forEach(b => add(b.name));
+        const ok = sh.people.length > 0;
+        return Object.assign(base, {
+          eyebrow: funded ? 'Fund a trial' : 'Approve and assign', title: i.title,
+          sub: (funded ? 'A trial needs people more than money. ' : 'Approving stops the clock; naming the team is what makes it real. ') + 'Pick who runs it — they are told today, and the proposer is credited.',
+          hasPeople: true, people: people(names),
+          hasText: true, text: sh.text, textLabel: 'One line to the team (optional)', placeholder: funded ? 'e.g. Four weeks, one site, measure the wait before and after' : 'e.g. Start with the two pilot sites; report on Thursday',
+          primaryLabel: ok ? (funded ? 'Fund it with ' : 'Approve with ') + sh.people.length + (sh.people.length === 1 ? ' person' : ' people') : 'Pick at least one person',
+          primaryStyle: this.btn(ok ? 'accent' : 'disabled'),
+          onConfirm: () => { if (!ok) return; (funded ? this.act.fund : this.act.approve)(i.id, sh.people, text); done((funded ? 'Trial funded. ' : 'Approved. ') + sh.people.join(', ') + (sh.people.length === 1 ? ' has' : ' have') + ' been told; the clock is stopped.'); }
+        });
+      }
+      if (sh.kind === 'askIdea' && i) {
+        const to = i.team[0] === '—' ? 'the proposer' : i.team[0];
+        const ok = text.length >= 4;
+        return Object.assign(base, {
+          eyebrow: 'Ask a question', title: i.title, sub: 'Goes to ' + to + '. It shows under the idea for everyone, so the answer is asked once.',
+          hasText: true, text: sh.text, textLabel: 'Your question', placeholder: 'e.g. What happened at the two pilot sites when a purchase went wrong?',
+          primaryLabel: ok ? 'Ask ' + to : 'Type the question', primaryStyle: this.btn(ok ? 'primary' : 'disabled'),
+          onConfirm: () => { if (!ok) return; this.act.askIdea(i.id, text); done('Question posted under “' + i.title + '”. ' + to + ' has been told.'); }
+        });
+      }
+      return none;
+    }
+
     renderVals() {
       const s = this.state;
+      const S = this.reduce();
       const role = ROLES.find(r => r.id === s.role) || ROLES[2];
       const who = role.who;
       const isEmployee = s.role === 'employee', isLead = s.role === 'lead', isManager = s.role === 'manager';
@@ -327,10 +447,12 @@ window.createDashboardComponent = function (DCLogic) {
       const view = VIEWS[s.tab] || VIEWS.overview;
 
       // Demo data on/off: one switch, every list reads through it.
+      // Cases and ideas come from the store (seed + events); with demo data
+      // off only what was created in this browser remains.
       const D = {
-        problems: demo ? PROBLEMS : [], ideas: demo ? IDEAS : [], initiatives: demo ? INITIATIVES : [],
-        mine: demo ? s.sent.concat(MY_IDEAS) : s.sent, outcomes: demo ? OUTCOMES : [],
-        cases: demo ? CASES : [], waitingOn: demo ? WAITING_ON : [], buddies: BUDDIES, stall: demo ? STALL : []
+        problems: demo ? S.problems : [], ideas: demo ? S.ideas : [], initiatives: demo ? INITIATIVES : [],
+        outcomes: demo ? OUTCOMES : [],
+        cases: demo ? S.cases : S.cases.filter(c => !c.seed), waitingOn: demo ? WAITING_ON : [], buddies: BUDDIES, stall: demo ? STALL : []
       };
       const dash = v => demo ? v : '—';
       const cnt = n => n ? String(n) : '';
@@ -350,9 +472,12 @@ window.createDashboardComponent = function (DCLogic) {
       };
 
       // ── rail ──
-      const openCases = D.cases.filter(c => !s.cases[c.id]);
+      const openCases = D.cases.filter(c => c.assignee === who.name && c.open);
+      const deskCases = D.cases.filter(c => c.assignee === who.name && (c.open || c.status === 'asked'));
+      const mineCases = D.cases.filter(c => c.from === who.handle);
+      const mineCount = mineCases.length + D.ideas.filter(i => i.cosigners.some(x => x.name === who.handle)).length;
       const navDefs = isEmployee
-        ? [['mine', 'My cases', cnt(D.mine.length)], ['problems', 'Problems', cnt(N.problems)], ['ideas', 'Ideas', cnt(N.ideas)], ['progress', 'Progress', '']]
+        ? [['mine', 'My cases', cnt(mineCount)], ['problems', 'Problems', cnt(N.problems)], ['ideas', 'Ideas', cnt(N.ideas)], ['progress', 'Progress', '']]
         : isLead
           ? [['inbox', 'Inbox', cnt(openCases.length)], ['problems', 'Problems', cnt(N.problems)], ['ideas', 'Ideas', cnt(N.ideas)],
             ['network', 'Collaboration', cnt(N.initiatives)], ['progress', 'Progress', '']]
@@ -375,34 +500,15 @@ window.createDashboardComponent = function (DCLogic) {
 
       // ── problems ──
       const decorateIdea = i => ({
-        id: i.id, title: i.title, score: i.score, status: i.status, effort: i.effort, expected: i.expected,
+        id: i.id, title: i.title, criteria: this.criteriaTags(i.criteria), status: i.status, effort: i.effort, expected: i.expected,
         expectedShort: i.expected, proposedBy: i.proposedBy,
         problemTitle: (PROBLEMS.find(p => p.id === i.problem) || {}).title || '—',
         statusStyle: this.statusStyle(i.status),
-        scoreStyle: { fontFamily: MONO, fontSize: '15px', fontWeight: 800, color: i.score >= 80 ? '#fff' : '#5b5b5b',
-          background: i.score >= 80 ? INK : '#f0efea', borderRadius: '9px', padding: '7px 9px', minWidth: '38px', textAlign: 'center', flex: 'none' },
         rowStyle: this.row(s.iid === i.id), markStyle: this.mark(s.iid === i.id), onOpen: openIdea(i.id)
       });
 
-      // ── query + filters + sort ──
-      // While you type, the search box also narrows the problems / ideas /
-      // collaboration lists; picking a result clears it again.
-      const toks = this.tokens(s.q);
-      const hasQuery = toks.length > 0;
-      const listTab = s.tab === 'problems' || s.tab === 'ideas' || s.tab === 'network';
-      const qFilter = hay => !listTab || !hasQuery || this.hits(hay, toks);
-
-      const ideaScope = D.ideas.filter(i => this.matches((PROBLEMS.find(p => p.id === i.problem) || { depts: [] }).depts));
-      const ideaSearched = ideaScope.filter(i => qFilter(this.ideaHay(i)));
-      const ideaPool = ideaSearched.filter(i => s.iStatus === 'All' || i.status === s.iStatus);
-      const upsideNum = v => { const m = /€\s*([\d.]+)\s*(k|M)?/i.exec(v || ''); return m ? parseFloat(m[1]) * (m[2] === 'M' ? 1000 : 1) : -1; };
-      const ideaSorted = ideaPool.slice().sort((a, b) => {
-        if (s.iSort === 'wait') return (b.wait || 0) - (a.wait || 0) || b.score - a.score;
-        if (s.iSort === 'upside') return upsideNum(b.upside) - upsideNum(a.upside) || b.score - a.score;
-        if (s.iSort === 'title') return a.title.localeCompare(b.title);
-        return b.score - a.score;
-      });
-      const ideas = ideaSorted.map(decorateIdea);
+      const ideaPool = D.ideas.filter(i => this.matches((PROBLEMS.find(p => p.id === i.problem) || { depts: [] }).depts));
+      const ideas = ideaPool.slice().sort((a, b) => this.criteriaCount(b.criteria) - this.criteriaCount(a.criteria) || b.wait - a.wait).map(decorateIdea);
 
       const problemScope = D.problems.filter(p => this.matches(p.depts));
       const problemSearched = problemScope.filter(p => qFilter(this.problemHay(p)));
@@ -423,11 +529,11 @@ window.createDashboardComponent = function (DCLogic) {
       });
 
       const problems = sorted.map(decorateProblem);
-      const sp0 = sorted.some(p => p.id === s.pid) ? PROBLEMS.find(p => p.id === s.pid) : sorted[0];
+      const sp0 = sorted.some(p => p.id === s.pid) ? sorted.find(p => p.id === s.pid) : sorted[0];
       const sp = sp0 ? {
         eyebrow: 'Selected problem',
         title: sp0.title, detail: sp0.detail, people: sp0.people, timeLost: sp0.timeLost, signals: sp0.signals,
-        linked: sp0.ideas.map(id => IDEAS.find(i => i.id === id)).filter(Boolean).map(i => ({
+        linked: sp0.ideas.map(id => D.ideas.find(i => i.id === id)).filter(Boolean).map(i => ({
           title: i.title, status: i.status, statusStyle: this.statusStyle(i.status), onOpen: openIdea(i.id)
         }))
       } : {
@@ -439,28 +545,37 @@ window.createDashboardComponent = function (DCLogic) {
       };
 
       // ── ideas ──
-      const si0 = ideas.some(i => i.id === s.iid) ? IDEAS.find(i => i.id === s.iid) : (ideaPool[0] || null);
-      const sip = si0 ? (PROBLEMS.find(p => p.id === si0.problem) || {}) : {};
+      const si0 = ideas.some(i => i.id === s.iid) ? ideaPool.find(i => i.id === s.iid) : (ideaPool[0] || null);
+      const sip = si0 ? (D.problems.find(p => p.id === si0.problem) || {}) : {};
       const decidable = si0 && si0.status === 'Awaiting decision';
+      const fundable = si0 && si0.status === 'Unfunded';
+      const cosigned = !!si0 && si0.cosigners.some(x => x.name === who.handle);
       const si = si0 ? {
         title: si0.title, status: si0.status, statusStyle: this.statusStyle(si0.status),
         waitLabel: si0.wait ? 'waiting ' + si0.wait + ' days' : si0.status === 'Shipped' ? 'live' : 'no owner assigned',
         rationale: si0.rationale, upside: si0.upside, effort: si0.effort,
         problemTitle: sip.title || '—', problemSub: sip.sub || '',
         onOpenProblem: sip.id ? openProblem(sip.id) : () => {},
-        primaryBtnLabel: isEmployee ? 'Co-sign this idea' : decidable ? 'Approve and assign' : si0.status === 'Unfunded' ? 'Fund a trial' : 'Open the trial',
-        onPrimary: () => this.toast(isEmployee ? 'You co-signed “' + si0.title + '”. Credit follows your handle.'
-          : decidable ? 'Approved. ' + si0.team[0] + ' has been told and the clock is stopped.' : 'Opened ' + si0.title + '.'),
-        primaryBtnStyle: { flex: 1, textAlign: 'center', background: decidable && !isEmployee ? this.accent() : INK, color: '#fff', borderRadius: '10px',
+        cosigners: si0.cosigners.length, cosignLabel: si0.cosigners.length ? si0.cosigners.length + (si0.cosigners.length === 1 ? ' co-signer' : ' co-signers') : '',
+        primaryBtnLabel: isEmployee ? (cosigned ? 'Co-signed ✓' : 'Co-sign this idea') : decidable ? 'Approve and assign' : fundable ? 'Fund a trial' : 'Open the trial',
+        onPrimary: () => {
+          if (isEmployee) { this.act.cosign(si0.id); this.toast(cosigned ? 'Co-sign withdrawn from “' + si0.title + '”.' : 'You co-signed “' + si0.title + '”. Credit follows your handle.'); }
+          else if (decidable || fundable) this.openSheet('assign', si0.id, { people: si0.team.filter(n => n !== '—' && n !== 'Anonymous') });
+          else this.toast('Opened ' + si0.title + '.');
+        },
+        primaryBtnStyle: { flex: 1, textAlign: 'center', background: (decidable || fundable) && !isEmployee ? this.accent() : cosigned ? '#f0efea' : INK, color: cosigned ? '#5b5b5b' : (decidable || fundable) && !isEmployee ? '#1a1a17' : '#fff', borderRadius: '10px',
           padding: '10px 14px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' },
-        onAsk: () => this.toast('Your question goes to ' + (si0.team[0] === '—' ? 'the proposer' : si0.team[0]) + '. The clock pauses until they answer.'),
+        onAsk: () => this.openSheet('askIdea', si0.id),
+        hasThread: si0.thread.length > 0,
+        thread: si0.thread.map(t => ({ text: '“' + t.text + '”', by: t.by + ' · ' + this.fmtDay(t.day, S), ini: this.ini(t.by) })),
+        approvedNote: si0.approved ? (si0.approved.funded ? 'Trial funded ' : 'Approved ') + this.fmtDay(si0.approved.day, S) + ' by ' + si0.approved.by + (si0.approved.note ? ' — “' + si0.approved.note + '”' : '') : '',
         team: si0.team.map(n => ({ name: n === '—' ? 'Nobody assigned' : n, ini: this.ini(n) })), teamNote: si0.teamNote
       } : {
         title: 'No idea to show', status: '', statusStyle: {}, waitLabel: '',
         rationale: demo ? 'No ideas are tied to problems in this department yet.' : 'Ideas appear here as step three of a case — once a problem exists, whoever raised it (or anyone else) can propose the fix.',
         upside: '—', effort: '—', problemTitle: '—', problemSub: '', onOpenProblem: () => {},
         primaryBtnLabel: 'Nothing to decide', onPrimary: () => {}, primaryBtnStyle: { flex: 1, textAlign: 'center', background: '#f0efea', color: '#a0a099', borderRadius: '10px', padding: '10px 14px', fontSize: '12.5px', fontWeight: 700 },
-        onAsk: () => {}, team: [], teamNote: ''
+        onAsk: () => {}, team: [], teamNote: '', cosigners: 0, cosignLabel: '', hasThread: false, thread: [], approvedNote: ''
       };
 
       // ── collaboration ──
@@ -545,7 +660,7 @@ window.createDashboardComponent = function (DCLogic) {
       const M = METRICS;
       const was = str => parseInt(String(str).replace(/[^\d]/g, ''), 10);
       const kpis = [
-        kpi('Idea → decision', M.ideaToDecision.now, M.ideaToDecision.was, true, 'median, last 30 days', M.ideaToDecision.spark),
+        kpi('Idea → decision', M.ideaToDecision.now, M.ideaToDecision.was, true, 'median to the decision itself, last 30 days — the first answer comes sooner', M.ideaToDecision.spark),
         kpi('Shipped this year', String(N.shippedTeams), M.shippedWas, N.shippedTeams >= was(M.shippedWas), M.stoppedEarly + ' stopped early, on purpose', M.shippedSpark),
         kpi('Value booked', M.valueBooked.now, M.valueBooked.delta, true, M.valueBooked.sub, M.valueBooked.spark),
         kpi('Waiting days saved', M.waitingDaysSaved.now, 'vs old route', true, 'across ' + N.ideas + ' ideas, since the clock came in', M.waitingDaysSaved.spark),
@@ -554,20 +669,25 @@ window.createDashboardComponent = function (DCLogic) {
 
       const stallMax = Math.max.apply(null, [1].concat(D.stall.map(x => x.days)));
       const stall = D.stall.map((x, i) => ({
-        reason: x.reason, days: x.days + ' d', share: Math.round(x.share * 100) + '%', note: x.note,
+        reason: x.reason, days: x.days + ' d', share: '', note: x.note,
         barStyle: { height: '10px', borderRadius: '999px', width: Math.round(x.days / stallMax * 100) + '%', background: i < 2 ? this.accent() : INK }
       }));
 
+      const live = type => s.log.events.filter(e => e.type === type).length;
       const ledger = {
         firstAnswer: dash(LEDGER.firstAnswer), firstAnswerWas: demo ? LEDGER.firstAnswerWas : 'measured in pilot',
         withinPromise: dash(LEDGER.withinPromise), withinPromiseWas: demo ? LEDGER.withinPromiseWas : 'measured in pilot',
-        overrides: dash(LEDGER.overrides), overridesNote: demo ? LEDGER.overridesNote : 'every overruled proposal is logged — this number is the map’s accuracy',
-        escalated: dash(LEDGER.escalated), handedOver: dash(LEDGER.handedOver)
+        overrides: dash(live(E.ROUTE_OVERRIDDEN) ? ((parseFloat(LEDGER.overrides) || 0) + live(E.ROUTE_OVERRIDDEN)) + '%' : LEDGER.overrides), overridesNote: demo ? LEDGER.overridesNote : 'every overruled proposal is logged — this number is the map’s accuracy',
+        escalated: dash(String(LEDGER.escalated)), handedOver: dash(String(LEDGER.handedOver + live(E.CASE_HANDED)))
       };
 
       // ── employee: my cases + intake ──
       const stepTone = { done: INK, now: this.accent(), late: this.accent(), todo: '#dedcd5' };
-      const myIdeas = D.mine.map(m => ({
+      const mine = mineCases.map(c => this.mineRow(c, S))
+        .concat(D.ideas.filter(i => i.cosigners.some(x => x.name === who.handle)).map(i => this.cosignRow(i, S, who.handle)))
+        .sort((a, b) => b.sortDay - a.sortDay);
+      const myIdeas = mine.map(m => ({
+        canReply: !!m.canReply, replyLabel: 'Answer ' + m.replyTo, onReply: () => this.openSheet('reply', m.id),
         title: m.title, submitted: m.submitted, status: m.status, statusStyle: this.statusStyle(m.status),
         clock: m.clock,
         clockStyle: { fontSize: '12px', fontWeight: 600, lineHeight: 1.5, marginTop: '13px', padding: '9px 11px', borderRadius: '9px',
@@ -600,17 +720,10 @@ window.createDashboardComponent = function (DCLogic) {
           borderRadius: '10px', padding: '10px 14px', fontSize: '12.5px', fontWeight: 800, cursor: s.draft.trim().length >= 8 ? 'pointer' : 'default' },
         onSend: () => {
           if (s.draft.trim().length < 8) return;
-          const owner = pr ? pr.owner.name : 'the triage desk';
-          const due = this.todayPlus(PROMISE_DAYS);
-          const entry = {
-            title: s.draft.trim(), submitted: 'You raised this today · ' + who.handle, status: 'Sent', overdue: false,
-            clock: 'Sent to ' + owner + '. They owe you a yes, a no or a question by ' + due + '.',
-            steps: [['Sent', 'today', 'done'], ['Read by a human', 'pending', 'now'], ['Decided', 'due ' + due, 'todo'], ['Shipped', '—', 'todo']],
-            reply: 'No reply yet. ' + owner + ' has been told; if they miss the date it moves to ' + (pr ? pr.deputy : 'their deputy') + ' automatically.',
-            replyBy: 'the ' + PROMISE_DAYS + '-day clock started today',
-            outcome: 'pending', outcomeNote: 'measured ' + OUTCOME_DAYS + ' days after launch'
-          };
-          this.persist({ sent: [entry].concat(s.sent), draft: '' });
+          const owner = pr ? pr.owner.name : 'Triage desk';
+          const due = this.todayPlus(S.day + PROMISE_DAYS);
+          this.act.raise({ title: s.draft.trim(), body: '', routeId: pr ? pr.id : null, assignee: owner, fromDept: who.line, reason: pr ? 'triage' : 'not responsible' });
+          this.set('draft', '');
           this.toast('Sent to ' + owner + '. Answer owed by ' + due + '.');
         },
         onWrong: () => this.toast('Noted — a human routes it instead, and the override is logged against the map.')
@@ -626,87 +739,105 @@ window.createDashboardComponent = function (DCLogic) {
       ];
 
       const myStats = [
-        { v: String(D.mine.length), l: 'problems and ideas you raised' },
-        { v: String(D.mine.filter(m => m.status === 'Shipped').length), l: 'shipped, credited to you' },
-        { v: String(D.mine.filter(m => m.status === 'Building' || m.status === 'In trial').length), l: 'being built right now' },
+        { v: String(mine.length), l: 'problems and ideas you raised' },
+        { v: String(mine.filter(m => m.status === 'Shipped').length), l: 'shipped, credited to you' },
+        { v: String(mine.filter(m => m.status === 'Building' || m.status === 'In trial').length), l: 'being built right now' },
         { v: demo ? METRICS.you.medianWait : '—', l: 'your median wait for a reply' }
       ];
 
       // ── team leader: inbox ──
-      const inboxSorted = openCases.slice().sort((a, b) => b.age - a.age);
+      // Live cases first (oldest clock on top), then the ones paused on a question.
+      const inboxSorted = deskCases.slice().sort((a, b) => (a.open === b.open ? 0 : a.open ? -1 : 1) || b.clock - a.clock || b.age - a.age);
       const decorateCase = c => {
-        const late = c.age > PROMISE_DAYS, soon = c.age >= PROMISE_DAYS - 2 && !late;
+        const paused = c.status === 'asked';
+        const late = c.clock > PROMISE_DAYS, soon = c.clock >= PROMISE_DAYS - 2 && !late;
         return {
-          id: c.id, title: c.title, from: c.from + ' · ' + c.fromDept, age: c.age + ' d', reason: c.reason, reasonStyle: this.reasonStyle(c.reason),
-          clock: late ? (c.age - PROMISE_DAYS) + ' d past the promise' : (PROMISE_DAYS - c.age) + ' d left',
+          id: c.id, title: c.title, from: c.from + ' · ' + c.fromDept, age: c.clock + ' d', reason: paused ? 'waiting on ' + c.from : c.reason, reasonStyle: paused ? this.pill('#f0efea', '#5b5b5b', 600) : this.reasonStyle(c.reason),
+          clock: paused ? 'clock paused' : late ? (c.clock - PROMISE_DAYS) + ' d past the promise' : (PROMISE_DAYS - c.clock) + ' d left',
           clockStyle: { fontFamily: MONO, fontSize: '11px', fontWeight: 700, whiteSpace: 'nowrap', borderRadius: '6px', padding: '4px 8px',
-            background: late ? this.accent() : soon ? this.accentSoft() : '#f0efea', color: late ? '#1a1a17' : soon ? this.accentInk() : '#5b5b5b' },
-          rowStyle: this.row(s.cid === c.id), markStyle: this.mark(s.cid === c.id), onOpen: () => this.set('cid', c.id)
+            background: paused ? 'transparent' : late ? this.accent() : soon ? this.accentSoft() : '#f0efea', color: paused ? '#a0a099' : late ? '#1a1a17' : soon ? this.accentInk() : '#5b5b5b',
+            border: paused ? '1px dashed #dedcd5' : 'none' },
+          rowStyle: Object.assign(this.row(s.cid === c.id), paused ? { opacity: 0.72 } : {}), markStyle: this.mark(s.cid === c.id),
+          // Opening a case is the "read by a human" moment the sender's tracker shows.
+          onOpen: () => { if (c.read === null) this.act.read(c.id); this.set('cid', c.id); }
         };
       };
       const inbox = inboxSorted.map(decorateCase);
-      const sc0 = inboxSorted.some(c => c.id === s.cid) ? CASES.find(c => c.id === s.cid) : inboxSorted[0];
-      const scRoute = sc0 ? ROUTES.find(r => r.id === sc0.routeId) : null;
-      const scMine = scRoute && scRoute.owner.name === who.name;
-      const act = (id, status, msg) => () => { this.persist({ cases: Object.assign({}, s.cases, { [id]: status }) }); this.toast(msg); };
+      const sc0 = inboxSorted.some(c => c.id === s.cid) ? inboxSorted.find(c => c.id === s.cid) : inboxSorted[0];
+      const scRoute = sc0 ? sc0.route : null;
+      const scMine = !!scRoute && scRoute.owner.name === who.name;
+      const handTo = scRoute ? (scMine ? scRoute.deputy : scRoute.owner.name) : 'the triage desk';
       const sc = sc0 ? {
         title: sc0.title, body: sc0.body, from: sc0.from, fromDept: sc0.fromDept, fromIni: this.ini(sc0.from),
-        age: sc0.age + ' days open', reason: sc0.reason, reasonStyle: this.reasonStyle(sc0.reason), upside: sc0.upside,
-        routeEyebrow: scMine ? 'The map says this is yours' : 'The map proposes another owner',
-        routeType: scRoute ? scRoute.type : '—',
-        routeOwner: scMine ? 'You · ' + scRoute.owner.role : scRoute.owner.name + ' · ' + scRoute.owner.role + ', ' + this.deptName(scRoute.owner.dept),
-        routeDeputy: scRoute.deputy, routeBuddy: scRoute.buddy,
-        handLabel: scMine ? 'Hand to ' + scRoute.deputy : 'Pass to ' + scRoute.owner.name,
-        onYes: act(sc0.id, 'decided', 'Answered “yes” in ' + sc0.age + ' days. ' + sc0.from + ' has been told; the clock is stopped.'),
-        onNo: act(sc0.id, 'decided', 'Answered “no” with your reason. ' + sc0.from + ' has been told — a no in ' + sc0.age + ' days beats silence.'),
-        onHand: act(sc0.id, 'handed', 'Handed to ' + (scMine ? scRoute.deputy : scRoute.owner.name) + '. Both of you and ' + sc0.from + ' have been told. The clock keeps running.'),
-        onAsk: act(sc0.id, 'asked', 'One question sent to ' + sc0.from + '. The clock pauses until they answer.')
+        age: sc0.clock + ' days open', reason: sc0.reason, reasonStyle: this.reasonStyle(sc0.reason), upside: sc0.upside,
+        routeEyebrow: !scRoute ? 'The map has no entry for this' : scMine ? 'The map says this is yours' : 'The map proposes another owner',
+        routeType: scRoute ? scRoute.type : 'no matching route — a human triages it',
+        routeOwner: !scRoute ? 'Triage desk' : scMine ? 'You · ' + scRoute.owner.role : scRoute.owner.name + ' · ' + scRoute.owner.role + ', ' + this.deptName(scRoute.owner.dept),
+        routeDeputy: scRoute ? scRoute.deputy : '—', routeBuddy: scRoute ? scRoute.buddy : '—',
+        handLabel: scMine ? 'Hand to ' + handTo : 'Pass to ' + handTo,
+        canAct: sc0.open,
+        paused: sc0.status === 'asked',
+        pausedNote: sc0.status === 'asked' ? 'Waiting for ' + sc0.from + ' to answer. The clock is paused at ' + sc0.clock + (sc0.clock === 1 ? ' day' : ' days') + '; it resumes when they reply.' : '',
+        hasQuestion: !!sc0.question,
+        question: sc0.question ? '“' + (sc0.question.text || 'One question.') + '”' : '',
+        questionBy: sc0.question ? 'you asked ' + this.fmtDay(sc0.question.day, S) : '',
+        hasAnswer: !!(sc0.question && sc0.question.answer),
+        answer: sc0.question && sc0.question.answer ? '“' + sc0.question.answer.text + '”' : '',
+        answerBy: sc0.question && sc0.question.answer ? sc0.from + ' answered ' + this.fmtDay(sc0.question.answer.day, S) : '',
+        handedNote: sc0.handed.length ? 'Came to you from ' + sc0.handed[sc0.handed.length - 1].from + ' ' + this.fmtDay(sc0.handed[sc0.handed.length - 1].day, S) + (sc0.handed[sc0.handed.length - 1].why ? ' — “' + sc0.handed[sc0.handed.length - 1].why + '”' : '') + '.' : '',
+        onYes: () => { this.act.decide(sc0.id, 'yes'); this.toast('Answered “yes” in ' + sc0.clock + ' days. ' + sc0.from + ' has been told; the clock is stopped.'); },
+        onNo: () => this.openSheet('no', sc0.id),
+        onHand: () => this.openSheet('hand', sc0.id, { picked: handTo }),
+        onAsk: () => this.openSheet('ask', sc0.id)
       } : {
         title: demo ? 'Inbox empty' : 'Nothing addressed to you yet', body: demo ? 'Nothing is waiting on you. That is the goal by the end of every day.' : 'When someone on your team, or in a neighbouring one, raises a problem the map routes to you, it lands here with a ' + PROMISE_DAYS + '-day clock.',
         from: '', fromDept: '', fromIni: '', age: '', reason: '', reasonStyle: {}, upside: '',
         routeEyebrow: '', routeType: '', routeOwner: '', routeDeputy: '', routeBuddy: '', handLabel: '',
+        canAct: false, paused: false, pausedNote: '', hasQuestion: false, question: '', questionBy: '', hasAnswer: false, answer: '', answerBy: '', handedNote: '',
         onYes: () => {}, onNo: () => {}, onHand: () => {}, onAsk: () => {}
       };
 
-      const cleared = D.cases.filter(c => s.cases[c.id]).map(c => ({
-        title: c.title, what: CASE_ACTIONS[s.cases[c.id]], style: this.pill(s.cases[c.id] === 'asked' ? '#f0efea' : INK, s.cases[c.id] === 'asked' ? '#5b5b5b' : '#fff', 600)
+      const cleared = D.cases.map(c => ({ c, did: NHStore.actedBy(c, who.name) })).filter(x => x.did === 'decided' || x.did === 'handed').map(({ c, did }) => ({
+        title: c.title,
+        what: did === 'decided' && c.decided ? 'Decided · ' + c.decided.answer + (c.decided.reason && c.decided.answer === 'no' ? ' · ' + c.decided.reason : '') : 'Handed over · ' + c.assignee,
+        style: this.pill(did === 'handed' ? '#f0efea' : INK, did === 'handed' ? '#5b5b5b' : '#fff', 600)
       }));
 
-      const overdueCases = openCases.filter(c => c.age > PROMISE_DAYS).length;
+      const overdueCases = openCases.filter(c => c.overdue).length;
       const inboxStats = [
-        { v: String(openCases.length), l: 'open, addressed to you' },
+        { v: String(deskCases.length), l: openCases.length === deskCases.length ? 'open, addressed to you' : 'open, addressed to you · ' + (deskCases.length - openCases.length) + ' paused' },
         { v: String(overdueCases), l: 'past the ' + PROMISE_DAYS + '-day promise', hot: overdueCases > 0 },
         { v: dash(METRICS.lead.medianAnswer), l: 'your median time to answer' },
         { v: dash(METRICS.lead.withinPromise), l: 'answered within the promise, Q3' }
       ].map(x => ({ v: x.v, l: x.l, vStyle: { fontSize: '19px', fontWeight: 800, letterSpacing: '-0.025em', color: x.hot ? this.accentInk() : '#141414' } }));
 
-      const waitingOn = D.waitingOn.map(w => ({
+      const myDeptName = this.deptName(role.dept);
+      const deptOfPerson = name => { const r = ROUTES.find(x => x.owner.name === name); return r ? this.deptName(r.owner.dept) : (BUDDIES.find(b => b.name === name) || {}).dept || '—'; };
+      const liveWaiting = D.cases
+        .filter(c => (c.open || c.status === 'asked') && c.assignee !== who.name && c.fromDept.indexOf(myDeptName) === 0)
+        .map(c => ({ title: c.title, owner: c.assignee, dept: deptOfPerson(c.assignee), age: c.clock, promised: PROMISE_DAYS, paused: c.status === 'asked' }));
+      const waitingOn = liveWaiting.concat(D.waitingOn).map(w => ({
         title: w.title, owner: w.owner + ' · ' + w.dept, age: w.age + ' d',
-        state: w.age > w.promised ? (w.age - w.promised) + ' d past the promise · escalated' : 'answer owed in ' + (w.promised - w.age) + ' d',
+        state: w.paused ? 'paused · they asked the sender a question' : w.age > w.promised ? (w.age - w.promised) + ' d past the promise · escalated' : 'answer owed in ' + (w.promised - w.age) + ' d',
         stateStyle: { fontFamily: MONO, fontSize: '10.5px', fontWeight: 600, color: w.age > w.promised ? this.accentInk() : '#a0a099' }
       }));
 
       // ── top bar: search, decisions popover, user menu ──
-      const q = s.q.trim();
-      const searchOpen = s.pop === 'search' && q.length >= 2;
-      const results = searchOpen ? this.runSearch(this.searchIndex(D, isLead, s.cases), q) : [];
-      const cursor = Math.min(s.cursor, Math.max(results.length - 1, 0));
-      const kindPill = k => Object.assign({
-        Problem: this.pill('#f0efea', '#5b5b5b', 700), Idea: this.pill(this.accentSoft(), this.accentInk(), 700),
-        Team: this.pill('#dcf3e3', '#116634', 700), Case: this.pill('#e8e4ff', '#4b3bb3', 700), Person: this.pill(INK, '#fff', 700)
-      }[k], { minWidth: '54px', textAlign: 'center', boxSizing: 'border-box', flex: 'none' });
-      const groupNames = ['Problems', 'Ideas', 'Teams', 'Your inbox', 'People'];
-      const resultGroups = [];
-      results.forEach((r, idx) => {
-        const label = groupNames[r.group];
-        let g = resultGroups.find(x => x.label === label);
-        if (!g) { g = { label, items: [] }; resultGroups.push(g); }
-        g.items.push({
-          kind: r.kind, kindStyle: kindPill(r.kind), meta: r.sub, right: r.right,
-          parts: this.hl(r.title, toks).map(x => ({ t: x.t, cls: x.hit ? 'nh-hit' : '' })),
-          rowClass: 'nh-result' + (idx === cursor ? ' nh-result--active' : ''),
-          onPick: () => this.pick(r), onHover: () => { if (s.cursor !== idx) this.set('cursor', idx); }
-        });
+      const q = s.q.trim().toLowerCase();
+      const hit = t => q.length >= 2 && (t || '').toLowerCase().indexOf(q) >= 0;
+      const people = {};
+      INITIATIVES.forEach(t => t.members.forEach(m => { if (!m.name.startsWith('Anonymous')) people[m.name] = { name: m.name, meta: m.role, tid: t.id }; }));
+      BUDDIES.forEach(b => { people[b.name] = people[b.name] || { name: b.name, meta: b.dept }; });
+      const results = [];
+      if (demo) {
+        PROBLEMS.filter(p => hit(p.title) || hit(p.sub)).slice(0, 4).forEach(p => results.push({ kind: 'Problem', title: p.title, meta: p.people + ' people · ' + p.trend, onOpen: openProblem(p.id) }));
+        IDEAS.filter(i => hit(i.title)).slice(0, 4).forEach(i => results.push({ kind: 'Idea', title: i.title, meta: i.status + ' · ' + this.criteriaTags(i.criteria).map(t => t.label).join(' · '), onOpen: openIdea(i.id) }));
+        INITIATIVES.filter(t => hit(t.name)).slice(0, 3).forEach(t => results.push({ kind: 'Team', title: t.name, meta: t.status, onOpen: openInitiative(t.id) }));
+        if (isLead) openCases.filter(c => hit(c.title)).slice(0, 3).forEach(c => results.push({ kind: 'Case', title: c.title, meta: c.clock + ' d · ' + c.from, onOpen: openCase(c.id) }));
+      }
+      Object.keys(people).filter(n => hit(n)).slice(0, 3).forEach(n => {
+        const p = people[n];
+        results.push({ kind: 'Person', title: p.name, meta: p.meta, onOpen: p.tid ? openInitiative(p.tid) : () => this.setState({ pop: null, q: '' }) });
       });
       const onSearchKey = e => {
         if (e.key === 'ArrowDown') { e.preventDefault(); this.setState({ pop: 'search', cursor: results.length ? (cursor + 1) % results.length : 0 }); }
@@ -767,11 +898,11 @@ window.createDashboardComponent = function (DCLogic) {
         cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', background: on ? INK : '#fff', color: on ? '#fff' : '#3d3d3a',
         border: '1px solid ' + (on ? INK : '#e6e5e0'), position: 'relative', zIndex: 31 });
 
-      const overdueMine = D.mine.filter(m => m.overdue);
+      const overdueMine = mine.filter(m => m.overdue);
       const dropItems = isManager
         ? decisions.map(d => ({ title: d.title, meta: d.days + ' · ' + (d.upside || '') + ' upside', hot: parseInt(d.days) > PROMISE_DAYS, onOpen: d.onOpen }))
         : isLead
-          ? inboxSorted.filter(c => c.age >= PROMISE_DAYS - 2).map(c => ({ title: c.title, meta: c.age + ' d · ' + c.from, hot: c.age > PROMISE_DAYS, onOpen: openCase(c.id) }))
+          ? inboxSorted.filter(c => c.clock >= PROMISE_DAYS - 2).map(c => ({ title: c.title, meta: c.clock + ' d · ' + c.from, hot: c.clock > PROMISE_DAYS, onOpen: openCase(c.id) }))
           : overdueMine.map(m => ({ title: m.title, meta: m.clock, hot: true, onOpen: () => this.setState({ tab: 'mine', pop: null }) }));
       const dropCount = dropItems.length;
       const decisionBtnLabel = !demo && !dropCount ? 'Nothing waiting'
@@ -832,7 +963,11 @@ window.createDashboardComponent = function (DCLogic) {
 
       const mv = (label, now, was, spark) => ({ label, now: dash(now), was: demo ? was : 'measured in pilot', bars: demo ? this.bars(spark) : this.flatBars() });
 
+      const sheet = this.sheetVals(S, who);
+
       return {
+        sheet, sheetOpen: sheet.open,
+        replyBtn: this.btn('accent'),
         // rail + shell
         navItems, scopeItems,
         viewTitle: view.title, viewSub: view.sub.replace('{signals}', demo ? fmt(METRICS.signals) : '0'),
@@ -891,7 +1026,7 @@ window.createDashboardComponent = function (DCLogic) {
         toggleDemo: () => this.setState({ demo: !s.demo, dev: false }), resetDemo: () => this.resetDemo(),
         demoLabel: demo ? 'Demo data on' : 'Demo data off',
         copySnippet: () => this.copySnippet(),
-        newCount: s.sent.length ? s.sent.length + (s.sent.length === 1 ? ' new case this session' : ' new cases this session') : 'nothing new this session',
+        newCount: (n => n ? n + (n === 1 ? ' new case this session' : ' new cases this session') : 'nothing new this session')(S.cases.filter(c => !c.seed).length),
         demoTrack: { width: '30px', height: '17px', borderRadius: '999px', padding: '2px', boxSizing: 'border-box', background: demo ? this.accent() : '#4a4a44', cursor: 'pointer', display: 'flex', justifyContent: demo ? 'flex-end' : 'flex-start' },
         devBtnStyle: { display: 'flex', alignItems: 'center', gap: '7px', background: s.dev ? '#fbfbf9' : '#2e2e28', color: s.dev ? '#1a1a17' : '#c9c8c0', border: '1px solid ' + (s.dev ? '#fbfbf9' : '#3d3d38'), borderRadius: '9px', padding: '7px 11px', fontFamily: MONO, fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', boxShadow: '0 6px 20px rgba(0,0,0,0.35)' },
         devStatus: role.label + ' · demo ' + (demo ? 'on' : 'off'),
@@ -901,10 +1036,10 @@ window.createDashboardComponent = function (DCLogic) {
         nextCall: demo ? METRICS.nextCall : 'not scheduled yet',
         nextCallNote: demo ? 'Agenda is built from the items above — nothing else on it.' : 'The first decision call is booked when the first item passes its ' + PROMISE_DAYS + ' days.',
         movement: [
-          mv('Idea → decision', M.ideaToDecision.now, M.ideaToDecision.was, M.ideaToDecision.spark),
+          mv('Time to decision', M.ideaToDecision.now, M.ideaToDecision.was, M.ideaToDecision.spark),
           mv('Ideas shipped / yr', String(N.shippedTeams), M.shippedWas, M.shippedSpark),
           mv('Value from ideas', M.valueBooked.now, M.valueBooked.was, M.valueBooked.spark),
-          mv('People contributing', M.contributing.now, M.contributing.was, M.contributing.spark)
+          mv('People who raised something', M.contributing.now, M.contributing.was, M.contributing.spark)
         ],
         legendAccentStyle: { width: '20px', height: '3px', borderRadius: '2px', background: this.accent() },
         unansweredStyle: { fontSize: '22px', fontWeight: 800, color: demo ? this.accentInk() : '#141414', letterSpacing: '-0.025em' },
@@ -922,7 +1057,7 @@ window.createDashboardComponent = function (DCLogic) {
         discovery: (() => {
           const done = demo ? METRICS.discovery.interviewed : 0, pct = Math.round(done / N.people * 100);
           return { done: fmt(done) + ' of ' + fmt(N.people) + ' interviewed', w: { width: pct + '%', height: '7px', borderRadius: '999px', background: INK },
-            note: demo ? pct + '% coverage · ' + METRICS.discovery.note : 'Round 1 not started' };
+            note: demo ? METRICS.discovery.note : 'Round 1 not started' };
         })(),
         discoveryRound: 'Discovery round ' + (demo ? METRICS.discovery.round : 1),
         ideas, topIdeas: ideas.slice(0, 5), si, noIdeas: ideas.length === 0,
@@ -961,7 +1096,7 @@ window.createDashboardComponent = function (DCLogic) {
         answered: {
           replied: demo ? METRICS.answered.replied : '—', median: demo ? METRICS.answered.median : '—',
           credited: demo ? fmt(METRICS.answered.credited) : '0',
-          unanswered: String(N.overdueIdeas + openCases.filter(c => c.age > PROMISE_DAYS).length)
+          unanswered: String(N.overdueIdeas + D.cases.filter(c => c.overdue).length)
         },
         contributors, noContributors: contributors.length === 0
       };
