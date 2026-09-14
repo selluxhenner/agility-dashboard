@@ -20,13 +20,12 @@ window.createDashboardComponent = function (DCLogic) {
 
   const MONO = 'IBM Plex Mono, monospace';
   const CASE_ACTIONS = { decided: 'Decided', handed: 'Handed over', asked: 'Question sent' };
-  const STORE_KEY = 'nexthub.demo.v1';
 
-  // Session-created data (cases the employee sent, inbox actions) is kept in
-  // localStorage so it survives a reload. "Copy for data.js" in the dev panel
-  // turns the sent cases into MY_IDEAS entries to paste into js/data.js.
-  const loadStore = () => { try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch (e) { return {}; } };
-  const saveStore = o => { try { localStorage.setItem(STORE_KEY, JSON.stringify(o)); } catch (e) { /* private mode */ } };
+  // Everything that happens in the browser is an event in NHStore (js/store.js).
+  // The seed rows in js/data.js never change; the page renders
+  // reduce(seed, events). "Copy for data.js" exports session cases as rows.
+  const SEED = () => ({ cases: CASES, ideas: IDEAS, problems: PROBLEMS, routes: ROUTES, promiseDays: PROMISE_DAYS });
+  const E = NHStore.T;
   const median = xs => { if (!xs.length) return null; const a = xs.slice().sort((x, y) => x - y); const m = a.length >> 1; return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
   const fmt = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
@@ -38,12 +37,49 @@ window.createDashboardComponent = function (DCLogic) {
         role: role.id, tab: props.defaultView || role.home, dept: role.dept,
         pid: 'p1', iid: 'i1', tid: 't3', cid: 'c1', sort: 'people',
         demo: props.demoData !== false, dev: false,
-        q: '', pop: null, draft: '', sent: loadStore().sent || [], cases: loadStore().cases || {}, toast: null,
+        q: '', pop: null, draft: '', log: NHStore.load(), toast: null,
         mobile: false, menu: false
       };
       this.onKey = this.onKey.bind(this);
       this.onMedia = this.onMedia.bind(this);
+
+      // ── actions: the only way UI code changes domain state ──────────────
+      // Each appends one event as the current persona and re-renders. UI
+      // pieces (buttons, sheets) call these; they never touch the log or the
+      // reducer directly. Payload shapes: js/store.js, docs/ACTIONS_PLAN.md §2.2.
+      const emit = (type, target, payload) => {
+        const log = NHStore.append(this.state.log, { type, actor: this.actor(), target, payload: payload || {} });
+        this.setState({ log });
+        return log;
+      };
+      this.act = {
+        raise: p => { const id = NHStore.newId('c'); emit(E.CASE_RAISED, id, p); return id; },
+        read: id => emit(E.CASE_READ, id),
+        decide: (id, answer, reason, note) => emit(E.CASE_DECIDED, id, { answer, reason, note }),
+        hand: (id, to, why) => emit(E.CASE_HANDED, id, { to, why }),
+        ask: (id, text) => emit(E.CASE_ASKED, id, { text }),
+        answer: (id, text) => emit(E.CASE_ANSWERED, id, { text }),
+        override: (id, proposed, chosen) => emit(E.ROUTE_OVERRIDDEN, id, { proposed, chosen }),
+        cosign: ideaId => {
+          const i = this.reduce().ideas.find(x => x.id === ideaId);
+          const already = i && i.cosigners.some(x => x.name === this.actor());
+          return emit(already ? E.IDEA_UNCOSIGNED : E.IDEA_COSIGNED, ideaId);
+        },
+        askIdea: (ideaId, text) => emit(E.IDEA_ASKED, ideaId, { text }),
+        approve: (ideaId, team, note) => emit(E.IDEA_APPROVED, ideaId, { team, note }),
+        fund: (ideaId, team, note) => emit(E.IDEA_FUNDED, ideaId, { team, note }),
+        advanceDay: by => emit(E.DAY_ADVANCED, null, { by: by || 1 })
+      };
     }
+
+    // Who is acting: the employee posts under their handle, everyone else by name.
+    actor() {
+      const r = ROLES.find(x => x.id === this.state.role) || ROLES[2];
+      return r.id === 'employee' && r.who.handle ? r.who.handle : r.who.name;
+    }
+
+    // Seed + log → state. Cheap; called once per render.
+    reduce() { return NHStore.reduce(SEED(), this.state.log); }
 
     componentDidMount() {
       window.addEventListener('keydown', this.onKey);
@@ -91,8 +127,9 @@ window.createDashboardComponent = function (DCLogic) {
     }
 
     statusStyle(s) {
-      if (s === 'Awaiting decision' || s === 'Sent') return this.pill(this.accentSoft(), this.accentInk());
+      if (s === 'Awaiting decision' || s === 'Sent' || s === 'Question for you') return this.pill(this.accentSoft(), this.accentInk());
       if (s === 'Shipped') return this.pill(INK, '#fff');
+      if (s === 'Approved') return this.pill('#dcf3e3', '#116634');
       if (s === 'In trial' || s === 'Building') return this.pill('#ecebe6', '#3d3d3a');
       return this.pill('transparent', MUTE, 600);
     }
@@ -147,6 +184,17 @@ window.createDashboardComponent = function (DCLogic) {
     ini(name) { return !name || name.startsWith('Anonymous') || name === '—' ? '?' : name.split(' ').map(w => w[0]).join('').slice(0, 2); }
 
     deptName(id) { const d = DEPTS.find(x => x.id === id); return d ? d.name : id; }
+    // The three case criteria as tags — the KPI tag is the routing criterion and gets the ink.
+    criteriaCount(c) { return (c.fit ? 1 : 0) + (c.urgent ? 1 : 0) + (c.kpi ? 1 : 0); }
+    criteriaTags(c) {
+      const tag = (label, strong) => ({ label, style: this.pill(strong ? INK : '#f0efea', strong ? '#fff' : '#5b5b5b', 600) });
+      const t = [];
+      if (c.fit) t.push(tag('Strategic fit'));
+      if (c.urgent) t.push(tag('Urgent'));
+      if (c.kpi) t.push(tag('Moves: ' + c.kpi, true));
+      if (!t.length) t.push({ label: 'No criterion met', style: this.pill('transparent', '#a0a099', 500) });
+      return t;
+    }
     deptLabel(ids) { return ids.length > 3 ? ids.slice(0, 3).map(i => this.deptName(i)).join(' · ') + ' +' + (ids.length - 3) : ids.map(i => this.deptName(i)).join(' · '); }
 
     matches(depts) { return this.state.dept === 'All' || depts.indexOf(this.state.dept) >= 0; }
@@ -159,17 +207,7 @@ window.createDashboardComponent = function (DCLogic) {
     }
 
     // ── routing: propose (never decide) the owning row for a piece of text ──
-    propose(text) {
-      const t = (text || '').toLowerCase();
-      if (t.trim().length < 8) return null;
-      let best = null, bestHits = 0;
-      ROUTES.forEach(r => {
-        const hits = r.keys.filter(k => t.indexOf(k) >= 0).length;
-        if (hits > bestHits) { best = r; bestHits = hits; }
-      });
-      if (!best) return { route: null, confidence: 0 };
-      return { route: best, confidence: bestHits >= 3 ? 91 : bestHits === 2 ? 78 : 62 };
-    }
+    propose(text) { return NHStore.propose(text); }
 
     todayPlus(days) {
       const d = new Date(); d.setDate(d.getDate() + days);
@@ -183,33 +221,94 @@ window.createDashboardComponent = function (DCLogic) {
     }
 
     resetDemo() {
-      saveStore({});
-      this.setState({ sent: [], cases: {}, draft: '', q: '', pop: null, dev: false });
+      this.setState({ log: NHStore.reset(), draft: '', q: '', pop: null, dev: false });
       this.toast('Demo state reset');
     }
 
-    // Persist the two pieces of session-created state alongside the setState.
-    persist(patch) {
-      this.setState(patch);
-      const cur = loadStore();
-      saveStore({ sent: patch.sent !== undefined ? patch.sent : (cur.sent || this.state.sent), cases: patch.cases !== undefined ? patch.cases : (cur.cases || this.state.cases) });
-    }
-
-    // Sent cases as a snippet for js/data.js (MY_IDEAS entries).
-    exportSnippet() {
-      const rows = this.state.sent.map(m => '  ' + JSON.stringify(m, null, 0).replace(/"(\w+)":/g, '$1: ').replace(/,/g, ', '));
-      return rows.length ? '// paste at the top of MY_IDEAS in js/data.js\n' + rows.join(',\n') + ',' : '';
-    }
+    // Session-created cases as CASES rows (with their history) for js/data.js.
     copySnippet() {
-      const txt = this.exportSnippet();
+      const S = this.reduce();
+      const txt = NHStore.exportSnippet(S);
+      const n = S.cases.filter(c => !c.seed).length;
       if (!txt) { this.toast('Nothing new to copy — raise a case as the employee first.'); return; }
-      const done = () => this.toast('Copied ' + this.state.sent.length + (this.state.sent.length === 1 ? ' entry' : ' entries') + ' — paste into MY_IDEAS in js/data.js.');
+      const done = () => this.toast('Copied ' + n + (n === 1 ? ' case' : ' cases') + ' — paste into CASES in js/data.js.');
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, () => window.prompt('Copy this into js/data.js:', txt));
       else window.prompt('Copy this into js/data.js:', txt);
     }
 
+    // ── derived rows for "My cases": facts in, sentences out ─────────────
+    // A day offset (0 = demo today) as a short date; 'today' / 'yesterday' near now.
+    fmtDay(d, S) {
+      const rel = d - S.day;
+      return rel === 0 ? 'today' : rel === -1 ? 'yesterday' : this.todayPlus(d);
+    }
+
+    // One case, seen by the person who raised it.
+    mineRow(c, S) {
+      const f = d => this.fmtDay(d, S);
+      const P = PROMISE_DAYS, deputy = c.route ? (c.route.owner.name === c.assignee ? c.route.deputy : c.route.owner.name) : 'their deputy';
+      const q = c.question, dec = c.decided, b = c.building, sh = c.shipped;
+      const buildDay = b ? Math.min(b.days, S.day - b.day) : 0;
+      const days = n => n + (n === 1 ? ' day' : ' days');
+      const status = sh ? 'Shipped' : b ? 'Building' : dec ? (dec.answer === 'yes' ? 'Approved' : 'Declined') : c.status === 'asked' ? 'Question for you' : 'Sent';
+      const steps = [
+        ['Sent', f(c.raisedDay), 'done'],
+        ['Read by a human', c.read !== null ? f(c.read) : 'pending', c.read !== null ? 'done' : 'now'],
+        dec ? ['Decided', f(dec.day), 'done']
+          : c.status === 'asked' ? ['Decided', 'question for you', 'now']
+            : c.overdue ? ['Decided', 'overdue', 'late']
+              : ['Decided', 'due ' + f(c.dueDay), c.read !== null ? 'now' : 'todo'],
+        sh ? ['Shipped', f(sh.day), 'done']
+          : b ? ['Shipped', 'due ' + f(b.day + b.days), 'now']
+            : ['Shipped', '—', 'todo']
+      ];
+      const clock = sh ? 'Answered in ' + days(c.clock) + '. Live since ' + f(sh.day) + '.'
+        : b ? 'Answered in ' + days(c.clock) + '. In build since ' + f(b.day) + ' — day ' + buildDay + ' of ' + b.days + '.'
+          : dec ? (dec.answer === 'yes' ? 'Answered “yes” in ' : 'Answered “no” in ') + days(c.clock) + (dec.reason ? ' — ' + dec.reason : '') + '.'
+            : c.status === 'asked' ? q.by + ' asked you a question ' + f(q.day) + '. The clock is paused until you answer.'
+              : c.overdue ? c.clock + ' days waiting — ' + days(c.clock - P) + ' past the promise.' + (c.escalated ? ' Moved to ' + c.escalated.to + ' automatically.' : '')
+                : c.read !== null ? c.assignee + ' read this ' + f(c.read) + '. They owe you a yes, a no or a question by ' + f(c.dueDay) + '.'
+                  : 'Sent to ' + c.assignee + '. They owe you a yes, a no or a question by ' + f(c.dueDay) + '.';
+      const reply = dec ? (dec.note || (dec.answer === 'yes' ? 'Yes — we are doing this.' : 'No.' + (dec.reason ? ' Reason: ' + dec.reason + '.' : '')))
+        : c.status === 'asked' ? (q.text || 'One question for you before this can be decided.')
+          : 'No reply yet. ' + c.assignee + ' has been told; if they miss the date it moves to ' + deputy + ' automatically.';
+      const replyBy = dec ? dec.by + ' · ' + f(dec.day) : c.status === 'asked' ? q.by + ' · ' + f(q.day) : 'the ' + P + '-day clock started ' + f(c.raisedDay);
+      return {
+        id: c.id, sortDay: c.raisedDay, title: c.title, status, overdue: c.overdue,
+        submitted: 'You raised this ' + f(c.raisedDay) + ' · ' + c.from,
+        clock, steps, reply, replyBy,
+        outcome: sh ? sh.outcome : b && b.expected ? 'expected ' + b.expected : 'pending',
+        outcomeNote: sh ? sh.outcomeNote : b ? 'will be measured ' + OUTCOME_DAYS + ' days after launch' : 'measured ' + OUTCOME_DAYS + ' days after launch'
+      };
+    }
+
+    // An idea I co-signed, as a row in My cases.
+    cosignRow(i, S, handle) {
+      const f = d => this.fmtDay(d, S);
+      const P = PROMISE_DAYS, cs = i.cosigners.find(x => x.name === handle), since = cs ? cs.day : 0;
+      const waiting = i.status === 'Awaiting decision', late = waiting && i.wait > P, ap = i.approved;
+      const raised = -(i.wait || 0), lead = i.team[0] === '—' ? 'the proposer' : i.team[0];
+      return {
+        id: i.id, sortDay: since, title: i.title, status: i.status, overdue: late,
+        submitted: 'You co-signed this ' + f(since) + ' · ' + handle,
+        clock: ap ? 'Approved ' + f(ap.day) + ' by ' + ap.by + '.' + (i.team[0] !== '—' ? ' ' + i.team.filter(n => n !== 'Anonymous').join(', ') + ' are on it.' : '')
+          : waiting ? i.wait + ' days waiting' + (late ? ' — ' + (i.wait - P) + ' days past the promise. Escalated one level up.' : '. Answer owed by ' + f(raised + P) + '.')
+            : i.status === 'Shipped' ? 'Shipped. ' + (i.expected || '') : i.status + '. ' + (i.expected || ''),
+        steps: [
+          ['Sent', f(raised), 'done'],
+          ['Read by a human', f(raised + 1), 'done'],
+          ap ? ['Decided', f(ap.day), 'done'] : waiting ? (late ? ['Decided', 'overdue', 'late'] : ['Decided', 'due ' + f(raised + P), 'now']) : ['Decided', '—', i.status === 'Unfunded' ? 'todo' : 'done'],
+          i.status === 'Shipped' ? ['Shipped', 'live', 'done'] : ['Shipped', '—', 'todo']
+        ],
+        reply: i.teamNote, replyBy: lead + ' · proposer',
+        outcome: ap ? 'approved' : i.status === 'Shipped' ? i.expected : 'pending',
+        outcomeNote: i.upside && i.upside !== 'not modelled' ? i.upside + ' / yr expected' + (ap || i.status === 'Shipped' ? '' : ' if approved') : 'upside not modelled yet'
+      };
+    }
+
     renderVals() {
       const s = this.state;
+      const S = this.reduce();
       const role = ROLES.find(r => r.id === s.role) || ROLES[2];
       const who = role.who;
       const isEmployee = s.role === 'employee', isLead = s.role === 'lead', isManager = s.role === 'manager';
@@ -217,10 +316,12 @@ window.createDashboardComponent = function (DCLogic) {
       const view = VIEWS[s.tab] || VIEWS.overview;
 
       // Demo data on/off: one switch, every list reads through it.
+      // Cases and ideas come from the store (seed + events); with demo data
+      // off only what was created in this browser remains.
       const D = {
-        problems: demo ? PROBLEMS : [], ideas: demo ? IDEAS : [], initiatives: demo ? INITIATIVES : [],
-        mine: demo ? s.sent.concat(MY_IDEAS) : s.sent, outcomes: demo ? OUTCOMES : [],
-        cases: demo ? CASES : [], waitingOn: demo ? WAITING_ON : [], buddies: BUDDIES, stall: demo ? STALL : []
+        problems: demo ? S.problems : [], ideas: demo ? S.ideas : [], initiatives: demo ? INITIATIVES : [],
+        outcomes: demo ? OUTCOMES : [],
+        cases: demo ? S.cases : S.cases.filter(c => !c.seed), waitingOn: demo ? WAITING_ON : [], buddies: BUDDIES, stall: demo ? STALL : []
       };
       const dash = v => demo ? v : '—';
       const cnt = n => n ? String(n) : '';
@@ -240,9 +341,11 @@ window.createDashboardComponent = function (DCLogic) {
       };
 
       // ── rail ──
-      const openCases = D.cases.filter(c => !s.cases[c.id]);
+      const openCases = D.cases.filter(c => c.assignee === who.name && c.open);
+      const mineCases = D.cases.filter(c => c.from === who.handle);
+      const mineCount = mineCases.length + D.ideas.filter(i => i.cosigners.some(x => x.name === who.handle)).length;
       const navDefs = isEmployee
-        ? [['mine', 'My cases', cnt(D.mine.length)], ['problems', 'Problems', cnt(N.problems)], ['ideas', 'Ideas', cnt(N.ideas)], ['progress', 'Progress', '']]
+        ? [['mine', 'My cases', cnt(mineCount)], ['problems', 'Problems', cnt(N.problems)], ['ideas', 'Ideas', cnt(N.ideas)], ['progress', 'Progress', '']]
         : isLead
           ? [['inbox', 'Inbox', cnt(openCases.length)], ['problems', 'Problems', cnt(N.problems)], ['ideas', 'Ideas', cnt(N.ideas)],
             ['network', 'Collaboration', cnt(N.initiatives)], ['progress', 'Progress', '']]
@@ -269,17 +372,15 @@ window.createDashboardComponent = function (DCLogic) {
 
       // ── problems ──
       const decorateIdea = i => ({
-        id: i.id, title: i.title, score: i.score, status: i.status, effort: i.effort, expected: i.expected,
+        id: i.id, title: i.title, criteria: this.criteriaTags(i.criteria), status: i.status, effort: i.effort, expected: i.expected,
         expectedShort: i.expected, proposedBy: i.proposedBy,
         problemTitle: (PROBLEMS.find(p => p.id === i.problem) || {}).title || '—',
         statusStyle: this.statusStyle(i.status),
-        scoreStyle: { fontFamily: MONO, fontSize: '15px', fontWeight: 800, color: i.score >= 80 ? '#fff' : '#5b5b5b',
-          background: i.score >= 80 ? INK : '#f0efea', borderRadius: '9px', padding: '7px 9px', minWidth: '38px', textAlign: 'center', flex: 'none' },
         rowStyle: this.row(s.iid === i.id), markStyle: this.mark(s.iid === i.id), onOpen: openIdea(i.id)
       });
 
       const ideaPool = D.ideas.filter(i => this.matches((PROBLEMS.find(p => p.id === i.problem) || { depts: [] }).depts));
-      const ideas = ideaPool.slice().sort((a, b) => b.score - a.score).map(decorateIdea);
+      const ideas = ideaPool.slice().sort((a, b) => this.criteriaCount(b.criteria) - this.criteriaCount(a.criteria) || b.wait - a.wait).map(decorateIdea);
 
       const problemPool = D.problems.filter(p => this.matches(p.depts));
       const sorted = problemPool.slice().sort((a, b) => {
@@ -297,11 +398,11 @@ window.createDashboardComponent = function (DCLogic) {
       });
 
       const problems = sorted.map(decorateProblem);
-      const sp0 = sorted.some(p => p.id === s.pid) ? PROBLEMS.find(p => p.id === s.pid) : sorted[0];
+      const sp0 = sorted.some(p => p.id === s.pid) ? sorted.find(p => p.id === s.pid) : sorted[0];
       const sp = sp0 ? {
         eyebrow: 'Selected problem',
         title: sp0.title, detail: sp0.detail, people: sp0.people, timeLost: sp0.timeLost, signals: sp0.signals,
-        linked: sp0.ideas.map(id => IDEAS.find(i => i.id === id)).filter(Boolean).map(i => ({
+        linked: sp0.ideas.map(id => D.ideas.find(i => i.id === id)).filter(Boolean).map(i => ({
           title: i.title, status: i.status, statusStyle: this.statusStyle(i.status), onOpen: openIdea(i.id)
         }))
       } : {
@@ -313,19 +414,26 @@ window.createDashboardComponent = function (DCLogic) {
       };
 
       // ── ideas ──
-      const si0 = ideas.some(i => i.id === s.iid) ? IDEAS.find(i => i.id === s.iid) : (ideaPool[0] || null);
-      const sip = si0 ? (PROBLEMS.find(p => p.id === si0.problem) || {}) : {};
+      const si0 = ideas.some(i => i.id === s.iid) ? ideaPool.find(i => i.id === s.iid) : (ideaPool[0] || null);
+      const sip = si0 ? (D.problems.find(p => p.id === si0.problem) || {}) : {};
       const decidable = si0 && si0.status === 'Awaiting decision';
+      const fundable = si0 && si0.status === 'Unfunded';
+      const cosigned = !!si0 && si0.cosigners.some(x => x.name === who.handle);
       const si = si0 ? {
         title: si0.title, status: si0.status, statusStyle: this.statusStyle(si0.status),
         waitLabel: si0.wait ? 'waiting ' + si0.wait + ' days' : si0.status === 'Shipped' ? 'live' : 'no owner assigned',
         rationale: si0.rationale, upside: si0.upside, effort: si0.effort,
         problemTitle: sip.title || '—', problemSub: sip.sub || '',
         onOpenProblem: sip.id ? openProblem(sip.id) : () => {},
-        primaryBtnLabel: isEmployee ? 'Co-sign this idea' : decidable ? 'Approve and assign' : si0.status === 'Unfunded' ? 'Fund a trial' : 'Open the trial',
-        onPrimary: () => this.toast(isEmployee ? 'You co-signed “' + si0.title + '”. Credit follows your handle.'
-          : decidable ? 'Approved. ' + si0.team[0] + ' has been told and the clock is stopped.' : 'Opened ' + si0.title + '.'),
-        primaryBtnStyle: { flex: 1, textAlign: 'center', background: decidable && !isEmployee ? this.accent() : INK, color: '#fff', borderRadius: '10px',
+        cosigners: si0.cosigners.length, cosignLabel: si0.cosigners.length ? si0.cosigners.length + (si0.cosigners.length === 1 ? ' co-signer' : ' co-signers') : '',
+        primaryBtnLabel: isEmployee ? (cosigned ? 'Co-signed ✓' : 'Co-sign this idea') : decidable ? 'Approve and assign' : fundable ? 'Fund a trial' : 'Open the trial',
+        onPrimary: () => {
+          if (isEmployee) { this.act.cosign(si0.id); this.toast(cosigned ? 'Co-sign withdrawn from “' + si0.title + '”.' : 'You co-signed “' + si0.title + '”. Credit follows your handle.'); }
+          else if (decidable) { this.act.approve(si0.id); this.toast('Approved. ' + (si0.team[0] === '—' ? 'The proposer' : si0.team[0]) + ' has been told and the clock is stopped.'); }
+          else if (fundable) { this.act.fund(si0.id); this.toast('Trial funded. ' + (si0.team[0] === '—' ? 'A team still needs to be named.' : si0.team[0] + ' has been told.')); }
+          else this.toast('Opened ' + si0.title + '.');
+        },
+        primaryBtnStyle: { flex: 1, textAlign: 'center', background: (decidable || fundable) && !isEmployee ? this.accent() : cosigned ? '#f0efea' : INK, color: cosigned ? '#5b5b5b' : (decidable || fundable) && !isEmployee ? '#1a1a17' : '#fff', borderRadius: '10px',
           padding: '10px 14px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' },
         onAsk: () => this.toast('Your question goes to ' + (si0.team[0] === '—' ? 'the proposer' : si0.team[0]) + '. The clock pauses until they answer.'),
         team: si0.team.map(n => ({ name: n === '—' ? 'Nobody assigned' : n, ini: this.ini(n) })), teamNote: si0.teamNote
@@ -334,7 +442,7 @@ window.createDashboardComponent = function (DCLogic) {
         rationale: demo ? 'No ideas are tied to problems in this department yet.' : 'Ideas appear here as step three of a case — once a problem exists, whoever raised it (or anyone else) can propose the fix.',
         upside: '—', effort: '—', problemTitle: '—', problemSub: '', onOpenProblem: () => {},
         primaryBtnLabel: 'Nothing to decide', onPrimary: () => {}, primaryBtnStyle: { flex: 1, textAlign: 'center', background: '#f0efea', color: '#a0a099', borderRadius: '10px', padding: '10px 14px', fontSize: '12.5px', fontWeight: 700 },
-        onAsk: () => {}, team: [], teamNote: ''
+        onAsk: () => {}, team: [], teamNote: '', cosigners: 0, cosignLabel: ''
       };
 
       // ── collaboration ──
@@ -419,7 +527,7 @@ window.createDashboardComponent = function (DCLogic) {
       const M = METRICS;
       const was = str => parseInt(String(str).replace(/[^\d]/g, ''), 10);
       const kpis = [
-        kpi('Idea → decision', M.ideaToDecision.now, M.ideaToDecision.was, true, 'median, last 30 days', M.ideaToDecision.spark),
+        kpi('Idea → decision', M.ideaToDecision.now, M.ideaToDecision.was, true, 'median to the decision itself, last 30 days — the first answer comes sooner', M.ideaToDecision.spark),
         kpi('Shipped this year', String(N.shippedTeams), M.shippedWas, N.shippedTeams >= was(M.shippedWas), M.stoppedEarly + ' stopped early, on purpose', M.shippedSpark),
         kpi('Value booked', M.valueBooked.now, M.valueBooked.delta, true, M.valueBooked.sub, M.valueBooked.spark),
         kpi('Waiting days saved', M.waitingDaysSaved.now, 'vs old route', true, 'across ' + N.ideas + ' ideas, since the clock came in', M.waitingDaysSaved.spark),
@@ -428,20 +536,24 @@ window.createDashboardComponent = function (DCLogic) {
 
       const stallMax = Math.max.apply(null, [1].concat(D.stall.map(x => x.days)));
       const stall = D.stall.map((x, i) => ({
-        reason: x.reason, days: x.days + ' d', share: Math.round(x.share * 100) + '%', note: x.note,
+        reason: x.reason, days: x.days + ' d', share: '', note: x.note,
         barStyle: { height: '10px', borderRadius: '999px', width: Math.round(x.days / stallMax * 100) + '%', background: i < 2 ? this.accent() : INK }
       }));
 
+      const live = type => s.log.events.filter(e => e.type === type).length;
       const ledger = {
         firstAnswer: dash(LEDGER.firstAnswer), firstAnswerWas: demo ? LEDGER.firstAnswerWas : 'measured in pilot',
         withinPromise: dash(LEDGER.withinPromise), withinPromiseWas: demo ? LEDGER.withinPromiseWas : 'measured in pilot',
-        overrides: dash(LEDGER.overrides), overridesNote: demo ? LEDGER.overridesNote : 'every overruled proposal is logged — this number is the map’s accuracy',
-        escalated: dash(LEDGER.escalated), handedOver: dash(LEDGER.handedOver)
+        overrides: dash(live(E.ROUTE_OVERRIDDEN) ? ((parseFloat(LEDGER.overrides) || 0) + live(E.ROUTE_OVERRIDDEN)) + '%' : LEDGER.overrides), overridesNote: demo ? LEDGER.overridesNote : 'every overruled proposal is logged — this number is the map’s accuracy',
+        escalated: dash(String(LEDGER.escalated)), handedOver: dash(String(LEDGER.handedOver + live(E.CASE_HANDED)))
       };
 
       // ── employee: my cases + intake ──
       const stepTone = { done: INK, now: this.accent(), late: this.accent(), todo: '#dedcd5' };
-      const myIdeas = D.mine.map(m => ({
+      const mine = mineCases.map(c => this.mineRow(c, S))
+        .concat(D.ideas.filter(i => i.cosigners.some(x => x.name === who.handle)).map(i => this.cosignRow(i, S, who.handle)))
+        .sort((a, b) => b.sortDay - a.sortDay);
+      const myIdeas = mine.map(m => ({
         title: m.title, submitted: m.submitted, status: m.status, statusStyle: this.statusStyle(m.status),
         clock: m.clock,
         clockStyle: { fontSize: '12px', fontWeight: 600, lineHeight: 1.5, marginTop: '13px', padding: '9px 11px', borderRadius: '9px',
@@ -474,17 +586,10 @@ window.createDashboardComponent = function (DCLogic) {
           borderRadius: '10px', padding: '10px 14px', fontSize: '12.5px', fontWeight: 800, cursor: s.draft.trim().length >= 8 ? 'pointer' : 'default' },
         onSend: () => {
           if (s.draft.trim().length < 8) return;
-          const owner = pr ? pr.owner.name : 'the triage desk';
-          const due = this.todayPlus(PROMISE_DAYS);
-          const entry = {
-            title: s.draft.trim(), submitted: 'You raised this today · ' + who.handle, status: 'Sent', overdue: false,
-            clock: 'Sent to ' + owner + '. They owe you a yes, a no or a question by ' + due + '.',
-            steps: [['Sent', 'today', 'done'], ['Read by a human', 'pending', 'now'], ['Decided', 'due ' + due, 'todo'], ['Shipped', '—', 'todo']],
-            reply: 'No reply yet. ' + owner + ' has been told; if they miss the date it moves to ' + (pr ? pr.deputy : 'their deputy') + ' automatically.',
-            replyBy: 'the ' + PROMISE_DAYS + '-day clock started today',
-            outcome: 'pending', outcomeNote: 'measured ' + OUTCOME_DAYS + ' days after launch'
-          };
-          this.persist({ sent: [entry].concat(s.sent), draft: '' });
+          const owner = pr ? pr.owner.name : 'Triage desk';
+          const due = this.todayPlus(S.day + PROMISE_DAYS);
+          this.act.raise({ title: s.draft.trim(), body: '', routeId: pr ? pr.id : null, assignee: owner, fromDept: who.line, reason: pr ? 'triage' : 'not responsible' });
+          this.set('draft', '');
           this.toast('Sent to ' + owner + '. Answer owed by ' + due + '.');
         },
         onWrong: () => this.toast('Noted — a human routes it instead, and the override is logged against the map.')
@@ -500,41 +605,42 @@ window.createDashboardComponent = function (DCLogic) {
       ];
 
       const myStats = [
-        { v: String(D.mine.length), l: 'problems and ideas you raised' },
-        { v: String(D.mine.filter(m => m.status === 'Shipped').length), l: 'shipped, credited to you' },
-        { v: String(D.mine.filter(m => m.status === 'Building' || m.status === 'In trial').length), l: 'being built right now' },
+        { v: String(mine.length), l: 'problems and ideas you raised' },
+        { v: String(mine.filter(m => m.status === 'Shipped').length), l: 'shipped, credited to you' },
+        { v: String(mine.filter(m => m.status === 'Building' || m.status === 'In trial').length), l: 'being built right now' },
         { v: demo ? METRICS.you.medianWait : '—', l: 'your median wait for a reply' }
       ];
 
       // ── team leader: inbox ──
-      const inboxSorted = openCases.slice().sort((a, b) => b.age - a.age);
+      const inboxSorted = openCases.slice().sort((a, b) => b.clock - a.clock || b.age - a.age);
       const decorateCase = c => {
-        const late = c.age > PROMISE_DAYS, soon = c.age >= PROMISE_DAYS - 2 && !late;
+        const late = c.clock > PROMISE_DAYS, soon = c.clock >= PROMISE_DAYS - 2 && !late;
         return {
-          id: c.id, title: c.title, from: c.from + ' · ' + c.fromDept, age: c.age + ' d', reason: c.reason, reasonStyle: this.reasonStyle(c.reason),
-          clock: late ? (c.age - PROMISE_DAYS) + ' d past the promise' : (PROMISE_DAYS - c.age) + ' d left',
+          id: c.id, title: c.title, from: c.from + ' · ' + c.fromDept, age: c.clock + ' d', reason: c.reason, reasonStyle: this.reasonStyle(c.reason),
+          clock: late ? (c.clock - PROMISE_DAYS) + ' d past the promise' : (PROMISE_DAYS - c.clock) + ' d left',
           clockStyle: { fontFamily: MONO, fontSize: '11px', fontWeight: 700, whiteSpace: 'nowrap', borderRadius: '6px', padding: '4px 8px',
             background: late ? this.accent() : soon ? this.accentSoft() : '#f0efea', color: late ? '#1a1a17' : soon ? this.accentInk() : '#5b5b5b' },
           rowStyle: this.row(s.cid === c.id), markStyle: this.mark(s.cid === c.id), onOpen: () => this.set('cid', c.id)
         };
       };
       const inbox = inboxSorted.map(decorateCase);
-      const sc0 = inboxSorted.some(c => c.id === s.cid) ? CASES.find(c => c.id === s.cid) : inboxSorted[0];
-      const scRoute = sc0 ? ROUTES.find(r => r.id === sc0.routeId) : null;
-      const scMine = scRoute && scRoute.owner.name === who.name;
-      const act = (id, status, msg) => () => { this.persist({ cases: Object.assign({}, s.cases, { [id]: status }) }); this.toast(msg); };
+      const sc0 = inboxSorted.some(c => c.id === s.cid) ? inboxSorted.find(c => c.id === s.cid) : inboxSorted[0];
+      const scRoute = sc0 ? sc0.route : null;
+      const scMine = !!scRoute && scRoute.owner.name === who.name;
+      const handTo = scRoute ? (scMine ? scRoute.deputy : scRoute.owner.name) : 'the triage desk';
       const sc = sc0 ? {
         title: sc0.title, body: sc0.body, from: sc0.from, fromDept: sc0.fromDept, fromIni: this.ini(sc0.from),
-        age: sc0.age + ' days open', reason: sc0.reason, reasonStyle: this.reasonStyle(sc0.reason), upside: sc0.upside,
-        routeEyebrow: scMine ? 'The map says this is yours' : 'The map proposes another owner',
-        routeType: scRoute ? scRoute.type : '—',
-        routeOwner: scMine ? 'You · ' + scRoute.owner.role : scRoute.owner.name + ' · ' + scRoute.owner.role + ', ' + this.deptName(scRoute.owner.dept),
-        routeDeputy: scRoute.deputy, routeBuddy: scRoute.buddy,
-        handLabel: scMine ? 'Hand to ' + scRoute.deputy : 'Pass to ' + scRoute.owner.name,
-        onYes: act(sc0.id, 'decided', 'Answered “yes” in ' + sc0.age + ' days. ' + sc0.from + ' has been told; the clock is stopped.'),
-        onNo: act(sc0.id, 'decided', 'Answered “no” with your reason. ' + sc0.from + ' has been told — a no in ' + sc0.age + ' days beats silence.'),
-        onHand: act(sc0.id, 'handed', 'Handed to ' + (scMine ? scRoute.deputy : scRoute.owner.name) + '. Both of you and ' + sc0.from + ' have been told. The clock keeps running.'),
-        onAsk: act(sc0.id, 'asked', 'One question sent to ' + sc0.from + '. The clock pauses until they answer.')
+        age: sc0.clock + ' days open', reason: sc0.reason, reasonStyle: this.reasonStyle(sc0.reason), upside: sc0.upside,
+        routeEyebrow: !scRoute ? 'The map has no entry for this' : scMine ? 'The map says this is yours' : 'The map proposes another owner',
+        routeType: scRoute ? scRoute.type : 'no matching route — a human triages it',
+        routeOwner: !scRoute ? 'Triage desk' : scMine ? 'You · ' + scRoute.owner.role : scRoute.owner.name + ' · ' + scRoute.owner.role + ', ' + this.deptName(scRoute.owner.dept),
+        routeDeputy: scRoute ? scRoute.deputy : '—', routeBuddy: scRoute ? scRoute.buddy : '—',
+        handLabel: scMine ? 'Hand to ' + handTo : 'Pass to ' + handTo,
+        // Phase 2 replaces these bare events with sheets that capture the reason / question text.
+        onYes: () => { this.act.decide(sc0.id, 'yes'); this.toast('Answered “yes” in ' + sc0.clock + ' days. ' + sc0.from + ' has been told; the clock is stopped.'); },
+        onNo: () => { this.act.decide(sc0.id, 'no', sc0.reason); this.toast('Answered “no” with your reason. ' + sc0.from + ' has been told — a no in ' + sc0.clock + ' days beats silence.'); },
+        onHand: () => { this.act.hand(sc0.id, handTo); this.toast('Handed to ' + handTo + '. Both of you and ' + sc0.from + ' have been told. The clock keeps running.'); },
+        onAsk: () => { this.act.ask(sc0.id, ''); this.toast('One question sent to ' + sc0.from + '. The clock pauses until they answer.'); }
       } : {
         title: demo ? 'Inbox empty' : 'Nothing addressed to you yet', body: demo ? 'Nothing is waiting on you. That is the goal by the end of every day.' : 'When someone on your team, or in a neighbouring one, raises a problem the map routes to you, it lands here with a ' + PROMISE_DAYS + '-day clock.',
         from: '', fromDept: '', fromIni: '', age: '', reason: '', reasonStyle: {}, upside: '',
@@ -542,11 +648,13 @@ window.createDashboardComponent = function (DCLogic) {
         onYes: () => {}, onNo: () => {}, onHand: () => {}, onAsk: () => {}
       };
 
-      const cleared = D.cases.filter(c => s.cases[c.id]).map(c => ({
-        title: c.title, what: CASE_ACTIONS[s.cases[c.id]], style: this.pill(s.cases[c.id] === 'asked' ? '#f0efea' : INK, s.cases[c.id] === 'asked' ? '#5b5b5b' : '#fff', 600)
+      const cleared = D.cases.map(c => ({ c, did: NHStore.actedBy(c, who.name) })).filter(x => x.did).map(({ c, did }) => ({
+        title: c.title,
+        what: did === 'decided' && c.decided ? 'Decided · ' + c.decided.answer : did === 'handed' ? 'Handed over · ' + c.assignee : CASE_ACTIONS[did],
+        style: this.pill(did === 'asked' ? '#f0efea' : INK, did === 'asked' ? '#5b5b5b' : '#fff', 600)
       }));
 
-      const overdueCases = openCases.filter(c => c.age > PROMISE_DAYS).length;
+      const overdueCases = openCases.filter(c => c.overdue).length;
       const inboxStats = [
         { v: String(openCases.length), l: 'open, addressed to you' },
         { v: String(overdueCases), l: 'past the ' + PROMISE_DAYS + '-day promise', hot: overdueCases > 0 },
@@ -569,9 +677,9 @@ window.createDashboardComponent = function (DCLogic) {
       const results = [];
       if (demo) {
         PROBLEMS.filter(p => hit(p.title) || hit(p.sub)).slice(0, 4).forEach(p => results.push({ kind: 'Problem', title: p.title, meta: p.people + ' people · ' + p.trend, onOpen: openProblem(p.id) }));
-        IDEAS.filter(i => hit(i.title)).slice(0, 4).forEach(i => results.push({ kind: 'Idea', title: i.title, meta: i.status + ' · score ' + i.score, onOpen: openIdea(i.id) }));
+        IDEAS.filter(i => hit(i.title)).slice(0, 4).forEach(i => results.push({ kind: 'Idea', title: i.title, meta: i.status + ' · ' + this.criteriaTags(i.criteria).map(t => t.label).join(' · '), onOpen: openIdea(i.id) }));
         INITIATIVES.filter(t => hit(t.name)).slice(0, 3).forEach(t => results.push({ kind: 'Team', title: t.name, meta: t.status, onOpen: openInitiative(t.id) }));
-        if (isLead) CASES.filter(c => hit(c.title) && !s.cases[c.id]).slice(0, 3).forEach(c => results.push({ kind: 'Case', title: c.title, meta: c.age + ' d · ' + c.from, onOpen: openCase(c.id) }));
+        if (isLead) openCases.filter(c => hit(c.title)).slice(0, 3).forEach(c => results.push({ kind: 'Case', title: c.title, meta: c.clock + ' d · ' + c.from, onOpen: openCase(c.id) }));
       }
       Object.keys(people).filter(n => hit(n)).slice(0, 3).forEach(n => {
         const p = people[n];
@@ -581,11 +689,11 @@ window.createDashboardComponent = function (DCLogic) {
         kindStyle: { fontFamily: MONO, fontSize: '9.5px', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#a0a099', minWidth: '52px' }
       }));
 
-      const overdueMine = D.mine.filter(m => m.overdue);
+      const overdueMine = mine.filter(m => m.overdue);
       const dropItems = isManager
         ? decisions.map(d => ({ title: d.title, meta: d.days + ' · ' + (d.upside || '') + ' upside', hot: parseInt(d.days) > PROMISE_DAYS, onOpen: d.onOpen }))
         : isLead
-          ? inboxSorted.filter(c => c.age >= PROMISE_DAYS - 2).map(c => ({ title: c.title, meta: c.age + ' d · ' + c.from, hot: c.age > PROMISE_DAYS, onOpen: openCase(c.id) }))
+          ? inboxSorted.filter(c => c.clock >= PROMISE_DAYS - 2).map(c => ({ title: c.title, meta: c.clock + ' d · ' + c.from, hot: c.clock > PROMISE_DAYS, onOpen: openCase(c.id) }))
           : overdueMine.map(m => ({ title: m.title, meta: m.clock, hot: true, onOpen: () => this.setState({ tab: 'mine', pop: null }) }));
       const dropCount = dropItems.length;
       const decisionBtnLabel = !demo && !dropCount ? 'Nothing waiting'
@@ -688,7 +796,7 @@ window.createDashboardComponent = function (DCLogic) {
         toggleDemo: () => this.setState({ demo: !s.demo, dev: false }), resetDemo: () => this.resetDemo(),
         demoLabel: demo ? 'Demo data on' : 'Demo data off',
         copySnippet: () => this.copySnippet(),
-        newCount: s.sent.length ? s.sent.length + (s.sent.length === 1 ? ' new case this session' : ' new cases this session') : 'nothing new this session',
+        newCount: (n => n ? n + (n === 1 ? ' new case this session' : ' new cases this session') : 'nothing new this session')(S.cases.filter(c => !c.seed).length),
         demoTrack: { width: '30px', height: '17px', borderRadius: '999px', padding: '2px', boxSizing: 'border-box', background: demo ? this.accent() : '#4a4a44', cursor: 'pointer', display: 'flex', justifyContent: demo ? 'flex-end' : 'flex-start' },
         devBtnStyle: { display: 'flex', alignItems: 'center', gap: '7px', background: s.dev ? '#fbfbf9' : '#2e2e28', color: s.dev ? '#1a1a17' : '#c9c8c0', border: '1px solid ' + (s.dev ? '#fbfbf9' : '#3d3d38'), borderRadius: '9px', padding: '7px 11px', fontFamily: MONO, fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', boxShadow: '0 6px 20px rgba(0,0,0,0.35)' },
         devStatus: role.label + ' · demo ' + (demo ? 'on' : 'off'),
@@ -698,10 +806,10 @@ window.createDashboardComponent = function (DCLogic) {
         nextCall: demo ? METRICS.nextCall : 'not scheduled yet',
         nextCallNote: demo ? 'Agenda is built from the items above — nothing else on it.' : 'The first decision call is booked when the first item passes its ' + PROMISE_DAYS + ' days.',
         movement: [
-          mv('Idea → decision', M.ideaToDecision.now, M.ideaToDecision.was, M.ideaToDecision.spark),
+          mv('Time to decision', M.ideaToDecision.now, M.ideaToDecision.was, M.ideaToDecision.spark),
           mv('Ideas shipped / yr', String(N.shippedTeams), M.shippedWas, M.shippedSpark),
           mv('Value from ideas', M.valueBooked.now, M.valueBooked.was, M.valueBooked.spark),
-          mv('People contributing', M.contributing.now, M.contributing.was, M.contributing.spark)
+          mv('People who raised something', M.contributing.now, M.contributing.was, M.contributing.spark)
         ],
         legendAccentStyle: { width: '20px', height: '3px', borderRadius: '2px', background: this.accent() },
         unansweredStyle: { fontSize: '22px', fontWeight: 800, color: demo ? this.accentInk() : '#141414', letterSpacing: '-0.025em' },
@@ -715,7 +823,7 @@ window.createDashboardComponent = function (DCLogic) {
         discovery: (() => {
           const done = demo ? METRICS.discovery.interviewed : 0, pct = Math.round(done / N.people * 100);
           return { done: fmt(done) + ' of ' + fmt(N.people) + ' interviewed', w: { width: pct + '%', height: '7px', borderRadius: '999px', background: INK },
-            note: demo ? pct + '% coverage · ' + METRICS.discovery.note : 'Round 1 not started' };
+            note: demo ? METRICS.discovery.note : 'Round 1 not started' };
         })(),
         discoveryRound: 'Discovery round ' + (demo ? METRICS.discovery.round : 1),
         ideas, topIdeas: ideas.slice(0, 5), si, noIdeas: ideas.length === 0,
@@ -754,7 +862,7 @@ window.createDashboardComponent = function (DCLogic) {
         answered: {
           replied: demo ? METRICS.answered.replied : '—', median: demo ? METRICS.answered.median : '—',
           credited: demo ? fmt(METRICS.answered.credited) : '0',
-          unanswered: String(N.overdueIdeas + openCases.filter(c => c.age > PROMISE_DAYS).length)
+          unanswered: String(N.overdueIdeas + D.cases.filter(c => c.overdue).length)
         },
         contributors, noContributors: contributors.length === 0
       };

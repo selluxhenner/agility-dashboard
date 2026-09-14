@@ -5,11 +5,12 @@ Demo page for the innovation & agility dashboard. Static — no build step.
 ```
 index.html          page markup (design-component template) + editable props
 css/dashboard.css   page-level styles
-js/data.js          demo data (departments, problems, ideas, cases, routing table, …)
-js/dashboard.js     component logic (state, view models for the template)
+js/data.js          seed data (departments, problems, ideas, cases, routing table, …)
+js/store.js         event log (localStorage) + reducer: seed + events → page state
+js/dashboard.js     component logic (state, view models for the template, this.act.*)
 support.js          dc-runtime (generated, do not edit) — renders the template
-uploads/            reference material used while designing; not loaded by the page
-.claude/launch.json dev-server config for the Claude Code browser pane
+docs/               plans (ACTIONS_PLAN.md: how the buttons come alive)
+.github/ci/         CI scripts: browser smoke test, reducer unit tests
 ```
 
 ## Roles
@@ -30,19 +31,37 @@ Below 760px the rail becomes a drawer behind the ☰ button, popovers pin to
 the top of the screen and side panels stack — the rules live at the bottom
 of `css/dashboard.css` (class hooks `nh-*` in `index.html`).
 
-## Data — `js/data.js` is the store
+## Data — seed in `js/data.js`, events in `js/store.js`
 
-Every number on the page is counted from the arrays in `js/data.js`: the
-rail counts (problems, ideas, teams, people per department), "All N →"
-links, decisions waiting, the funnel, "stuck the longest", the contributors
-list, the inbox stats. Add a row and the counts follow:
+Every number on the page is counted from rows. The rows come from two places:
+
+- **Seed** — the arrays in `js/data.js`. Never change at runtime.
+- **Events** — what happens in the browser: a case raised, a yes, a hand-over,
+  a co-sign. Each button appends one event to a log in `localStorage`
+  (`nexthub.demo.v2`). Nothing mutates the seed.
+
+The page renders `NHStore.reduce(seed, log)`: cases, ideas and problems with
+their *current* status, assignee, clock and history. Reset demo state = clear
+the log. Event types and payloads are listed at the top of `js/store.js`; the
+plan behind it is `docs/ACTIONS_PLAN.md`.
+
+**A case is one object, seen from three sides.** The employee sees the cases
+they raised (`from` = their handle), a team leader sees the open ones addressed
+to them right now (`assignee`), the manager sees all. `raisedDay` is relative
+to demo day 0 (today); age and the promise clock are derived. Seed rows may
+carry `seedEvents` — history that already happened, applied by the same reducer
+as live actions (that is how the employee's shipped and in-build cases exist).
+
+UI code changes state only through `this.act.*` in `js/dashboard.js`
+(`raise`, `decide`, `hand`, `ask`, `answer`, `cosign`, `approve`, `fund`,
+`advanceDay`, …). Add a row to the seed and the counts follow:
 
 | Add a … | to | link it via |
 |---|---|---|
 | problem | `PROBLEMS` | `ideas: ['i9']` (ideas that answer it), `signals[].by` = `'Name · Department'` |
 | idea | `IDEAS` | `problem: 'p3'`, `status` (Awaiting decision · In trial · Building · Shipped · Unfunded), `team: ['—']` = no owner |
 | cross-team project | `INITIATIVES` | `members[].name` — shipped ones give those people credit |
-| case in the team leader's inbox | `CASES` | `routeId` → a row in `ROUTES` |
+| case (anyone's inbox / my cases) | `CASES` | `routeId` → `ROUTES`; `assignee` = whose inbox; `from` = whose "my cases"; `seedEvents` for history |
 | routing row | `ROUTES` | `keys` are the words the intake field matches on |
 | department | `DEPTS` | `id` is what problems/initiatives reference |
 
@@ -50,9 +69,11 @@ Figures with no underlying rows (medians, € values, survey coverage,
 baseline "was …" values) live in `METRICS` at the bottom of the file — one
 place to edit, and they all read "measured in pilot" when demo data is off.
 
-Cases raised in the browser (employee intake) and inbox actions are kept in
-`localStorage`, so they survive a reload. **Copy for data.js** in the dev
-panel copies the raised cases as `MY_IDEAS` entries to paste into the file.
+Everything done in the browser survives a reload (it is the event log).
+**Copy for data.js** in the dev panel exports the cases raised this session as
+`CASES` rows, history included, to paste into the file.
+
+Reducer tests: `node .github/ci/store.test.cjs` (also run in CI).
 
 ## Dev panel
 

@@ -7,8 +7,9 @@
   <title>NextHub Dashboard</title>
   <!-- dc-runtime: renders the design-component template in <body> (loads React from CDN) -->
   <script src="./support.js"></script>
-  <!-- demo data + component logic (see js/dashboard.js for how they are wired) -->
+  <!-- seed data → event store → component logic (see js/dashboard.js for how they are wired) -->
   <script src="./js/data.js"></script>
+  <script src="./js/store.js"></script>
   <script src="./js/dashboard.js"></script>
 </head>
 
@@ -636,13 +637,13 @@
                       <div style="background:#232320; border-radius:11px; padding:13px 15px;">
                         <div style="font-size:26px; font-weight:800; color:#fbfbf9; letter-spacing:-0.03em; line-height:1;">{{
                           ledger.firstAnswer }}</div>
-                        <div style="font-size:11.5px; color:#a3a29a; margin-top:6px; line-height:1.4;">median to first human answer ·
+                        <div style="font-size:11.5px; color:#a3a29a; margin-top:6px; line-height:1.4;">median to the first human answer — a yes, no or question, not yet the decision ·
                           <span style="color:#d6d5cd;">{{ ledger.firstAnswerWas }}</span></div>
                       </div>
                       <div style="background:#232320; border-radius:11px; padding:13px 15px;">
                         <div style="font-size:26px; font-weight:800; color:#fbfbf9; letter-spacing:-0.03em; line-height:1;">{{
                           ledger.withinPromise }}</div>
-                        <div style="font-size:11.5px; color:#a3a29a; margin-top:6px; line-height:1.4;">answered within the 14-day promise ·
+                        <div style="font-size:11.5px; color:#a3a29a; margin-top:6px; line-height:1.4;">answered within the 5-day promise ·
                           <span style="color:#d6d5cd;">{{ ledger.withinPromiseWas }}</span></div>
                       </div>
                     </div>
@@ -752,9 +753,11 @@
                           <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
                             <span style="font-size:13.5px; font-weight:700; color:#141414; line-height:1.35;">{{ i.title
                               }}</span>
-                            <span
-                              style="font-family:'IBM Plex Mono',monospace; font-size:14px; font-weight:800; color:#141414;">{{
-                              i.score }}</span>
+                          </div>
+                          <div style="display:flex; align-items:center; gap:5px; margin-top:7px; flex-wrap:wrap;">
+                            <sc-for list="{{ i.criteria }}" as="t" hint-placeholder-count="2">
+                              <span style="{{ t.style }}">{{ t.label }}</span>
+                            </sc-for>
                           </div>
                           <div style="display:flex; align-items:center; gap:7px; margin-top:8px; flex-wrap:wrap;">
                             <span style="{{ i.statusStyle }}">{{ i.status }}</span>
@@ -944,8 +947,12 @@
                         <div style="{{ i.markStyle }}"></div>
                         <div style="flex:1; min-width:0;">
                           <div style="display:flex; align-items:flex-start; gap:14px;">
-                            <div style="{{ i.scoreStyle }}">{{ i.score }}</div>
                             <div style="flex:1 1 200px; min-width:160px;">
+                              <div style="display:flex; align-items:center; gap:5px; margin-bottom:7px; flex-wrap:wrap;">
+                                <sc-for list="{{ i.criteria }}" as="t" hint-placeholder-count="2">
+                                  <span style="{{ t.style }}">{{ t.label }}</span>
+                                </sc-for>
+                              </div>
                               <div style="font-size:14.5px; font-weight:700; color:#141414; line-height:1.35;">{{
                                 i.title }}</div>
                               <div style="font-size:12.5px; color:#8c8c88; margin-top:4px; line-height:1.45;">solves: {{
@@ -1263,7 +1270,7 @@
                     <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:14px;">
                       <div style="background:#faf9f7; border:1px solid #eeede8; border-radius:11px; padding:13px 15px;">
                         <div style="font-size:22px; font-weight:800; color:#141414; letter-spacing:-0.025em;">{{ answered.replied }}</div>
-                        <div style="font-size:11.5px; color:#8c8c88; margin-top:3px;">signals given a human reply</div>
+                        <div style="font-size:11.5px; color:#8c8c88; margin-top:3px;">signals given a human reply, by name</div>
                       </div>
                       <div style="background:#faf9f7; border:1px solid #eeede8; border-radius:11px; padding:13px 15px;">
                         <div style="font-size:22px; font-weight:800; color:#141414; letter-spacing:-0.025em;">{{ answered.median }}</div>

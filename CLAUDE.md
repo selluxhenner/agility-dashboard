@@ -15,10 +15,29 @@ data model in `js/data.js` drives every number on the page.
 ```
 index.html          markup template (<x-dc> … </x-dc>) + editable props
 css/dashboard.css   page styles + responsive rules at the bottom
-js/data.js          demo data — the single source of truth for all counts
-js/dashboard.js     component logic (state, view models)
+js/data.js          seed data — rows never change at runtime
+js/store.js         EVENT LOG + REDUCER — Kevin only (see below)
+js/dashboard.js     component logic (state, view models, this.act.*)
 support.js          GENERATED RUNTIME — never edit, never reformat
+docs/ACTIONS_PLAN.md how the action buttons work and who builds what
 ```
+
+## How state works (read before touching any button)
+
+Nothing in the browser mutates `js/data.js`. Every action appends an event
+to `NHStore` (`js/store.js`); the page renders `reduce(seed, events)`.
+
+- **You change state only by calling `this.act.something(...)`** in
+  `js/dashboard.js` — `raise`, `read`, `decide`, `hand`, `ask`, `answer`,
+  `override`, `cosign`, `askIdea`, `approve`, `fund`, `advanceDay`.
+- **You never edit `js/store.js`.** If the event you need does not exist, or
+  a derived field is missing, describe it in the PR and Kevin adds it.
+- **Never store display text as state** (`'Sent to X. They owe…'`). Store the
+  facts (who, which day, which route); build the sentence at render time —
+  see `mineRow()` / `cosignRow()` for the pattern.
+- **Never call `localStorage` directly.** The store owns persistence.
+- Reducer tests live in `.github/ci/store.test.cjs` and run in CI. If your
+  change makes them fail, the change is wrong, not the test.
 
 ## Git rules (non-negotiable)
 
@@ -71,7 +90,8 @@ support.js          GENERATED RUNTIME — never edit, never reformat
 
 | Area | Who | Rule for you |
 |---|---|---|
-| `support.js`, runtime wiring in `index.html` (`<script data-dc-script>`, props block) | Kevin | Don't touch. Report instead. |
+| `support.js`, runtime wiring in `index.html` (`<script>` tags, `<script data-dc-script>`, props block) | Kevin | Don't touch. Report instead. |
+| `js/store.js` (event types, reducer, migration), `.github/ci/store.test.cjs` | Kevin | Don't touch. Ask for the event you need in the PR. |
 | Shape of the data model (new arrays, renamed fields, new `METRICS` keys) | Kevin | Propose in PR description; add rows freely, don't restructure. |
 | `.github/`, `.gitignore`, `CLAUDE.md`, `CONTRIBUTING.md`, deploy/hosting | Kevin | Don't touch. |
 | UI features, copy, styles, demo data rows, new views | anyone | Normal branch + PR flow. |
@@ -96,7 +116,8 @@ Before you say a change is done:
 ## When to stop and ask instead of doing
 
 - The task needs a new dependency, build tool, backend, or hosting change.
-- The task needs a change to `support.js` or the data model's shape.
+- The task needs a change to `support.js`, `js/store.js`, or the data model's shape.
+- You want to store something new — ask for an event type instead of adding state.
 - Something in `.github/` is failing and you're tempted to edit the workflow.
 - You'd need to force-push, rewrite history, or touch `main` directly.
 - You found a committed secret or a file that looks like one.
