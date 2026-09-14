@@ -15,21 +15,25 @@
 
 const INK = '#141414', MUTE = '#8c8c88';
 
+// The two promises the whole page is built around: days to a first answer,
+// and days after launch until the outcome is measured. Change them here only.
+const PROMISE_DAYS = 5, OUTCOME_DAYS = 14;
+
 const DEPTS = [
-  { id: 'PRD', name: 'Production', people: 640 },
-  { id: 'ENG', name: 'Engineering', people: 210 },
-  { id: 'QUA', name: 'Quality', people: 95 },
-  { id: 'FIN', name: 'Finance', people: 70 },
-  { id: 'OPS', name: 'Ops & Admin', people: 150 },
-  { id: 'HIT', name: 'HR / IT', people: 85 },
-  { id: 'FLD', name: 'Field Service', people: 240 },
-  { id: 'SAL', name: 'Sales', people: 180 }
+  { id: 'PRD', name: 'Production', people: 190 },
+  { id: 'ENG', name: 'Engineering', people: 65 },
+  { id: 'QUA', name: 'Quality', people: 30 },
+  { id: 'FIN', name: 'Finance', people: 20 },
+  { id: 'OPS', name: 'Ops & Admin', people: 45 },
+  { id: 'HIT', name: 'HR / IT', people: 25 },
+  { id: 'FLD', name: 'Field Service', people: 70 },
+  { id: 'SAL', name: 'Sales', people: 55 }
 ];
 
 const PROBLEMS = [
   { id: 'p1', title: 'Three approval steps for spend under €5k', sub: 'A €400 sensor takes the same route as a €40k machine.',
     detail: 'Raised independently in Ops, Engineering and Field Service. Every purchase below €5k still passes cost-centre lead, department head and controlling — a median of nine days for items that are already budgeted.',
-    people: 86, depts: ['OPS', 'ENG', 'FLD'], trend: 'Worsening', age: '14 months ago', months: 14, owner: 'ideas', timeLost: '210 h',
+    people: 26, depts: ['OPS', 'ENG', 'FLD'], trend: 'Worsening', age: '14 months ago', months: 14, owner: 'ideas', timeLost: '210 h',
     spark: [0.4, 0.45, 0.5, 0.6, 0.7, 0.85, 1], ideas: ['i1'],
     signals: [
       { quote: 'I waited eleven days for a €380 replacement sensor. The line stood still for two of them.', by: 'Anonymous · Production, Line 3' },
@@ -38,15 +42,15 @@ const PROBLEMS = [
     ] },
   { id: 'p2', title: 'No slack: 97% of capacity is committed', sub: 'Nobody has hours left to try anything new.',
     detail: 'The strongest signal in the company and the one with no owner. Improvement work is scheduled on top of a full load, so it is the first thing dropped when a delivery date moves.',
-    people: 214, depts: ['PRD', 'ENG', 'QUA', 'SAL', 'FLD', 'OPS', 'FIN'], trend: 'Flat', age: '11 months ago', months: 11, owner: 'none', timeLost: '—',
+    people: 64, depts: ['PRD', 'ENG', 'QUA', 'SAL', 'FLD', 'OPS', 'FIN'], trend: 'Flat', age: '11 months ago', months: 11, owner: 'none', timeLost: '—',
     spark: [0.8, 0.82, 0.8, 0.85, 0.83, 0.86, 0.85], ideas: ['i4'],
     signals: [
       { quote: 'I was asked to join an improvement team. Nothing was taken off my plate.', by: 'Anonymous · Engineering' },
       { quote: 'We plan at 97% and then wonder why nothing changes.', by: 'H. Sander · Quality' }
     ] },
   { id: 'p3', title: 'People who flag a risk get handed the fix', sub: 'So the second time, they stay quiet.',
-    detail: 'Named twenty-nine times, 71% of it anonymously — which is itself the finding. Raising a concern is treated as volunteering, so early warnings arrive late or not at all.',
-    people: 67, depts: ['PRD', 'QUA', 'HIT'], trend: 'Worsening', age: '9 months ago', months: 9, owner: 'none', timeLost: '—',
+    detail: 'Named nineteen times, 71% of it anonymously — which is itself the finding. Raising a concern is treated as volunteering, so early warnings arrive late or not at all.',
+    people: 20, depts: ['PRD', 'QUA', 'HIT'], trend: 'Worsening', age: '9 months ago', months: 9, owner: 'none', timeLost: '—',
     spark: [0.35, 0.4, 0.5, 0.55, 0.7, 0.8, 0.95], ideas: ['i5'],
     signals: [
       { quote: 'I reported a tolerance drift and became the project lead for fixing it. On top of my job.', by: 'Anonymous · Quality' },
@@ -54,28 +58,28 @@ const PROBLEMS = [
     ] },
   { id: 'p4', title: 'Quality data lives in three systems', sub: 'Nobody trusts a number they did not pull themselves.',
     detail: 'Measurement data sits in the MES, a shared drive and two Access databases. Reconciling a single week costs a full day and the versions still disagree.',
-    people: 58, depts: ['QUA', 'PRD', 'HIT'], trend: 'Flat', age: '2 years ago', months: 24, owner: 'ideas', timeLost: '96 h',
+    people: 17, depts: ['QUA', 'PRD', 'HIT'], trend: 'Flat', age: '2 years ago', months: 24, owner: 'ideas', timeLost: '96 h',
     spark: [0.6, 0.62, 0.6, 0.63, 0.6, 0.62, 0.61], ideas: ['i6'],
     signals: [
       { quote: 'Three systems, three truths. We spend the morning agreeing which one is real.', by: 'H. Sander · Quality' }
     ] },
   { id: 'p5', title: 'Sales hears about product changes from customers', sub: 'Engineering ships, nobody tells the field.',
     detail: 'Three customer escalations last quarter traced to changes Sales did not know had shipped. A weekly change note now runs as a trial between the two departments.',
-    people: 41, depts: ['SAL', 'ENG'], trend: 'Improving', age: '7 months ago', months: 7, owner: 'trial', timeLost: '40 h',
+    people: 12, depts: ['SAL', 'ENG'], trend: 'Improving', age: '7 months ago', months: 7, owner: 'trial', timeLost: '40 h',
     spark: [0.9, 0.85, 0.8, 0.6, 0.45, 0.35, 0.25], ideas: ['i7'],
     signals: [
       { quote: 'A customer told me about our new firmware. I had to pretend I knew.', by: 'N. Kaya · Sales' }
     ] },
   { id: 'p6', title: 'Test rig booked out six weeks ahead', sub: 'Four ideas are waiting on one machine.',
     detail: 'The only endurance rig is fully booked by series validation. Anything exploratory queues behind it, which quietly kills small experiments before they start.',
-    people: 33, depts: ['ENG', 'QUA'], trend: 'Flat', age: '5 months ago', months: 5, owner: 'ideas', timeLost: '—',
+    people: 10, depts: ['ENG', 'QUA'], trend: 'Flat', age: '5 months ago', months: 5, owner: 'ideas', timeLost: '—',
     spark: [0.5, 0.55, 0.5, 0.6, 0.55, 0.6, 0.58], ideas: ['i2'],
     signals: [
       { quote: 'Six weeks to test a two-day change. We stopped asking.', by: 'M. Roth · Engineering' }
     ] },
   { id: 'p7', title: 'New hires wait five weeks for system access', sub: 'Paid, onboarded, and unable to work.',
     detail: 'Access requests are raised per system, sequentially, after the start date. A bundled request template cut this to eleven days at the Ulm site.',
-    people: 24, depts: ['HIT', 'OPS'], trend: 'Improving', age: '3 months ago', months: 3, owner: 'trial', timeLost: '64 h',
+    people: 7, depts: ['HIT', 'OPS'], trend: 'Improving', age: '3 months ago', months: 3, owner: 'trial', timeLost: '64 h',
     spark: [0.9, 0.88, 0.7, 0.55, 0.4, 0.3, 0.28], ideas: ['i8'],
     signals: [
       { quote: 'My first two weeks were reading PDFs because I had no login.', by: 'L. Brandt · HR / IT' }
@@ -83,12 +87,12 @@ const PROBLEMS = [
 ];
 
 const IDEAS = [
-  { id: 'i1', title: 'Team-level spend authority up to €5k', score: 92, problem: 'p1', status: 'Awaiting decision', wait: 41,
+  { id: 'i1', title: 'Team-level spend authority up to €5k', score: 92, problem: 'p1', status: 'Awaiting decision', wait: 19,
     expected: '−9 days per purchase', upside: '€740k', effort: '2 people · 6 wks', proposedBy: 'C. Ilg, Ops',
     blocker: 'Needs a CFO signature to leave the two pilot sites.',
     rationale: 'Give cost-centre teams a standing €5k authority with monthly review instead of pre-approval. Already run at two sites for a quarter: no budget overrun, purchase lead time down from twelve days to two.',
-    team: ['C. Ilg', 'R. Nowak', 'Anonymous'], teamNote: 'Needs a CFO signature to move beyond the two pilot sites — that signature is what the 41 days are.' },
-  { id: 'i2', title: 'Hold 20% of test-rig time for experiments', score: 78, problem: 'p6', status: 'Awaiting decision', wait: 12,
+    team: ['C. Ilg', 'R. Nowak', 'Anonymous'], teamNote: 'Needs a CFO signature to move beyond the two pilot sites — that signature is what the 19 days are.' },
+  { id: 'i2', title: 'Hold 20% of test-rig time for experiments', score: 78, problem: 'p6', status: 'Awaiting decision', wait: 4,
     expected: 'unblocks 4 queued ideas', upside: '€90k', effort: '1 person · 2 wks', proposedBy: 'M. Roth, Engineering',
     blocker: 'Engineering and Quality must agree the reserved slot.',
     rationale: 'Reserve one day a week on the endurance rig for unscheduled trials, bookable the same week. Series validation loses 20% of a machine; four stalled ideas get a way to be tested cheaply.',
@@ -98,14 +102,14 @@ const IDEAS = [
     rationale: 'Customers repeatedly asked to buy upgrade kits for machines already in the field. Sales, Engineering and Production built two kits for the most-requested models; phase two extends to export markets.',
     team: ['A. Weber', 'M. Roth', 'J. Klein'], teamNote: 'Day 9 of phase two. First phase shipped in May and is already booked.' },
   { id: 'i4', title: 'Protect one day a fortnight for improvement work', score: 74, problem: 'p2', status: 'Unfunded', wait: 0,
-    expected: 'capacity for trials', upside: 'not modelled', effort: '≈2% of payroll hours', proposedBy: '31 people, company-wide',
+    expected: 'capacity for trials', upside: 'not modelled', effort: '≈2% of payroll hours', proposedBy: '14 people, company-wide',
     rationale: 'Plan improvement time into the schedule instead of on top of it. The most-supported idea in the company and the one nobody can approve below board level, because it changes what the plan assumes.',
     team: ['—'], teamNote: 'No owner. This is a capacity decision, not a project.' },
   { id: 'i5', title: 'Blameless review, separate from ownership', score: 71, problem: 'p3', status: 'Unfunded', wait: 0,
     expected: 'earlier warnings', upside: 'not modelled', effort: '1 person · 4 wks', proposedBy: 'Anonymous, Quality',
     rationale: 'Split reporting a problem from being assigned it: whoever raises an issue is explicitly not its owner. Cheap to try, and it addresses the signal that 71% of people would only give anonymously.',
     team: ['—'], teamNote: 'Proposed by Quality and HR / IT jointly. Nobody assigned.' },
-  { id: 'i6', title: 'One measurement record, one place', score: 69, problem: 'p4', status: 'Awaiting decision', wait: 8,
+  { id: 'i6', title: 'One measurement record, one place', score: 69, problem: 'p4', status: 'Awaiting decision', wait: 3,
     expected: '−96 h / month reconciling', upside: '€120k', effort: '3 people · 10 wks', proposedBy: 'H. Sander, Quality',
     blocker: 'IT capacity is the constraint, not the approach.',
     rationale: 'Retire the two Access databases and write measurements once, into the MES. Unglamorous, well understood, and blocks four other ideas that need trustworthy quality data.',
@@ -127,7 +131,7 @@ const INITIATIVES = [
   { id: 't2', name: 'Offline job sheets for field service', depts: ['FLD', 'HIT'], people: 2, status: 'Building', stage: 'day 18',
     why: 'technicians enter the same job data twice, once on paper and once at the hotel',
     members: [{ name: 'D. Ferraro', role: 'Field Service' }, { name: 'L. Brandt', role: 'HR / IT' }] },
-  { id: 't3', name: 'Team spend authority', depts: ['OPS', 'FIN', 'PRD'], people: 3, status: 'Awaiting decision', stage: 'waiting 41 days',
+  { id: 't3', name: 'Team spend authority', depts: ['OPS', 'FIN', 'PRD'], people: 3, status: 'Awaiting decision', stage: 'waiting 19 days',
     why: 'three approvals were needed for any spend under €5k',
     members: [{ name: 'C. Ilg', role: 'Ops & Admin' }, { name: 'R. Nowak', role: 'Finance' }, { name: 'Anonymous', role: 'Production' }] },
   { id: 't4', name: '4-series fixture redesign', depts: ['PRD', 'QUA', 'ENG'], people: 4, status: 'Shipped', stage: 'shipped day 54',
@@ -142,26 +146,26 @@ const INITIATIVES = [
   { id: 't7', name: 'Blameless incident reviews', depts: ['QUA', 'HIT'], people: 0, status: 'Proposed', stage: 'nobody assigned',
     why: 'people who flag a risk get handed the fix, so they stop flagging',
     members: [{ name: 'Anonymous', role: 'proposed by Quality' }] },
-  { id: 't8', name: 'One measurement record', depts: ['QUA', 'PRD', 'HIT'], people: 3, status: 'Awaiting decision', stage: 'waiting 8 days',
+  { id: 't8', name: 'One measurement record', depts: ['QUA', 'PRD', 'HIT'], people: 3, status: 'Awaiting decision', stage: 'waiting 3 days',
     why: 'quality data lives in three systems that disagree',
     members: [{ name: 'H. Sander', role: 'Quality' }, { name: 'L. Brandt', role: 'HR / IT' }, { name: 'T. Vogel', role: 'Production' }] }
 ];
 
 const MY_IDEAS = [
   { title: 'Bundle new-hire access into one request', submitted: 'You raised this 14 March · Anonymous #4471',
-    status: 'Shipped', clock: 'Answered in 6 days. Live at Ulm since 2 July.', overdue: false,
-    steps: [['Sent', '14 Mar', 'done'], ['Read by a human', '15 Mar', 'done'], ['Decided', '20 Mar', 'done'], ['Shipped', '2 Jul', 'done']],
+    status: 'Shipped', clock: 'Answered in 3 days. Live at Ulm since 2 July.', overdue: false,
+    steps: [['Sent', '14 Mar', 'done'], ['Read by a human', '15 Mar', 'done'], ['Decided', '17 Mar', 'done'], ['Shipped', '2 Jul', 'done']],
     reply: 'We are doing this. One template at contract signature, HR raises it, IT pre-provisions. You are credited on the rollout note.',
-    replyBy: 'L. Brandt · HR / IT · 20 March',
+    replyBy: 'L. Brandt · HR / IT · 17 March',
     outcome: '5 weeks → 11 days', outcomeNote: 'measured across 9 new hires' },
   { title: 'Stop double-entering job data on paper', submitted: 'You raised this 2 June · Anonymous #4471',
-    status: 'Building', clock: 'Answered in 4 days. In build since 18 June — day 18 of 30.', overdue: false,
-    steps: [['Sent', '2 Jun', 'done'], ['Read by a human', '3 Jun', 'done'], ['Decided', '6 Jun', 'done'], ['Shipped', 'due 12 Oct', 'now']],
+    status: 'Building', clock: 'Answered in 2 days. In build since 18 June — day 18 of 30.', overdue: false,
+    steps: [['Sent', '2 Jun', 'done'], ['Read by a human', '3 Jun', 'done'], ['Decided', '4 Jun', 'done'], ['Shipped', 'due 12 Oct', 'now']],
     reply: 'Agreed and funded. Two people on it: offline job sheets that sync when you get signal. Want to test the first build with us?',
-    replyBy: 'D. Ferraro · Field Service · 6 June',
-    outcome: 'expected −3 h / week / technician', outcomeNote: 'will be measured 90 days after launch' },
+    replyBy: 'D. Ferraro · Field Service · 4 June',
+    outcome: 'expected −3 h / week / technician', outcomeNote: 'will be measured ' + OUTCOME_DAYS + ' days after launch' },
   { title: 'Let teams spend their own budget under €5k', submitted: 'You co-signed this 28 July · Anonymous #4471',
-    status: 'Awaiting decision', clock: '41 days waiting — 27 days past the promise. Escalated to the board on 11 August.', overdue: true,
+    status: 'Awaiting decision', clock: '19 days waiting — 14 days past the promise. Escalated to the board on 2 August.', overdue: true,
     steps: [['Sent', '28 Jul', 'done'], ['Read by a human', '29 Jul', 'done'], ['Decided', 'overdue', 'late'], ['Shipped', '—', 'todo']],
     reply: 'Piloted at two sites and it works. It now needs a CFO signature, which is what we are waiting for. I will report back after Thursday.',
     replyBy: 'C. Ilg · Ops & Admin · 20 August',
@@ -197,7 +201,7 @@ const ROUTES = [
   { id: 'r1', type: 'Spend under €5k (parts, tools, consumables)', keys: ['spend', 'buy', 'order', 'purchase', 'sensor', 'part', 'budget', '€', 'invoice', 'supplier'],
     owner: { name: 'R. Nowak', role: 'Cost-centre lead', dept: 'FIN' }, deputy: 'C. Ilg', buddy: 'C. Ilg · Ops & Admin', wait: '3 d' },
   { id: 'r2', type: 'Test-rig or machine time', keys: ['rig', 'test', 'machine', 'booking', 'slot', 'validation', 'endurance'],
-    owner: { name: 'M. Roth', role: 'Engineering lead', dept: 'ENG' }, deputy: 'H. Sander', buddy: 'M. Roth · Engineering', wait: '5 d' },
+    owner: { name: 'M. Roth', role: 'Engineering lead', dept: 'ENG' }, deputy: 'H. Sander', buddy: 'M. Roth · Engineering', wait: '4 d' },
   { id: 'r3', type: 'Quality data, measurements, tolerances', keys: ['quality', 'tolerance', 'measurement', 'mes', 'rework', 'scrap', 'drift', 'defect'],
     owner: { name: 'H. Sander', role: 'Quality lead', dept: 'QUA' }, deputy: 'T. Vogel', buddy: 'H. Sander · Quality', wait: '2 d' },
   { id: 'r4', type: 'System access, logins, IT equipment', keys: ['access', 'login', 'laptop', 'account', 'password', 'it ', 'software', 'system', 'vpn'],
@@ -218,19 +222,19 @@ const ROUTES = [
 // (the four from board 2: triage · no time · wrong department · not responsible).
 const CASES = [
   { id: 'c1', title: 'Rework on the 4-series housing is back — new batch of castings', from: 'Anonymous #2210', fromDept: 'Production, Line 2',
-    age: 16, reason: 'no time', routeId: 'r7', upside: '≈ 30 h / month rework',
+    age: 7, reason: 'no time', routeId: 'r7', upside: '≈ 30 h / month rework',
     body: 'The castings from the new supplier need the same hand-finish we removed with the fixture redesign. Three people are doing it off-plan.' },
   { id: 'c2', title: 'Night shift has no one who can sign a €300 parts order', from: 'S. Dahl', fromDept: 'Production, 4-series',
-    age: 11, reason: 'not responsible', routeId: 'r1', upside: 'line stops avoided',
+    age: 4, reason: 'not responsible', routeId: 'r1', upside: 'line stops avoided',
     body: 'When a belt goes at 02:00 we wait for the day shift to approve a €300 replacement. Twice last month the line stood until 07:30.' },
   { id: 'c3', title: 'Changeover sheet and MES ask for the same six numbers', from: 'Anonymous #4471', fromDept: 'Production, Line 3',
-    age: 6, reason: 'is it important', routeId: 'r8', upside: '≈ 20 min per changeover',
+    age: 3, reason: 'is it important', routeId: 'r8', upside: '≈ 20 min per changeover',
     body: 'Every changeover we write the same six values on paper and then type them into the MES. Twelve changeovers a shift.' },
   { id: 'c4', title: 'Tolerance drift on station 7 — who owns the gauge calibration?', from: 'J. Klein', fromDept: 'Production, 4-series',
-    age: 3, reason: 'wrong department', routeId: 'r3', upside: 'scrap on station 7',
+    age: 1, reason: 'wrong department', routeId: 'r3', upside: 'scrap on station 7',
     body: 'The gauge reads 0.02 off against Quality\u2019s reference. Quality says it is ours; we say it is theirs. Meanwhile parts get scrapped.' },
   { id: 'c5', title: 'Two apprentices still have no MES login after four weeks', from: 'P. Mayer', fromDept: 'Production, Line 1',
-    age: 2, reason: 'wrong department', routeId: 'r4', upside: '2 people idle on paperwork',
+    age: 1, reason: 'wrong department', routeId: 'r4', upside: '2 people idle on paperwork',
     body: 'Started 18 August. Tickets raised per system. They shadow others because they cannot book their own work.' },
   { id: 'c6', title: 'Can Line 3 borrow the endurance rig on Fridays?', from: 'Anonymous #0931', fromDept: 'Production, Line 3',
     age: 1, reason: 'is it important', routeId: 'r2', upside: 'unblocks the belt-tension trial',
@@ -240,10 +244,10 @@ const CASES = [
 // What the team leader's own team is waiting on elsewhere — the other end of
 // the same asymmetry (§12): the cost is felt here, the authority sits there.
 const WAITING_ON = [
-  { title: 'Team-level spend authority up to €5k', owner: 'CFO office', dept: 'Finance', age: 41, promised: 14 },
-  { title: 'Reserved rig day for unscheduled trials', owner: 'M. Roth', dept: 'Engineering', age: 12, promised: 14 },
-  { title: 'Gauge calibration ownership, station 7', owner: 'H. Sander', dept: 'Quality', age: 3, promised: 14 },
-  { title: 'MES logins for two apprentices', owner: 'L. Brandt', dept: 'HR / IT', age: 2, promised: 14 }
+  { title: 'Team-level spend authority up to €5k', owner: 'CFO office', dept: 'Finance', age: 19, promised: PROMISE_DAYS },
+  { title: 'Reserved rig day for unscheduled trials', owner: 'M. Roth', dept: 'Engineering', age: 4, promised: PROMISE_DAYS },
+  { title: 'Gauge calibration ownership, station 7', owner: 'H. Sander', dept: 'Quality', age: 2, promised: PROMISE_DAYS },
+  { title: 'MES logins for two apprentices', owner: 'L. Brandt', dept: 'HR / IT', age: 1, promised: PROMISE_DAYS }
 ];
 
 // Static buddy pairs for the Production team (§16): one lateral edge per
@@ -275,24 +279,24 @@ const LEDGER = {
 // demo data is off the page shows "measured in pilot" instead of these.
 const METRICS = {
   // Discovery interviews (the total is the sum of DEPTS.people).
-  discovery: { round: 2, interviewed: 1180, note: 'Production and Field Service still under 50%' },
+  discovery: { round: 2, interviewed: 355, note: 'Production and Field Service still under 50%' },
   // Raw signals before clustering — more than the quotes kept per problem.
-  signals: 412,
+  signals: 131,
   // Manager overview KPIs and movement since the baseline survey.
-  ideaToDecision: { now: '11d', was: 'was 34d', spark: [0.95, 1, 0.9, 0.6, 0.45, 0.35, 0.3] },
+  ideaToDecision: { now: '4d', was: 'was 12d', spark: [0.95, 1, 0.9, 0.6, 0.45, 0.35, 0.3] },
   valueBooked: { now: '€1.42M', delta: '+€1.15M', was: 'was €270k', sub: '€880k of it recurring', spark: [0.18, 0.2, 0.19, 0.45, 0.62, 0.82, 1] },
-  waitingDaysSaved: { now: '1,240 d', spark: [0.1, 0.2, 0.3, 0.45, 0.6, 0.8, 1] },
+  waitingDaysSaved: { now: '380 d', spark: [0.1, 0.2, 0.3, 0.45, 0.6, 0.8, 1] },
   shippedWas: 'was 1', shippedSpark: [0.25, 0.3, 0.22, 0.5, 0.7, 0.85, 1],
   noOwnerWas: 'was 4', noOwnerSpark: [0.4, 0.42, 0.5, 0.55, 0.62, 0.7, 0.8],
   contributing: { now: '64%', was: 'was 21%', spark: [0.2, 0.22, 0.21, 0.4, 0.52, 0.6, 0.64] },
   stoppedEarly: 38,
   nextCall: 'Thursday 14:00 · 25 min',
   // Progress → "Did anyone answer them".
-  answered: { replied: '91%', median: '6d', credited: 214 },
+  answered: { replied: '91%', median: '3d', credited: 64 },
   // Employee → "Your contribution".
-  you: { medianWait: '4 d' },
+  you: { medianWait: '2 d' },
   // Team leader → inbox stats.
-  lead: { medianAnswer: '3 d', withinPromise: '9 / 11' }
+  lead: { medianAnswer: '2 d', withinPromise: '9 / 11' }
 };
 
 const VIEWS = {

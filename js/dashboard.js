@@ -236,7 +236,7 @@ window.createDashboardComponent = function (DCLogic) {
         shippedIdeas: D.ideas.filter(i => i.status === 'Shipped').length,
         shippedTeams: D.initiatives.filter(t => t.status === 'Shipped').length,
         teamsInMotion: D.initiatives.filter(t => t.people > 0 && t.status !== 'Shipped').length,
-        overdueIdeas: D.ideas.filter(i => i.status === 'Awaiting decision' && i.wait > 14).length
+        overdueIdeas: D.ideas.filter(i => i.status === 'Awaiting decision' && i.wait > PROMISE_DAYS).length
       };
 
       // ── rail ──
@@ -357,7 +357,7 @@ window.createDashboardComponent = function (DCLogic) {
       const waiting = D.ideas.filter(i => i.status === 'Awaiting decision').sort((a, b) => b.wait - a.wait);
       const decisions = waiting.map(i => ({
         title: i.title, days: i.wait + ' days', blocker: i.blocker || i.teamNote, upside: i.upside,
-        dueLabel: i.wait > 14 ? (i.wait - 14) + ' days past the promise · escalated one level up' : 'answer owed in ' + (14 - i.wait) + ' days',
+        dueLabel: i.wait > PROMISE_DAYS ? (i.wait - PROMISE_DAYS) + ' days past the promise · escalated one level up' : 'answer owed in ' + (PROMISE_DAYS - i.wait) + ' days',
         dueStyle: { fontFamily: MONO, fontSize: '11px', fontWeight: 600, lineHeight: 1.4, color: i.wait > 14 ? this.accent() : '#c9c8c0' },
         dayStyle: { fontFamily: MONO, fontSize: '11px', fontWeight: 700, color: i.wait > 20 ? '#1a1a17' : '#d6d5cd',
           background: i.wait > 20 ? this.accent() : '#33332e', borderRadius: '6px', padding: '4px 8px', whiteSpace: 'nowrap' },
@@ -419,7 +419,7 @@ window.createDashboardComponent = function (DCLogic) {
       const M = METRICS;
       const was = str => parseInt(String(str).replace(/[^\d]/g, ''), 10);
       const kpis = [
-        kpi('Idea → decision', M.ideaToDecision.now, M.ideaToDecision.was, true, 'median, last 90 days', M.ideaToDecision.spark),
+        kpi('Idea → decision', M.ideaToDecision.now, M.ideaToDecision.was, true, 'median, last 30 days', M.ideaToDecision.spark),
         kpi('Shipped this year', String(N.shippedTeams), M.shippedWas, N.shippedTeams >= was(M.shippedWas), M.stoppedEarly + ' stopped early, on purpose', M.shippedSpark),
         kpi('Value booked', M.valueBooked.now, M.valueBooked.delta, true, M.valueBooked.sub, M.valueBooked.spark),
         kpi('Waiting days saved', M.waitingDaysSaved.now, 'vs old route', true, 'across ' + N.ideas + ' ideas, since the clock came in', M.waitingDaysSaved.spark),
@@ -475,14 +475,14 @@ window.createDashboardComponent = function (DCLogic) {
         onSend: () => {
           if (s.draft.trim().length < 8) return;
           const owner = pr ? pr.owner.name : 'the triage desk';
-          const due = this.todayPlus(14);
+          const due = this.todayPlus(PROMISE_DAYS);
           const entry = {
             title: s.draft.trim(), submitted: 'You raised this today · ' + who.handle, status: 'Sent', overdue: false,
             clock: 'Sent to ' + owner + '. They owe you a yes, a no or a question by ' + due + '.',
             steps: [['Sent', 'today', 'done'], ['Read by a human', 'pending', 'now'], ['Decided', 'due ' + due, 'todo'], ['Shipped', '—', 'todo']],
             reply: 'No reply yet. ' + owner + ' has been told; if they miss the date it moves to ' + (pr ? pr.deputy : 'their deputy') + ' automatically.',
-            replyBy: 'the 14-day clock started today',
-            outcome: 'pending', outcomeNote: 'measured 90 days after launch'
+            replyBy: 'the ' + PROMISE_DAYS + '-day clock started today',
+            outcome: 'pending', outcomeNote: 'measured ' + OUTCOME_DAYS + ' days after launch'
           };
           this.persist({ sent: [entry].concat(s.sent), draft: '' });
           this.toast('Sent to ' + owner + '. Answer owed by ' + due + '.');
@@ -494,8 +494,8 @@ window.createDashboardComponent = function (DCLogic) {
         onSel: () => this.toast('Opens a direct line to ' + b.name + ' (' + b.dept + ') — sideways, not up the tree.') }));
 
       const promises = [
-        { n: '14 d', label: 'to a yes, a no or a question — from a named person, not a form' },
-        { n: '90 d', label: 'after launch, the outcome is measured and published back to you' },
+        { n: PROMISE_DAYS + ' d', label: 'to a yes, a no or a question — from a named person, not a form' },
+        { n: OUTCOME_DAYS + ' d', label: 'after launch, the outcome is measured and published back to you' },
         { n: '100%', label: 'of shipped work names everyone who contributed, anonymous handles included' }
       ];
 
@@ -509,10 +509,10 @@ window.createDashboardComponent = function (DCLogic) {
       // ── team leader: inbox ──
       const inboxSorted = openCases.slice().sort((a, b) => b.age - a.age);
       const decorateCase = c => {
-        const late = c.age > 14, soon = c.age >= 10 && !late;
+        const late = c.age > PROMISE_DAYS, soon = c.age >= PROMISE_DAYS - 2 && !late;
         return {
           id: c.id, title: c.title, from: c.from + ' · ' + c.fromDept, age: c.age + ' d', reason: c.reason, reasonStyle: this.reasonStyle(c.reason),
-          clock: late ? (c.age - 14) + ' d past the promise' : (14 - c.age) + ' d left',
+          clock: late ? (c.age - PROMISE_DAYS) + ' d past the promise' : (PROMISE_DAYS - c.age) + ' d left',
           clockStyle: { fontFamily: MONO, fontSize: '11px', fontWeight: 700, whiteSpace: 'nowrap', borderRadius: '6px', padding: '4px 8px',
             background: late ? this.accent() : soon ? this.accentSoft() : '#f0efea', color: late ? '#1a1a17' : soon ? this.accentInk() : '#5b5b5b' },
           rowStyle: this.row(s.cid === c.id), markStyle: this.mark(s.cid === c.id), onOpen: () => this.set('cid', c.id)
@@ -536,7 +536,7 @@ window.createDashboardComponent = function (DCLogic) {
         onHand: act(sc0.id, 'handed', 'Handed to ' + (scMine ? scRoute.deputy : scRoute.owner.name) + '. Both of you and ' + sc0.from + ' have been told. The clock keeps running.'),
         onAsk: act(sc0.id, 'asked', 'One question sent to ' + sc0.from + '. The clock pauses until they answer.')
       } : {
-        title: demo ? 'Inbox empty' : 'Nothing addressed to you yet', body: demo ? 'Nothing is waiting on you. That is the goal by the end of every day.' : 'When someone on your team, or in a neighbouring one, raises a problem the map routes to you, it lands here with a 14-day clock.',
+        title: demo ? 'Inbox empty' : 'Nothing addressed to you yet', body: demo ? 'Nothing is waiting on you. That is the goal by the end of every day.' : 'When someone on your team, or in a neighbouring one, raises a problem the map routes to you, it lands here with a ' + PROMISE_DAYS + '-day clock.',
         from: '', fromDept: '', fromIni: '', age: '', reason: '', reasonStyle: {}, upside: '',
         routeEyebrow: '', routeType: '', routeOwner: '', routeDeputy: '', routeBuddy: '', handLabel: '',
         onYes: () => {}, onNo: () => {}, onHand: () => {}, onAsk: () => {}
@@ -546,10 +546,10 @@ window.createDashboardComponent = function (DCLogic) {
         title: c.title, what: CASE_ACTIONS[s.cases[c.id]], style: this.pill(s.cases[c.id] === 'asked' ? '#f0efea' : INK, s.cases[c.id] === 'asked' ? '#5b5b5b' : '#fff', 600)
       }));
 
-      const overdueCases = openCases.filter(c => c.age > 14).length;
+      const overdueCases = openCases.filter(c => c.age > PROMISE_DAYS).length;
       const inboxStats = [
         { v: String(openCases.length), l: 'open, addressed to you' },
-        { v: String(overdueCases), l: 'past the 14-day promise', hot: overdueCases > 0 },
+        { v: String(overdueCases), l: 'past the ' + PROMISE_DAYS + '-day promise', hot: overdueCases > 0 },
         { v: dash(METRICS.lead.medianAnswer), l: 'your median time to answer' },
         { v: dash(METRICS.lead.withinPromise), l: 'answered within the promise, Q3' }
       ].map(x => ({ v: x.v, l: x.l, vStyle: { fontSize: '19px', fontWeight: 800, letterSpacing: '-0.025em', color: x.hot ? this.accentInk() : '#141414' } }));
@@ -583,9 +583,9 @@ window.createDashboardComponent = function (DCLogic) {
 
       const overdueMine = D.mine.filter(m => m.overdue);
       const dropItems = isManager
-        ? decisions.map(d => ({ title: d.title, meta: d.days + ' · ' + (d.upside || '') + ' upside', hot: parseInt(d.days) > 14, onOpen: d.onOpen }))
+        ? decisions.map(d => ({ title: d.title, meta: d.days + ' · ' + (d.upside || '') + ' upside', hot: parseInt(d.days) > PROMISE_DAYS, onOpen: d.onOpen }))
         : isLead
-          ? inboxSorted.filter(c => c.age >= 10).map(c => ({ title: c.title, meta: c.age + ' d · ' + c.from, hot: c.age > 14, onOpen: openCase(c.id) }))
+          ? inboxSorted.filter(c => c.age >= PROMISE_DAYS - 2).map(c => ({ title: c.title, meta: c.age + ' d · ' + c.from, hot: c.age > PROMISE_DAYS, onOpen: openCase(c.id) }))
           : overdueMine.map(m => ({ title: m.title, meta: m.clock, hot: true, onOpen: () => this.setState({ tab: 'mine', pop: null }) }));
       const dropCount = dropItems.length;
       const decisionBtnLabel = !demo && !dropCount ? 'Nothing waiting'
@@ -696,7 +696,7 @@ window.createDashboardComponent = function (DCLogic) {
         // overview
         kpis, decisions, noDecisions: decisions.length === 0, stall, noStall: stall.length === 0, ledger,
         nextCall: demo ? METRICS.nextCall : 'not scheduled yet',
-        nextCallNote: demo ? 'Agenda is built from the items above — nothing else on it.' : 'The first decision call is booked when the first item passes its 14 days.',
+        nextCallNote: demo ? 'Agenda is built from the items above — nothing else on it.' : 'The first decision call is booked when the first item passes its ' + PROMISE_DAYS + ' days.',
         movement: [
           mv('Idea → decision', M.ideaToDecision.now, M.ideaToDecision.was, M.ideaToDecision.spark),
           mv('Ideas shipped / yr', String(N.shippedTeams), M.shippedWas, M.shippedSpark),
@@ -754,7 +754,7 @@ window.createDashboardComponent = function (DCLogic) {
         answered: {
           replied: demo ? METRICS.answered.replied : '—', median: demo ? METRICS.answered.median : '—',
           credited: demo ? fmt(METRICS.answered.credited) : '0',
-          unanswered: String(N.overdueIdeas + openCases.filter(c => c.age > 14).length)
+          unanswered: String(N.overdueIdeas + openCases.filter(c => c.age > PROMISE_DAYS).length)
         },
         contributors, noContributors: contributors.length === 0
       };
