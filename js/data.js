@@ -164,8 +164,104 @@ const OUTCOMES = [
   { title: 'Retrofit kit line, phase one', promised: '€300k booked', actual: '€410k booked', verdict: 'Beat it' }
 ];
 
+// ── Roles ────────────────────────────────────────────────────────────────
+// Three roles, three home screens (PRODUCT_CONCEPT_ORG_OS.md §8):
+//   employee  → "what happened to what I sent" + one field to raise something
+//   lead      → "one list: open items addressed to me, sorted by age, one action each"
+//   manager   → the ledger: what is waiting, how the system moves, what it costs
+const ROLES = [
+  { id: 'employee', label: 'Employee', home: 'mine', dept: 'PRD',
+    who: { name: 'J. Schmidt', ini: 'JS', line: 'Production, Line 3', handle: 'Anonymous #4471' } },
+  { id: 'lead', label: 'Team leader', home: 'inbox', dept: 'PRD',
+    who: { name: 'T. Vogel', ini: 'TV', line: 'Team lead · Production, 4-series', handle: null } },
+  { id: 'manager', label: 'Manager', home: 'overview', dept: 'All',
+    who: { name: 'B. Hartmann', ini: 'BH', line: 'Betriebsleitung · all departments', handle: null } }
+];
+
+// The routing table (PRODUCT_CONCEPT_ORG_OS.md §19): recurring request type →
+// owning role · deputy · buddy in the neighbouring department. Filled in once
+// by a department head. The intake box matches typed text against `keys` and
+// *proposes* the row — it never decides (§11.2).
+const ROUTES = [
+  { id: 'r1', type: 'Spend under €5k (parts, tools, consumables)', keys: ['spend', 'buy', 'order', 'purchase', 'sensor', 'part', 'budget', '€', 'invoice', 'supplier'],
+    owner: { name: 'R. Nowak', role: 'Cost-centre lead', dept: 'FIN' }, deputy: 'C. Ilg', buddy: 'C. Ilg · Ops & Admin', wait: '3 d' },
+  { id: 'r2', type: 'Test-rig or machine time', keys: ['rig', 'test', 'machine', 'booking', 'slot', 'validation', 'endurance'],
+    owner: { name: 'M. Roth', role: 'Engineering lead', dept: 'ENG' }, deputy: 'H. Sander', buddy: 'M. Roth · Engineering', wait: '5 d' },
+  { id: 'r3', type: 'Quality data, measurements, tolerances', keys: ['quality', 'tolerance', 'measurement', 'mes', 'rework', 'scrap', 'drift', 'defect'],
+    owner: { name: 'H. Sander', role: 'Quality lead', dept: 'QUA' }, deputy: 'T. Vogel', buddy: 'H. Sander · Quality', wait: '2 d' },
+  { id: 'r4', type: 'System access, logins, IT equipment', keys: ['access', 'login', 'laptop', 'account', 'password', 'it ', 'software', 'system', 'vpn'],
+    owner: { name: 'L. Brandt', role: 'IT service lead', dept: 'HIT' }, deputy: 'B. Ehlers', buddy: 'L. Brandt · HR / IT', wait: '4 d' },
+  { id: 'r5', type: 'Product change reaching the field', keys: ['customer', 'firmware', 'change note', 'release', 'field', 'shipped', 'sales'],
+    owner: { name: 'N. Kaya', role: 'Sales lead', dept: 'SAL' }, deputy: 'A. Weber', buddy: 'N. Kaya · Sales', wait: '2 d' },
+  { id: 'r6', type: 'Shift plan, staffing, overtime', keys: ['shift', 'overtime', 'staff', 'holiday', 'roster', 'capacity', 'hours', 'people'],
+    owner: { name: 'T. Vogel', role: 'Team lead, Production', dept: 'PRD' }, deputy: 'S. Dahl', buddy: 'D. Ferraro · Field Service', wait: '1 d' },
+  { id: 'r7', type: 'Fixture, tooling or line layout', keys: ['fixture', 'tooling', 'layout', 'line', 'housing', 'jig', 'setup', 'changeover'],
+    owner: { name: 'T. Vogel', role: 'Team lead, Production', dept: 'PRD' }, deputy: 'J. Klein', buddy: 'M. Roth · Engineering', wait: '2 d' },
+  { id: 'r8', type: 'Paperwork done twice (forms, job sheets)', keys: ['paper', 'form', 'twice', 'double', 'sheet', 'excel', 'report', 'manual'],
+    owner: { name: 'C. Ilg', role: 'Ops & Admin lead', dept: 'OPS' }, deputy: 'L. Brandt', buddy: 'D. Ferraro · Field Service', wait: '3 d' }
+];
+
+// Cases addressed to the team leader (T. Vogel). One list, sorted by age,
+// one action each: decide, hand over to the deputy, or ask one question.
+// `reason` is the stall reason the system *proposes* for why it is still open
+// (the four from board 2: triage · no time · wrong department · not responsible).
+const CASES = [
+  { id: 'c1', title: 'Rework on the 4-series housing is back — new batch of castings', from: 'Anonymous #2210', fromDept: 'Production, Line 2',
+    age: 16, reason: 'no time', routeId: 'r7', upside: '≈ 30 h / month rework',
+    body: 'The castings from the new supplier need the same hand-finish we removed with the fixture redesign. Three people are doing it off-plan.' },
+  { id: 'c2', title: 'Night shift has no one who can sign a €300 parts order', from: 'S. Dahl', fromDept: 'Production, 4-series',
+    age: 11, reason: 'not responsible', routeId: 'r1', upside: 'line stops avoided',
+    body: 'When a belt goes at 02:00 we wait for the day shift to approve a €300 replacement. Twice last month the line stood until 07:30.' },
+  { id: 'c3', title: 'Changeover sheet and MES ask for the same six numbers', from: 'Anonymous #4471', fromDept: 'Production, Line 3',
+    age: 6, reason: 'is it important', routeId: 'r8', upside: '≈ 20 min per changeover',
+    body: 'Every changeover we write the same six values on paper and then type them into the MES. Twelve changeovers a shift.' },
+  { id: 'c4', title: 'Tolerance drift on station 7 — who owns the gauge calibration?', from: 'J. Klein', fromDept: 'Production, 4-series',
+    age: 3, reason: 'wrong department', routeId: 'r3', upside: 'scrap on station 7',
+    body: 'The gauge reads 0.02 off against Quality\u2019s reference. Quality says it is ours; we say it is theirs. Meanwhile parts get scrapped.' },
+  { id: 'c5', title: 'Two apprentices still have no MES login after four weeks', from: 'P. Mayer', fromDept: 'Production, Line 1',
+    age: 2, reason: 'wrong department', routeId: 'r4', upside: '2 people idle on paperwork',
+    body: 'Started 18 August. Tickets raised per system. They shadow others because they cannot book their own work.' },
+  { id: 'c6', title: 'Can Line 3 borrow the endurance rig on Fridays?', from: 'Anonymous #0931', fromDept: 'Production, Line 3',
+    age: 1, reason: 'is it important', routeId: 'r2', upside: 'unblocks the belt-tension trial',
+    body: 'We have a two-day trial ready since June. The rig is booked six weeks out by series validation.' }
+];
+
+// What the team leader's own team is waiting on elsewhere — the other end of
+// the same asymmetry (§12): the cost is felt here, the authority sits there.
+const WAITING_ON = [
+  { title: 'Team-level spend authority up to €5k', owner: 'CFO office', dept: 'Finance', age: 41, promised: 14 },
+  { title: 'Reserved rig day for unscheduled trials', owner: 'M. Roth', dept: 'Engineering', age: 12, promised: 14 },
+  { title: 'Gauge calibration ownership, station 7', owner: 'H. Sander', dept: 'Quality', age: 3, promised: 14 },
+  { title: 'MES logins for two apprentices', owner: 'L. Brandt', dept: 'HR / IT', age: 2, promised: 14 }
+];
+
+// Static buddy pairs for the Production team (§16): one lateral edge per
+// neighbouring department, set by two department heads, overridable per case.
+const BUDDIES = [
+  { name: 'M. Roth', ini: 'MR', dept: 'Engineering', note: 'rig time, fixtures, drawings' },
+  { name: 'H. Sander', ini: 'HS', dept: 'Quality', note: 'gauges, tolerances, measurement data' },
+  { name: 'L. Brandt', ini: 'LB', dept: 'HR / IT', note: 'logins, devices, onboarding' },
+  { name: 'C. Ilg', ini: 'CI', dept: 'Ops & Admin', note: 'orders, forms, the approval route' }
+];
+
+// Where the waiting goes — every wait segment in the ledger carries one of
+// the four stall reasons (board 2). Days are the sum over open cases, Q3.
+const STALL = [
+  { reason: 'Wrong department', days: 212, share: 0.38, note: 'the map was wrong — it went one level up instead of sideways' },
+  { reason: 'Not responsible', days: 156, share: 0.28, note: 'the map had no entry — nobody owns it' },
+  { reason: 'No time → returned', days: 118, share: 0.21, note: 'bounced back to the sender unread' },
+  { reason: 'Is it important', days: 72, share: 0.13, note: 'the receiver could not rank it against their own work' }
+];
+
+// The two December numbers (CONCEPT_CHECK_SEP13.md §4.1, step 5).
+const LEDGER = {
+  firstAnswer: '26 h', firstAnswerWas: 'was 9 d', withinPromise: '84%', withinPromiseWas: 'was 31%',
+  escalated: 7, handedOver: 19, overrides: '11%', overridesNote: 'of proposed owners were overruled — the map is right 9 times in 10'
+};
+
 const VIEWS = {
-  mine: { title: 'What happened to your ideas', sub: 'Every idea you sent, who is answering it, when they owe you that answer, and what it changed once it shipped.' },
+  mine: { title: 'What happened to what you sent', sub: 'Every problem or idea you raised, who is answering it, when they owe you that answer, and what it changed once it shipped.' },
+  inbox: { title: 'Addressed to you', sub: 'Open items sorted by age. Each one takes one action: decide, hand it to your deputy, or ask one question. Empty by end of day is the whole ritual.' },
   overview: { title: 'Where the organisation is stuck', sub: 'One screen: what is blocked on you, how the system is performing, and what people are saying this quarter.' },
   problems: { title: 'Problems named by employees', sub: 'Root problems clustered from 412 signals. People choose whether to sign their name.' },
   ideas: { title: 'Ideas from the organisation', sub: 'Score weighs expected outcome against effort and the size of the problem it solves.' },

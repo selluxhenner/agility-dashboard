@@ -27,7 +27,7 @@
 
       <!-- ░░ RAIL ░░ -->
       <div
-        style="width:246px; flex:none; background:#1a1a17; display:flex; flex-direction:column; padding:20px 14px 16px; box-sizing:border-box; overflow:auto;">
+        style="width:246px; flex:none; background:#1a1a17; display:flex; flex-direction:column; padding:20px 14px 70px; box-sizing:border-box; overflow:auto;">
         <div style="display:flex; align-items:center; gap:10px; padding:0 8px 20px;">
           <span
             style="width:28px; height:28px; border-radius:8px; background:#f4f3f0; color:#1a1a17; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; flex:none;">K</span>
@@ -67,14 +67,15 @@
         </div>
 
         <div style="margin-top:auto; padding-top:22px;">
-          <div
-            style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.16em; text-transform:uppercase; color:#a3a29a; padding:0 8px 8px;">
-            Viewing as</div>
-          <div
-            style="display:grid; grid-template-columns:repeat(2,1fr); background:#232320; border-radius:10px; padding:3px; gap:3px;">
-            <sc-for list="{{ roles }}" as="r" hint-placeholder-count="4">
-              <span onClick="{{ r.onSel }}" style="{{ r.style }}">{{ r.label }}</span>
-            </sc-for>
+          <div style="display:flex; align-items:center; gap:10px; padding:10px 8px 0; border-top:1px solid #2c2c27;">
+            <span
+              style="width:26px; height:26px; border-radius:50%; background:#2e2e28; color:#fbfbf9; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:9.5px; flex:none;">{{
+              who.ini }}</span>
+            <span style="display:flex; flex-direction:column; min-width:0;">
+              <span style="font-size:12px; font-weight:700; color:#fbfbf9;">{{ who.name }}</span>
+              <span style="font-size:10.5px; color:#7d7c73; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{
+                who.line }}</span>
+            </span>
           </div>
         </div>
       </div>
@@ -87,21 +88,97 @@
           <span
             style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:#a0a099; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:0 1 auto; min-width:0;">Innovation
             &amp; agility · Q3 2026</span>
-          <div
-            style="flex:1 1 90px; min-width:0; max-width:340px; display:flex; align-items:center; gap:8px; background:#f4f3f0; border:1px solid #e6e5e0; border-radius:9px; padding:7px 10px; box-sizing:border-box; overflow:hidden;">
+          <div style="{{ searchWrapStyle }}">
             <span style="width:11px; height:11px; border:1.5px solid #a0a099; border-radius:50%; flex:none;"></span>
+            <input id="nh-search" type="text" placeholder="Search problems, ideas, people" value="{{ q }}"
+              oninput="{{ onQ }}" onfocus="{{ onQFocus }}" autocomplete="off"
+              style="flex:1; min-width:0; border:0; outline:0; background:transparent; font-family:inherit; font-size:12.5px; color:#141414; padding:0;">
             <span
-              style="font-size:12.5px; color:#a0a099; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Search
-              problems, ideas, people</span>
-            <span
-              style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#b8b7b0; margin-left:auto;">⌘K</span>
+              style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#b8b7b0; margin-left:auto; flex:none;">⌘K</span>
+
+            <sc-if value="{{ searchOpen }}" hint-placeholder-val="{{ false }}">
+              <div
+                style="position:absolute; top:calc(100% + 6px); left:0; right:0; min-width:340px; background:#fff; border:1px solid #e6e5e0; border-radius:12px; padding:6px; box-shadow:0 14px 40px rgba(20,20,20,0.14); z-index:40;">
+                <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding:14px 12px; font-size:12.5px; color:#8c8c88;">Nothing matches. Try a word from the problem, an idea, or a
+                    person's name.</div>
+                </sc-if>
+                <sc-for list="{{ searchResults }}" as="r" hint-placeholder-count="5">
+                  <div onClick="{{ r.onOpen }}" style-hover="background:#faf9f7;"
+                    style="display:flex; align-items:baseline; gap:12px; padding:9px 10px; border-radius:8px; cursor:pointer;">
+                    <span style="{{ r.kindStyle }}">{{ r.kind }}</span>
+                    <span style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;">
+                      <span style="font-size:12.5px; font-weight:700; color:#141414; line-height:1.35;">{{ r.title }}</span>
+                      <span style="font-size:11px; color:#a0a099;">{{ r.meta }}</span>
+                    </span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
           </div>
-          <div style="display:flex; align-items:center; gap:10px; margin-left:auto; flex:none;">
-            <span onClick="{{ goDecisions }}" style="{{ decisionBtnStyle }}">
+
+          <div style="display:flex; align-items:center; gap:10px; margin-left:auto; flex:none; position:relative;">
+            <span onClick="{{ toggleDecisions }}" style="{{ decisionBtnStyle }}">
               <span style="{{ decisionDotStyle }}"></span>{{ decisionBtnLabel }}
             </span>
-            <span
-              style="width:28px; height:28px; border-radius:50%; background:#1a1a17; color:#fff; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:10px; flex:none;">JS</span>
+            <span onClick="{{ toggleMe }}" style="{{ avatarStyle }}">{{ who.ini }}</span>
+
+            <sc-if value="{{ decisionsOpen }}" hint-placeholder-val="{{ false }}">
+              <div
+                style="position:absolute; top:calc(100% + 8px); right:38px; width:360px; background:#1a1a17; border-radius:12px; padding:14px 14px 10px; box-shadow:0 14px 40px rgba(20,20,20,0.3); z-index:40;">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px;">
+                  <span
+                    style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a3a29a;">{{
+                    dropdownTitle }}</span>
+                  <span onClick="{{ goDecisions }}" style="font-size:12px; font-weight:600; color:#c9c8c0; cursor:pointer;">Open
+                    →</span>
+                </div>
+                <sc-if value="{{ noDropdown }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size:12.5px; color:#a3a29a; padding:12px 0 8px; line-height:1.5;">{{ dropdownEmpty }}</div>
+                </sc-if>
+                <div style="display:flex; flex-direction:column; margin-top:6px;">
+                  <sc-for list="{{ dropdown }}" as="d" hint-placeholder-count="3">
+                    <div onClick="{{ d.onOpen }}" style-hover="background:#232320;"
+                      style="display:flex; align-items:flex-start; gap:10px; padding:9px 8px; border-radius:8px; cursor:pointer;">
+                      <span style="{{ d.dotStyle }}"></span>
+                      <span style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;">
+                        <span style="font-size:12.5px; font-weight:700; color:#fbfbf9; line-height:1.35;">{{ d.title }}</span>
+                        <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#a3a29a;">{{ d.meta }}</span>
+                      </span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ meOpen }}" hint-placeholder-val="{{ false }}">
+              <div
+                style="position:absolute; top:calc(100% + 8px); right:0; width:280px; background:#fff; border:1px solid #e6e5e0; border-radius:12px; padding:14px; box-shadow:0 14px 40px rgba(20,20,20,0.14); z-index:40;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <span
+                    style="width:34px; height:34px; border-radius:50%; background:#1a1a17; color:#fff; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:11px; flex:none;">{{
+                    who.ini }}</span>
+                  <span style="display:flex; flex-direction:column; min-width:0;">
+                    <span style="font-size:13.5px; font-weight:800; color:#141414;">{{ who.name }}</span>
+                    <span style="font-size:11.5px; color:#8c8c88;">{{ who.line }}</span>
+                  </span>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:7px; margin-top:13px; padding-top:12px; border-top:1px solid #f0efea;">
+                  <div style="display:flex; justify-content:space-between; gap:10px; font-size:12px;">
+                    <span style="color:#8c8c88;">Role</span><span style="font-weight:700; color:#141414;">{{ who.role }}</span>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; gap:10px; font-size:12px;">
+                    <span style="color:#8c8c88;">Scope</span><span style="font-weight:700; color:#141414;">{{ who.scope }}</span>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; gap:10px; font-size:12px;">
+                    <span style="color:#8c8c88;">You post as</span><span
+                      style="font-family:'IBM Plex Mono',monospace; color:#5b5b5b;">{{ who.handle }}</span>
+                  </div>
+                </div>
+                <div style="font-size:11px; color:#a0a099; margin-top:12px; line-height:1.5;">Switch role from the developer panel,
+                  bottom left.</div>
+              </div>
+            </sc-if>
           </div>
         </div>
 
@@ -136,6 +213,13 @@
                 style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; align-items:start;">
 
                 <div style="display:flex; flex-direction:column; gap:10px;">
+                  <sc-if value="{{ noMine }}" hint-placeholder-val="{{ false }}">
+                    <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:26px 22px;">
+                      <div style="font-size:14.5px; font-weight:700; color:#141414; line-height:1.4;">You have not sent anything yet</div>
+                      <div style="font-size:12.5px; color:#8c8c88; margin-top:7px; line-height:1.55;">Describe what you need in the box on the
+                        right. It names the person who owns it and the date they owe you an answer — and it stays here until they do.</div>
+                    </div>
+                  </sc-if>
                   <sc-for list="{{ myIdeas }}" as="m" hint-placeholder-count="3">
                     <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:18px 18px 16px;">
                       <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
@@ -179,12 +263,53 @@
 
                 <div style="position:sticky; top:0; display:flex; flex-direction:column; gap:12px;">
                   <div style="background:#1a1a17; border-radius:14px; padding:18px 20px 20px;">
-                    <div style="font-size:15px; font-weight:800; color:#fbfbf9; letter-spacing:-0.015em;">Nothing you
-                      send disappears</div>
-                    <div style="font-size:12.5px; color:#a3a29a; margin-top:6px; line-height:1.55;">Every idea has a
-                      named person answering it and a date they owe you that answer by. Miss it and it moves up a level,
-                      not into a drawer.</div>
-                    <div style="display:flex; flex-direction:column; gap:8px; margin-top:15px;">
+                    <div style="font-size:15px; font-weight:800; color:#fbfbf9; letter-spacing:-0.015em;">Raise a problem</div>
+                    <div style="font-size:12.5px; color:#a3a29a; margin-top:6px; line-height:1.55;">One field. Say what is
+                      broken or what you need — it names who owns it and the date they owe you an answer.</div>
+                    <textarea value="{{ intake.draft }}" oninput="{{ intake.onDraft }}" rows="3"
+                      placeholder="e.g. We wait days for a €300 part on night shift because nobody there can sign the order"
+                      style="display:block; width:100%; box-sizing:border-box; margin-top:13px; background:#232320; border:1px solid #33332e; border-radius:10px; padding:10px 12px; font-family:inherit; font-size:12.5px; line-height:1.5; color:#fbfbf9; resize:vertical; outline:0;"></textarea>
+
+                    <sc-if value="{{ intake.hasProposal }}" hint-placeholder-val="{{ false }}">
+                      <div style="background:#232320; border-radius:11px; padding:12px 13px; margin-top:10px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                          <span
+                            style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a3a29a;">Proposed
+                            owner</span>
+                          <span style="{{ intake.confStyle }}">{{ intake.confidence }} match</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:10px; margin-top:10px;">
+                          <span
+                            style="width:28px; height:28px; border-radius:50%; background:#fbfbf9; color:#1a1a17; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:10px; flex:none;">{{
+                            intake.ownerIni }}</span>
+                          <span style="display:flex; flex-direction:column; min-width:0;">
+                            <span style="font-size:13px; font-weight:700; color:#fbfbf9;">{{ intake.ownerName }}</span>
+                            <span style="font-size:11.5px; color:#a3a29a;">{{ intake.ownerRole }}</span>
+                          </span>
+                          <span style="margin-left:auto; text-align:right; display:flex; flex-direction:column;">
+                            <span style="font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:700; color:#fbfbf9;">{{
+                              intake.wait }}</span>
+                            <span style="font-size:10.5px; color:#a3a29a;">typical wait</span>
+                          </span>
+                        </div>
+                        <div style="font-size:11.5px; color:#a3a29a; margin-top:10px; line-height:1.5;">Matched row: <span
+                            style="color:#d6d5cd;">{{ intake.matched }}</span> · deputy {{ intake.deputy }} · your buddy there: {{
+                          intake.buddy }}</div>
+                        <span onClick="{{ intake.onWrong }}"
+                          style="display:inline-block; margin-top:8px; font-size:11.5px; font-weight:600; color:#c9c8c0; cursor:pointer; border-bottom:1px solid #4a4a44;">Not
+                          the right owner?</span>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ intake.noMatch }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size:11.5px; color:#a3a29a; margin-top:10px; line-height:1.5;">No row in the map matches yet — a human
+                        routes it within a day and the gap is added to the map.</div>
+                    </sc-if>
+
+                    <div style="display:flex; gap:8px; margin-top:12px;">
+                      <span onClick="{{ intake.onSend }}" style="{{ intake.sendStyle }}">{{ intake.sendLabel }}</span>
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; gap:8px; margin-top:16px; padding-top:14px; border-top:1px solid #33332e;">
                       <sc-for list="{{ promises }}" as="p" hint-placeholder-count="3">
                         <div style="display:flex; align-items:baseline; gap:10px;">
                           <span
@@ -194,7 +319,29 @@
                         </div>
                       </sc-for>
                     </div>
-                    <span style="{{ submitBtnStyle }}">Raise a problem or an idea</span>
+                  </div>
+
+                  <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:18px 18px 12px;">
+                    <div
+                      style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099;">
+                      Your buddies</div>
+                    <div style="font-size:12px; color:#8c8c88; margin-top:5px; line-height:1.5;">Someone at your level in the next department
+                      you can ask directly, without going up the tree first.</div>
+                    <div style="display:flex; flex-direction:column; margin-top:8px;">
+                      <sc-for list="{{ buddies }}" as="b" hint-placeholder-count="4">
+                        <div onClick="{{ b.onSel }}" style-hover="background:#faf9f7;"
+                          style="display:flex; align-items:center; gap:10px; border-top:1px solid #f0efea; padding:9px 4px; margin:0 -4px; border-radius:8px; cursor:pointer;">
+                          <span
+                            style="width:26px; height:26px; border-radius:50%; background:#1a1a17; color:#fff; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:10px; flex:none;">{{
+                            b.ini }}</span>
+                          <div style="flex:1; min-width:0;">
+                            <div style="font-size:12.5px; font-weight:700; color:#141414;">{{ b.name }} <span
+                                style="font-weight:500; color:#8c8c88;">· {{ b.dept }}</span></div>
+                            <div style="font-size:11px; color:#a0a099; margin-top:2px;">{{ b.note }}</div>
+                          </div>
+                        </div>
+                      </sc-for>
+                    </div>
                   </div>
 
                   <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:18px 18px 16px;">
@@ -213,8 +360,160 @@
                       </sc-for>
                     </div>
                     <div style="font-size:11.5px; color:#a0a099; margin-top:12px; line-height:1.5;">You post as <span
-                        style="font-family:'IBM Plex Mono',monospace; color:#5b5b5b;">Anonymous #4471</span>. The handle
+                        style="font-family:'IBM Plex Mono',monospace; color:#5b5b5b;">{{ handle }}</span>. The handle
                       stays yours, so credit still follows you.</div>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- ░░ INBOX (TEAM LEADER) ░░ -->
+            <sc-if value="{{ isInbox }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; flex-direction:column; gap:14px;">
+
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px;">
+                  <sc-for list="{{ inboxStats }}" as="k" hint-placeholder-count="4">
+                    <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:14px 17px 13px;">
+                      <div style="{{ k.vStyle }}">{{ k.v }}</div>
+                      <div style="font-size:11.5px; color:#8c8c88; margin-top:3px; line-height:1.35;">{{ k.l }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <div
+                  style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; align-items:start;">
+
+                  <div style="display:flex; flex-direction:column; gap:12px;">
+                    <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:6px 18px 12px;">
+                      <sc-if value="{{ noInbox }}" hint-placeholder-val="{{ false }}">
+                        <div style="padding:26px 4px;">
+                          <div style="font-size:14.5px; font-weight:700; color:#141414; line-height:1.4;">{{ sc.title }}</div>
+                          <div style="font-size:12.5px; color:#8c8c88; margin-top:7px; line-height:1.55;">{{ sc.body }}</div>
+                        </div>
+                      </sc-if>
+                      <div style="display:flex; flex-direction:column;">
+                        <sc-for list="{{ inbox }}" as="c" hint-placeholder-count="6">
+                          <div onClick="{{ c.onOpen }}" style="{{ c.rowStyle }}">
+                            <div style="{{ c.markStyle }}"></div>
+                            <div style="flex:1; min-width:0;">
+                              <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:14px;">
+                                <div style="flex:1 1 220px; min-width:170px;">
+                                  <div style="font-size:14px; font-weight:700; color:#141414; line-height:1.35;">{{ c.title }}</div>
+                                  <div style="font-size:12px; color:#8c8c88; margin-top:4px;">{{ c.from }}</div>
+                                </div>
+                                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+                                  <span style="{{ c.clockStyle }}">{{ c.clock }}</span>
+                                  <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#a0a099;">open {{ c.age }}</span>
+                                </div>
+                              </div>
+                              <div style="display:flex; align-items:center; gap:7px; margin-top:9px; flex-wrap:wrap;">
+                                <span style="font-size:11px; color:#a0a099;">why it is still open:</span>
+                                <span style="{{ c.reasonStyle }}">{{ c.reason }}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+
+                    <sc-if value="{{ hasCleared }}" hint-placeholder-val="{{ false }}">
+                      <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:16px 18px 10px;">
+                        <div
+                          style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099;">
+                          Cleared today</div>
+                        <div style="display:flex; flex-direction:column; margin-top:8px;">
+                          <sc-for list="{{ cleared }}" as="x" hint-placeholder-count="2">
+                            <div
+                              style="display:flex; align-items:center; justify-content:space-between; gap:12px; border-top:1px solid #f0efea; padding:10px 0;">
+                              <span style="font-size:12.5px; font-weight:600; color:#5b5b5b; line-height:1.35;">{{ x.title }}</span>
+                              <span style="{{ x.style }}">{{ x.what }}</span>
+                            </div>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-if>
+
+                    <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:18px 18px 10px;">
+                      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px;">
+                        <span style="font-size:15px; font-weight:800; color:#141414; letter-spacing:-0.015em;">Your team is waiting
+                          on</span>
+                        <span style="font-size:11.5px; color:#a0a099;">the other end of the same problems</span>
+                      </div>
+                      <sc-if value="{{ noWaitingOn }}" hint-placeholder-val="{{ false }}">
+                        <div style="font-size:12.5px; color:#8c8c88; padding:14px 0 10px; line-height:1.5;">Nothing your team raised is sitting
+                          with another department.</div>
+                      </sc-if>
+                      <div style="display:flex; flex-direction:column; margin-top:8px;">
+                        <sc-for list="{{ waitingOn }}" as="w" hint-placeholder-count="4">
+                          <div style="border-top:1px solid #f0efea; padding:11px 0 10px;">
+                            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+                              <span style="font-size:13px; font-weight:700; color:#141414; line-height:1.35;">{{ w.title }}</span>
+                              <span
+                                style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:700; color:#141414; white-space:nowrap;">{{
+                                w.age }}</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px; margin-top:6px; flex-wrap:wrap;">
+                              <span style="font-size:11.5px; color:#5b5b5b;">with {{ w.owner }}</span>
+                              <span style="{{ w.stateStyle }}">{{ w.state }}</span>
+                            </div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style="position:sticky; top:0; display:flex; flex-direction:column; gap:12px;">
+                    <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:20px 20px 18px;">
+                      <div
+                        style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099;">
+                        Selected case</div>
+                      <div
+                        style="font-size:17.5px; font-weight:800; color:#141414; letter-spacing:-0.02em; line-height:1.3; margin-top:9px;">
+                        {{ sc.title }}</div>
+                      <div style="display:flex; align-items:center; gap:9px; margin-top:11px; flex-wrap:wrap;">
+                        <span style="{{ sc.reasonStyle }}">{{ sc.reason }}</span>
+                        <span style="font-size:12.5px; color:#8c8c88;">{{ sc.age }}</span>
+                      </div>
+
+                      <div style="border-left:2px solid #dedcd5; padding:2px 0 2px 12px; margin-top:14px;">
+                        <div style="font-size:12.5px; color:#141414; line-height:1.55;">{{ sc.body }}</div>
+                        <div style="font-size:11px; color:#a0a099; margin-top:6px;">{{ sc.from }} · {{ sc.fromDept }}</div>
+                      </div>
+
+                      <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:14px;">
+                        <div style="background:#faf9f7; border:1px solid #eeede8; border-radius:11px; padding:11px 13px;">
+                          <div style="font-size:12.5px; font-weight:800; color:#141414; line-height:1.35;">{{ sc.upside }}</div>
+                          <div style="font-size:11px; color:#8c8c88; margin-top:3px;">what it costs while it waits</div>
+                        </div>
+                        <div style="background:#faf9f7; border:1px solid #eeede8; border-radius:11px; padding:11px 13px;">
+                          <div style="font-size:12.5px; font-weight:800; color:#141414; line-height:1.35;">{{ sc.routeBuddy }}</div>
+                          <div style="font-size:11px; color:#8c8c88; margin-top:3px;">buddy for this, if you need one</div>
+                        </div>
+                      </div>
+
+                      <div
+                        style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099; margin-top:18px;">
+                        {{ sc.routeEyebrow }}</div>
+                      <div style="background:#faf9f7; border:1px solid #eeede8; border-radius:11px; padding:12px 14px; margin-top:9px;">
+                        <div style="font-size:12.5px; font-weight:700; color:#141414; line-height:1.4;">{{ sc.routeOwner }}</div>
+                        <div style="font-size:11.5px; color:#8c8c88; margin-top:5px; line-height:1.45;">row: {{ sc.routeType }} · deputy {{
+                          sc.routeDeputy }}</div>
+                      </div>
+
+                      <div
+                        style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099; margin-top:18px;">
+                        One action</div>
+                      <div style="display:flex; gap:8px; margin-top:9px;">
+                        <span onClick="{{ sc.onYes }}" style="{{ actYes }}">Yes, do it</span>
+                        <span onClick="{{ sc.onNo }}" style="{{ actNo }}">No, and why</span>
+                      </div>
+                      <div style="display:flex; gap:8px; margin-top:8px;">
+                        <span onClick="{{ sc.onHand }}" style="{{ actHand }}">{{ sc.handLabel }}</span>
+                        <span onClick="{{ sc.onAsk }}" style="{{ actNo }}">Ask one question</span>
+                      </div>
+                      <div style="font-size:11px; color:#a0a099; margin-top:11px; line-height:1.5;">Whatever you pick, the person who raised it is
+                        told today. A question pauses the clock; a hand-over keeps it running.</div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -234,6 +533,13 @@
                   </div>
                   <div style="font-size:12.5px; color:#a3a29a; margin-top:5px; line-height:1.45;">Every idea gets a yes,
                     a no or a question within 14 days. Past that it escalates one level up — automatically.</div>
+                  <sc-if value="{{ noDecisions }}" hint-placeholder-val="{{ false }}">
+                    <div style="background:#232320; border-radius:11px; padding:18px 16px; margin-top:15px;">
+                      <div style="font-size:13.5px; font-weight:700; color:#fbfbf9;">Nothing is waiting on you</div>
+                      <div style="font-size:12px; color:#a3a29a; margin-top:5px; line-height:1.5;">Ideas land here once they have a
+                        team, a budget request and 14 days on the clock.</div>
+                    </div>
+                  </sc-if>
                   <div
                     style="display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:9px; margin-top:15px;">
                     <sc-for list="{{ decisions }}" as="d" hint-placeholder-count="3">
@@ -256,9 +562,8 @@
                     <span
                       style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a3a29a;">Next
                       decision call</span>
-                    <span style="font-size:12.5px; font-weight:700; color:#fbfbf9;">Thursday 14:00 · 25 min</span>
-                    <span style="font-size:12.5px; color:#a3a29a;">Agenda is built from the three items above — nothing
-                      else on it.</span>
+                    <span style="font-size:12.5px; font-weight:700; color:#fbfbf9;">{{ nextCall }}</span>
+                    <span style="font-size:12.5px; color:#a3a29a;">{{ nextCallNote }}</span>
                   </div>
                 </div>
 
@@ -284,7 +589,75 @@
                   </sc-for>
                 </div>
 
-                <sc-if value="{{ isBoard }}" hint-placeholder-val="{{ false }}">
+                <div
+                  style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; align-items:start;">
+                  <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:20px 22px 18px;">
+                    <div
+                      style="display:flex; align-items:baseline; justify-content:space-between; gap:14px; flex-wrap:wrap;">
+                      <span style="font-size:15px; font-weight:800; color:#141414; letter-spacing:-0.015em;">Where the
+                        waiting goes</span>
+                      <span style="font-size:12.5px; color:#8c8c88;">every wait segment carries one reason</span>
+                    </div>
+                    <sc-if value="{{ noStall }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size:12.5px; color:#8c8c88; margin-top:14px; line-height:1.55;">Once cases move, each day of
+                        waiting is labelled: wrong department, not responsible, no time, or could not rank it. The split tells you
+                        whether the map or the capacity is the problem.</div>
+                    </sc-if>
+                    <div style="display:flex; flex-direction:column; gap:11px; margin-top:16px;">
+                      <sc-for list="{{ stall }}" as="x" hint-placeholder-count="4">
+                        <div>
+                          <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px;">
+                            <span style="font-size:13px; font-weight:700; color:#141414;">{{ x.reason }} <span
+                                style="font-weight:500; color:#8c8c88;">· {{ x.note }}</span></span>
+                            <span
+                              style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:700; color:#141414; white-space:nowrap;">{{
+                              x.days }} <span style="color:#a0a099; font-weight:500;">{{ x.share }}</span></span>
+                          </div>
+                          <div style="height:10px; border-radius:999px; background:#f0efea; margin-top:6px; overflow:hidden;">
+                            <div style="{{ x.barStyle }}"></div>
+                          </div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+
+                  <div style="background:#1a1a17; border-radius:14px; padding:20px 22px 18px;">
+                    <div style="font-size:15px; font-weight:800; color:#fbfbf9; letter-spacing:-0.015em;">The wait ledger</div>
+                    <div style="font-size:12.5px; color:#a3a29a; margin-top:4px; line-height:1.45;">The two numbers that get reported
+                      upward; the rest of this page is context for them.</div>
+                    <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:14px;">
+                      <div style="background:#232320; border-radius:11px; padding:13px 15px;">
+                        <div style="font-size:26px; font-weight:800; color:#fbfbf9; letter-spacing:-0.03em; line-height:1;">{{
+                          ledger.firstAnswer }}</div>
+                        <div style="font-size:11.5px; color:#a3a29a; margin-top:6px; line-height:1.4;">median to first human answer ·
+                          <span style="color:#d6d5cd;">{{ ledger.firstAnswerWas }}</span></div>
+                      </div>
+                      <div style="background:#232320; border-radius:11px; padding:13px 15px;">
+                        <div style="font-size:26px; font-weight:800; color:#fbfbf9; letter-spacing:-0.03em; line-height:1;">{{
+                          ledger.withinPromise }}</div>
+                        <div style="font-size:11.5px; color:#a3a29a; margin-top:6px; line-height:1.4;">answered within the 14-day promise ·
+                          <span style="color:#d6d5cd;">{{ ledger.withinPromiseWas }}</span></div>
+                      </div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:7px; margin-top:14px; padding-top:12px; border-top:1px solid #33332e;">
+                      <div style="display:flex; justify-content:space-between; gap:10px; font-size:12px;">
+                        <span style="color:#a3a29a;">Escalated one level up this quarter</span><span
+                          style="font-family:'IBM Plex Mono',monospace; font-weight:700; color:#fbfbf9;">{{ ledger.escalated }}</span>
+                      </div>
+                      <div style="display:flex; justify-content:space-between; gap:10px; font-size:12px;">
+                        <span style="color:#a3a29a;">Handed sideways to a deputy or buddy</span><span
+                          style="font-family:'IBM Plex Mono',monospace; font-weight:700; color:#fbfbf9;">{{ ledger.handedOver }}</span>
+                      </div>
+                      <div style="display:flex; justify-content:space-between; gap:10px; font-size:12px;">
+                        <span style="color:#a3a29a;">Proposed owner overruled</span><span
+                          style="font-family:'IBM Plex Mono',monospace; font-weight:700; color:#fbfbf9;">{{ ledger.overrides }}</span>
+                      </div>
+                    </div>
+                    <div style="font-size:11.5px; color:#a3a29a; margin-top:10px; line-height:1.5;">{{ ledger.overridesNote }}</div>
+                  </div>
+                </div>
+
+                <sc-if value="{{ isManager }}" hint-placeholder-val="{{ false }}">
                   <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:20px 22px;">
                     <div
                       style="display:flex; align-items:baseline; justify-content:space-between; gap:14px; flex-wrap:wrap;">
@@ -325,10 +698,13 @@
                       <span style="font-size:15px; font-weight:800; color:#141414; letter-spacing:-0.015em;">What people
                         say is broken</span>
                       <span onClick="{{ goProblems }}"
-                        style="font-size:12.5px; font-weight:600; color:#8c8c88; cursor:pointer;">All 38 →</span>
+                        style="font-size:12.5px; font-weight:600; color:#8c8c88; cursor:pointer;">{{ problemCountLabel }}</span>
                     </div>
                     <div style="font-size:12.5px; color:#8c8c88; margin-top:4px; line-height:1.45;">Ranked by people
                       affected. Unowned means no team is on it.</div>
+                    <sc-if value="{{ noProblems }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size:12.5px; color:#8c8c88; padding:14px 0 6px; line-height:1.5;">Nothing raised yet. The first forwarded thread or typed problem shows up here.</div>
+                    </sc-if>
                     <div style="display:flex; flex-direction:column; margin-top:12px;">
                       <sc-for list="{{ topProblems }}" as="p" hint-placeholder-count="5">
                         <div onClick="{{ p.onOpen }}"
@@ -355,10 +731,13 @@
                       <span style="font-size:15px; font-weight:800; color:#141414; letter-spacing:-0.015em;">Ideas
                         people have</span>
                       <span onClick="{{ goIdeas }}"
-                        style="font-size:12.5px; font-weight:600; color:#8c8c88; cursor:pointer;">All 147 →</span>
+                        style="font-size:12.5px; font-weight:600; color:#8c8c88; cursor:pointer;">{{ ideaCountLabel }}</span>
                     </div>
                     <div style="font-size:12.5px; color:#8c8c88; margin-top:4px; line-height:1.45;">Each one is tied to
                       a problem above and to an expected outcome.</div>
+                    <sc-if value="{{ noIdeas }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size:12.5px; color:#8c8c88; padding:14px 0 6px; line-height:1.5;">No ideas yet. They appear as step three of a case, tied to the problem they answer.</div>
+                    </sc-if>
                     <div style="display:flex; flex-direction:column; margin-top:12px;">
                       <sc-for list="{{ topIdeas }}" as="i" hint-placeholder-count="5">
                         <div onClick="{{ i.onOpen }}"
@@ -388,6 +767,9 @@
                     </div>
                     <div style="font-size:12.5px; color:#8c8c88; margin-top:4px; line-height:1.45;">Cross-department
                       work in motion, and what it is for.</div>
+                    <sc-if value="{{ noInitiatives }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size:12.5px; color:#8c8c88; padding:14px 0 6px; line-height:1.5;">No cross-team work in motion yet.</div>
+                    </sc-if>
                     <div style="display:flex; flex-direction:column; margin-top:12px;">
                       <sc-for list="{{ initiatives }}" as="t" hint-placeholder-count="6">
                         <div onClick="{{ t.onOpen }}"
@@ -423,15 +805,13 @@
                       <div
                         style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.12em; text-transform:uppercase; color:#a0a099;">
                         Discovery round 2</div>
-                      <div style="font-size:12.5px; color:#141414; font-weight:700; margin-top:5px;">1,180 of 1,840
-                        interviewed</div>
+                      <div style="font-size:12.5px; color:#141414; font-weight:700; margin-top:5px;">{{ discovery.done }}</div>
                     </div>
                     <div style="flex:1; min-width:150px;">
                       <div style="height:7px; border-radius:999px; background:#eeede8; overflow:hidden;">
-                        <div style="width:64%; height:7px; border-radius:999px; background:#141414;"></div>
+                        <div style="{{ discovery.w }}"></div>
                       </div>
-                      <div style="font-size:11.5px; color:#8c8c88; margin-top:6px;">64% coverage · Production and Field
-                        Service still under 50%</div>
+                      <div style="font-size:11.5px; color:#8c8c88; margin-top:6px;">{{ discovery.note }}</div>
                     </div>
                     <div style="font-size:11.5px; color:#a0a099; line-height:1.5; max-width:240px;">Interviews run twice
                       a year. Between rounds the same problems keep arriving through the app — that is what moves the
@@ -443,9 +823,7 @@
                       <div style="padding:26px 4px;">
                         <div style="font-size:14.5px; font-weight:700; color:#141414; line-height:1.4;">{{
                           emptyProblemTitle }}</div>
-                        <div style="font-size:12.5px; color:#8c8c88; margin-top:7px; line-height:1.55;">Either nothing
-                          here is broken, or nobody has said so yet. Silence from a whole department is usually the
-                          second one.</div>
+                        <div style="font-size:12.5px; color:#8c8c88; margin-top:7px; line-height:1.55;">{{ emptyProblemSub }}</div>
                       </div>
                     </sc-if>
                     <div style="display:flex; flex-direction:column;">
@@ -547,6 +925,12 @@
                 style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; align-items:start;">
 
                 <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:6px 18px 12px;">
+                  <sc-if value="{{ noIdeas }}" hint-placeholder-val="{{ false }}">
+                    <div style="padding:26px 4px;">
+                      <div style="font-size:14.5px; font-weight:700; color:#141414; line-height:1.4;">No ideas yet</div>
+                      <div style="font-size:12.5px; color:#8c8c88; margin-top:7px; line-height:1.55;">{{ si.rationale }}</div>
+                    </div>
+                  </sc-if>
                   <div style="display:flex; flex-direction:column;">
                     <sc-for list="{{ ideas }}" as="i" hint-placeholder-count="8">
                       <div onClick="{{ i.onOpen }}" style="{{ i.rowStyle }}">
@@ -604,8 +988,8 @@
                   </div>
 
                   <div style="display:flex; gap:8px; margin-top:14px;">
-                    <span style="{{ si.primaryBtnStyle }}">{{ si.primaryBtnLabel }}</span>
-                    <span
+                    <span onClick="{{ si.onPrimary }}" style="{{ si.primaryBtnStyle }}">{{ si.primaryBtnLabel }}</span>
+                    <span onClick="{{ si.onAsk }}"
                       style="flex:1; text-align:center; background:#faf9f7; border:1px solid #e6e5e0; border-radius:10px; padding:10px 14px; font-size:12.5px; font-weight:700; color:#5b5b5b; cursor:pointer;">Ask
                       a question</span>
                   </div>
@@ -745,6 +1129,10 @@
                     <div
                       style="font-size:15px; font-weight:800; color:#141414; letter-spacing:-0.015em; padding:0 2px;">
                       All cross-team work</div>
+                    <sc-if value="{{ noInitiatives }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size:12.5px; color:#8c8c88; padding:14px 2px 8px; line-height:1.5;">Nothing yet. The first case
+                        that needs two departments draws the first cluster.</div>
+                    </sc-if>
                     <div style="display:flex; flex-direction:column; margin-top:8px;">
                       <sc-for list="{{ initiatives }}" as="t" hint-placeholder-count="7">
                         <div onClick="{{ t.onOpen }}" style="{{ t.rowStyle }}">
@@ -780,7 +1168,7 @@
                       <div style="font-size:12.5px; color:#8c8c88; margin-top:4px;">Twelve months, every stage. Read the
                         width, not the number.</div>
                     </div>
-                    <span style="font-size:12.5px; color:#8c8c88;">412 in · 23 out</span>
+                    <span style="font-size:12.5px; color:#8c8c88;">{{ funnelTotals }}</span>
                   </div>
 
                   <div style="display:flex; flex-direction:column; gap:12px; margin-top:18px;">
@@ -813,6 +1201,9 @@
                       shipped ones deliver</div>
                     <div style="font-size:12.5px; color:#8c8c88; margin-top:4px;">Promised at approval, measured 90 days
                       after launch.</div>
+                    <sc-if value="{{ noOutcomes }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size:12.5px; color:#8c8c88; padding:14px 0 6px; line-height:1.5;">Nothing shipped yet. The first outcome is measured 90 days after the first launch.</div>
+                    </sc-if>
                     <div style="display:flex; flex-direction:column; margin-top:12px;">
                       <sc-for list="{{ outcomes }}" as="o" hint-placeholder-count="4">
                         <div style="border-top:1px solid #f0efea; padding:12px 0 11px;">
@@ -839,6 +1230,9 @@
                       longest</div>
                     <div style="font-size:12.5px; color:#8c8c88; margin-top:4px;">Nothing here is blocked by money or by
                       effort.</div>
+                    <sc-if value="{{ noStalled }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size:12.5px; color:#8c8c88; padding:14px 0 6px; line-height:1.5;">Nothing is stuck yet.</div>
+                    </sc-if>
                     <div style="display:flex; flex-direction:column; margin-top:12px;">
                       <sc-for list="{{ stalled }}" as="x" hint-placeholder-count="4">
                         <div style="border-top:1px solid #f0efea; padding:12px 0 11px;">
@@ -861,20 +1255,20 @@
 
                     <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:14px;">
                       <div style="background:#faf9f7; border:1px solid #eeede8; border-radius:11px; padding:13px 15px;">
-                        <div style="font-size:22px; font-weight:800; color:#141414; letter-spacing:-0.025em;">91%</div>
+                        <div style="font-size:22px; font-weight:800; color:#141414; letter-spacing:-0.025em;">{{ answered.replied }}</div>
                         <div style="font-size:11.5px; color:#8c8c88; margin-top:3px;">signals given a human reply</div>
                       </div>
                       <div style="background:#faf9f7; border:1px solid #eeede8; border-radius:11px; padding:13px 15px;">
-                        <div style="font-size:22px; font-weight:800; color:#141414; letter-spacing:-0.025em;">6d</div>
+                        <div style="font-size:22px; font-weight:800; color:#141414; letter-spacing:-0.025em;">{{ answered.median }}</div>
                         <div style="font-size:11.5px; color:#8c8c88; margin-top:3px;">median time to that reply</div>
                       </div>
                       <div style="background:#faf9f7; border:1px solid #eeede8; border-radius:11px; padding:13px 15px;">
-                        <div style="font-size:22px; font-weight:800; color:#141414; letter-spacing:-0.025em;">214</div>
+                        <div style="font-size:22px; font-weight:800; color:#141414; letter-spacing:-0.025em;">{{ answered.credited }}</div>
                         <div style="font-size:11.5px; color:#8c8c88; margin-top:3px;">people credited on shipped work
                         </div>
                       </div>
                       <div style="background:#faf9f7; border:1px solid #eeede8; border-radius:11px; padding:13px 15px;">
-                        <div style="{{ unansweredStyle }}">23</div>
+                        <div style="{{ unansweredStyle }}">{{ answered.unanswered }}</div>
                         <div style="font-size:11.5px; color:#8c8c88; margin-top:3px;">unanswered over 14 days</div>
                       </div>
                     </div>
@@ -882,6 +1276,9 @@
                     <div
                       style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099; margin-top:20px;">
                       Most relied-on contributors</div>
+                    <sc-if value="{{ noContributors }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size:12.5px; color:#8c8c88; padding:14px 0 6px; line-height:1.5;">Nobody has contributed yet.</div>
+                    </sc-if>
                     <div style="display:flex; flex-direction:column; margin-top:8px;">
                       <sc-for list="{{ contributors }}" as="c" hint-placeholder-count="5">
                         <div
@@ -909,6 +1306,55 @@
         </div>
       </div>
 
+      <!-- ░░ POPOVER BACKDROP ░░ (click anywhere else closes search / decisions / user menu) -->
+      <sc-if value="{{ popOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closePop }}" style="position:fixed; inset:0; z-index:30;"></div>
+      </sc-if>
+
+      <!-- ░░ TOAST ░░ -->
+      <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+        <div
+          style="position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:60; max-width:520px; background:#1a1a17; color:#fbfbf9; border-radius:11px; padding:11px 16px; font-size:12.5px; font-weight:600; line-height:1.45; box-shadow:0 14px 40px rgba(20,20,20,0.3);">
+          {{ toast }}</div>
+      </sc-if>
+
+      <!-- ░░ DEV PANEL ░░ fixed bottom-left: role switch + demo data toggle -->
+      <div style="position:fixed; right:14px; bottom:14px; z-index:50; display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+        <sc-if value="{{ dev }}" hint-placeholder-val="{{ false }}">
+          <div
+            style="width:256px; background:#1a1a17; border:1px solid #33332e; border-radius:12px; padding:12px; box-shadow:0 14px 40px rgba(0,0,0,0.45); box-sizing:border-box;">
+            <div
+              style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.16em; text-transform:uppercase; color:#a3a29a; padding:0 2px 8px;">
+              Viewing as</div>
+            <div style="display:grid; grid-template-columns:repeat(3,1fr); background:#232320; border-radius:10px; padding:3px; gap:3px;">
+              <sc-for list="{{ roles }}" as="r" hint-placeholder-count="3">
+                <span onClick="{{ r.onSel }}" style="{{ r.style }}">{{ r.label }}</span>
+              </sc-for>
+            </div>
+
+            <div onClick="{{ toggleDemo }}"
+              style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px; padding:9px 2px 0; border-top:1px solid #2c2c27; cursor:pointer;">
+              <span style="display:flex; flex-direction:column; gap:2px;">
+                <span style="font-size:12.5px; font-weight:700; color:#fbfbf9;">{{ demoLabel }}</span>
+                <span style="font-size:10.5px; color:#7d7c73;">off = empty install, nothing measured yet</span>
+              </span>
+              <span style="{{ demoTrack }}">
+                <span style="width:13px; height:13px; border-radius:50%; background:#fbfbf9; display:block;"></span>
+              </span>
+            </div>
+
+            <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-top:12px; padding:9px 2px 0; border-top:1px solid #2c2c27;">
+              <span onClick="{{ resetDemo }}"
+                style="font-size:11px; font-weight:600; color:#a3a29a; cursor:pointer; border-bottom:1px solid #3d3d38; white-space:nowrap;">Reset
+                demo state</span>
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:9px; color:#5b5b5b; white-space:nowrap;">K search · Esc</span>
+            </div>
+          </div>
+        </sc-if>
+        <span onClick="{{ toggleDev }}" style="{{ devBtnStyle }}">
+          <span style="width:6px; height:6px; border-radius:50%; background:#ff5a1f; flex:none;"></span>Dev</span>
+      </div>
+
     </div>
   </x-dc>
   <!-- Editable props (accent colour, default view, quotes toggle) are declared
@@ -916,7 +1362,9 @@
   <script type="text/x-dc" data-dc-script data-props='{
     "accent":      { "editor": "color",   "default": "#ff5a1f", "options": ["#ff5a1f", "#1f6fff", "#0f8f6c", "#8c5cff"], "tsType": "string",  "section": "Look" },
     "defaultView": { "editor": "enum",    "default": "overview", "options": ["overview", "problems", "ideas", "network", "progress"], "tsType": "string", "section": "Behaviour" },
-    "showQuotes":  { "editor": "boolean", "default": true, "tsType": "boolean", "section": "Behaviour" }
+    "showQuotes":  { "editor": "boolean", "default": true, "tsType": "boolean", "section": "Behaviour" },
+    "defaultRole": { "editor": "enum",    "default": "manager", "options": ["employee", "lead", "manager"], "tsType": "string", "section": "Behaviour" },
+    "demoData":    { "editor": "boolean", "default": true, "tsType": "boolean", "section": "Behaviour" }
   }'>
     const Component = window.createDashboardComponent(DCLogic);
   </script>
