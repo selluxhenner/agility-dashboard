@@ -5,6 +5,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>NextHub Dashboard</title>
+  <link rel="icon" type="image/png" sizes="64x64" href="./assets/favicon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon.png">
   <!-- dc-runtime: renders the design-component template in <body> (loads React from CDN) -->
   <script src="./support.js"></script>
   <!-- demo data + component logic (see js/dashboard.js for how they are wired) -->
@@ -29,12 +32,12 @@
       <div class="{{ railClass }}"
         style="width:246px; flex:none; background:#1a1a17; display:flex; flex-direction:column; padding:20px 14px 70px; box-sizing:border-box; overflow:auto;">
         <div style="display:flex; align-items:center; gap:10px; padding:0 8px 20px;">
-          <span
-            style="width:28px; height:28px; border-radius:8px; background:#f4f3f0; color:#1a1a17; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; flex:none;">K</span>
+          <img src="./assets/logo.png" alt="NextHub"
+            style="width:28px; height:28px; border-radius:8px; display:block; flex:none;">
           <span style="display:flex; flex-direction:column; min-width:0; flex:1;">
-            <span style="font-size:14px; font-weight:700; color:#fbfbf9; letter-spacing:-0.01em;">Kessler</span>
+            <span style="font-size:14px; font-weight:700; color:#fbfbf9; letter-spacing:-0.01em;">NextHub</span>
             <span
-              style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:#7d7c73;">Antriebstechnik</span>
+              style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:#7d7c73; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Kessler Antriebstechnik</span>
           </span>
           <span class="nh-close" onClick="{{ closeMenu }}"
             style="display:none; width:30px; height:30px; border-radius:8px; background:#2e2e28; color:#fbfbf9; align-items:center; justify-content:center; font-size:16px; cursor:pointer; flex:none;">×</span>
