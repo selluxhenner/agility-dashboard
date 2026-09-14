@@ -26,9 +26,13 @@ between them with the **Dev** button, bottom left.
 Problems, Ideas, Collaboration and Progress are shared views; the top bar
 (search, the "waiting" button, the user menu) adapts to the role.
 
+Below 760px the rail becomes a drawer behind the ☰ button, popovers pin to
+the top of the screen and side panels stack — the rules live at the bottom
+of `css/dashboard.css` (class hooks `nh-*` in `index.html`).
+
 ## Dev panel
 
-Fixed bottom-left. **Viewing as** switches the role; **Demo data** on/off
+Fixed bottom-right; closes after any press. **Viewing as** switches the role; **Demo data** on/off
 swaps every list for its empty state and every figure for "measured in pilot"
 — the honest day-one install. State you create in the session (a case you
 sent, an inbox item you answered) survives the toggle; **Reset demo state**

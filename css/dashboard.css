@@ -29,3 +29,49 @@ a:hover {
   border: 3px solid transparent;
   background-clip: content-box;
 }
+
+/* ── Mobile (≤ 760px) ─────────────────────────────────────────────────
+   Component markup is inline-styled, so these rules use !important to win.
+   The rail becomes an off-canvas drawer (class nh-open is set by the logic),
+   popovers pin to the top of the viewport, sticky side panels go static. */
+
+.nh-rail { transition: transform 0.22s ease; }
+
+@media (max-width: 760px) {
+  .nh-root { height: 100dvh !important; }
+
+  .nh-rail {
+    position: fixed !important; top: 0; left: 0; bottom: 0; z-index: 80;
+    width: min(300px, 86vw) !important;
+    transform: translateX(-104%);
+    box-shadow: 0 0 60px rgba(0, 0, 0, 0.4);
+    padding-bottom: 24px !important;
+  }
+  .nh-rail.nh-open { transform: translateX(0); }
+  .nh-close { display: flex !important; }
+
+  .nh-topbar { padding: 0 12px !important; gap: 10px !important; }
+  .nh-burger { display: flex !important; }
+  .nh-period { display: none !important; }
+  .nh-search { max-width: none !important; }
+  .nh-kbd { display: none !important; }
+  .nh-dlong { display: none !important; }
+  .nh-dshort { display: inline !important; }
+
+  .nh-pop {
+    position: fixed !important; top: 64px !important; left: 12px !important; right: 12px !important;
+    width: auto !important; min-width: 0 !important; max-height: calc(100dvh - 90px); overflow: auto;
+  }
+
+  .nh-content { padding: 14px 12px 96px !important; }
+  .nh-title { font-size: 20px !important; }
+  .nh-sticky { position: static !important; }
+  .nh-stats { grid-template-columns: repeat(2, 1fr) !important; }
+  .nh-clock { white-space: normal !important; text-align: right; max-width: 118px; line-height: 1.35; }
+
+  .nh-toast { left: 12px !important; right: 12px !important; bottom: 66px !important; transform: none !important; max-width: none !important; }
+  .nh-dev { right: 12px !important; bottom: 12px !important; }
+  .nh-devpanel { width: min(280px, calc(100vw - 24px)) !important; }
+
+  textarea, input { font-size: 16px !important; } /* stops iOS zooming on focus */
+}
