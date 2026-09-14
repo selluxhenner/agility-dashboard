@@ -20,6 +20,15 @@ window.createDashboardComponent = function (DCLogic) {
 
   const MONO = 'IBM Plex Mono, monospace';
   const CASE_ACTIONS = { decided: 'Decided', handed: 'Handed over', asked: 'Question sent' };
+  const STORE_KEY = 'nexthub.demo.v1';
+
+  // Session-created data (cases the employee sent, inbox actions) is kept in
+  // localStorage so it survives a reload. "Copy for data.js" in the dev panel
+  // turns the sent cases into MY_IDEAS entries to paste into js/data.js.
+  const loadStore = () => { try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch (e) { return {}; } };
+  const saveStore = o => { try { localStorage.setItem(STORE_KEY, JSON.stringify(o)); } catch (e) { /* private mode */ } };
+  const median = xs => { if (!xs.length) return null; const a = xs.slice().sort((x, y) => x - y); const m = a.length >> 1; return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
+  const fmt = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
   class Component extends DCLogic {
     constructor(props) {
@@ -29,7 +38,7 @@ window.createDashboardComponent = function (DCLogic) {
         role: role.id, tab: props.defaultView || role.home, dept: role.dept,
         pid: 'p1', iid: 'i1', tid: 't3', cid: 'c1', sort: 'people',
         demo: props.demoData !== false, dev: false,
-        q: '', pop: null, draft: '', sent: [], cases: {}, toast: null,
+        q: '', pop: null, draft: '', sent: loadStore().sent || [], cases: loadStore().cases || {}, toast: null,
         mobile: false, menu: false
       };
       this.onKey = this.onKey.bind(this);
@@ -174,8 +183,29 @@ window.createDashboardComponent = function (DCLogic) {
     }
 
     resetDemo() {
+      saveStore({});
       this.setState({ sent: [], cases: {}, draft: '', q: '', pop: null, dev: false });
       this.toast('Demo state reset');
+    }
+
+    // Persist the two pieces of session-created state alongside the setState.
+    persist(patch) {
+      this.setState(patch);
+      const cur = loadStore();
+      saveStore({ sent: patch.sent !== undefined ? patch.sent : (cur.sent || this.state.sent), cases: patch.cases !== undefined ? patch.cases : (cur.cases || this.state.cases) });
+    }
+
+    // Sent cases as a snippet for js/data.js (MY_IDEAS entries).
+    exportSnippet() {
+      const rows = this.state.sent.map(m => '  ' + JSON.stringify(m, null, 0).replace(/"(\w+)":/g, '$1: ').replace(/,/g, ', '));
+      return rows.length ? '// paste at the top of MY_IDEAS in js/data.js\n' + rows.join(',\n') + ',' : '';
+    }
+    copySnippet() {
+      const txt = this.exportSnippet();
+      if (!txt) { this.toast('Nothing new to copy — raise a case as the employee first.'); return; }
+      const done = () => this.toast('Copied ' + this.state.sent.length + (this.state.sent.length === 1 ? ' entry' : ' entries') + ' — paste into MY_IDEAS in js/data.js.');
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, () => window.prompt('Copy this into js/data.js:', txt));
+      else window.prompt('Copy this into js/data.js:', txt);
     }
 
     renderVals() {
@@ -193,24 +223,38 @@ window.createDashboardComponent = function (DCLogic) {
         cases: demo ? CASES : [], waitingOn: demo ? WAITING_ON : [], buddies: BUDDIES, stall: demo ? STALL : []
       };
       const dash = v => demo ? v : '—';
-      const cnt = n => demo && n ? String(n) : '';
+      const cnt = n => n ? String(n) : '';
+
+      // ── counts: everything below is counted from js/data.js ──
+      const N = {
+        people: DEPTS.reduce((a, d) => a + d.people, 0),
+        problems: D.problems.length, ideas: D.ideas.length, initiatives: D.initiatives.length,
+        signals: D.problems.reduce((a, p) => a + p.signals.length, 0),
+        awaiting: D.ideas.filter(i => i.status === 'Awaiting decision').length,
+        noOwner: D.ideas.filter(i => i.team.length === 1 && i.team[0] === '—').length,
+        funded: D.ideas.filter(i => ['In trial', 'Building', 'Shipped'].indexOf(i.status) >= 0).length,
+        shippedIdeas: D.ideas.filter(i => i.status === 'Shipped').length,
+        shippedTeams: D.initiatives.filter(t => t.status === 'Shipped').length,
+        teamsInMotion: D.initiatives.filter(t => t.people > 0 && t.status !== 'Shipped').length,
+        overdueIdeas: D.ideas.filter(i => i.status === 'Awaiting decision' && i.wait > 14).length
+      };
 
       // ── rail ──
       const openCases = D.cases.filter(c => !s.cases[c.id]);
       const navDefs = isEmployee
-        ? [['mine', 'My cases', cnt(D.mine.length)], ['problems', 'Problems', cnt(38)], ['ideas', 'Ideas', cnt(147)], ['progress', 'Progress', '']]
+        ? [['mine', 'My cases', cnt(D.mine.length)], ['problems', 'Problems', cnt(N.problems)], ['ideas', 'Ideas', cnt(N.ideas)], ['progress', 'Progress', '']]
         : isLead
-          ? [['inbox', 'Inbox', cnt(openCases.length)], ['problems', 'Problems', cnt(38)], ['ideas', 'Ideas', cnt(147)],
-            ['network', 'Collaboration', cnt(8)], ['progress', 'Progress', '']]
-          : [['overview', 'Overview', ''], ['problems', 'Problems', cnt(38)], ['ideas', 'Ideas', cnt(147)],
-            ['network', 'Collaboration', cnt(8)], ['progress', 'Progress', '']];
+          ? [['inbox', 'Inbox', cnt(openCases.length)], ['problems', 'Problems', cnt(N.problems)], ['ideas', 'Ideas', cnt(N.ideas)],
+            ['network', 'Collaboration', cnt(N.initiatives)], ['progress', 'Progress', '']]
+          : [['overview', 'Overview', ''], ['problems', 'Problems', cnt(N.problems)], ['ideas', 'Ideas', cnt(N.ideas)],
+            ['network', 'Collaboration', cnt(N.initiatives)], ['progress', 'Progress', '']];
       const navItems = navDefs.map(([id, label, count]) => ({
         label, count, onSel: () => this.setState({ tab: id, pop: null, menu: false }), style: this.navStyle(s.tab === id), countStyle: this.countStyle(s.tab === id)
       }));
 
-      const scopeItems = [{ id: 'All', name: 'All departments', people: '1,840' }].concat(DEPTS).map(d => {
+      const scopeItems = [{ id: 'All', name: 'All departments', people: N.people }].concat(DEPTS).map(d => {
         const id = d.id || 'All', active = s.dept === id;
-        return { label: d.name, people: typeof d.people === 'number' ? String(d.people) : d.people,
+        return { label: d.name, people: fmt(d.people),
           onSel: () => this.setState({ dept: id, menu: false }), style: this.scopeStyle(active), countStyle: this.countStyle(active) };
       });
 
@@ -372,12 +416,14 @@ window.createDashboardComponent = function (DCLogic) {
         label, value: dash(value), delta: d, deltaStyle: delta(up), sub: demo ? sub : 'measured in pilot',
         bars: demo ? this.bars(spark) : this.flatBars()
       });
+      const M = METRICS;
+      const was = str => parseInt(String(str).replace(/[^\d]/g, ''), 10);
       const kpis = [
-        kpi('Idea → decision', '11d', 'was 34d', true, 'median, last 90 days', [0.95, 1, 0.9, 0.6, 0.45, 0.35, 0.3]),
-        kpi('Shipped this year', '23', 'was 6', true, '38 stopped early, on purpose', [0.25, 0.3, 0.22, 0.5, 0.7, 0.85, 1]),
-        kpi('Value booked', '€1.42M', '+€1.15M', true, '€880k of it recurring', [0.18, 0.2, 0.19, 0.45, 0.62, 0.82, 1]),
-        kpi('Waiting days saved', '1,240 d', 'vs old route', true, 'across 147 ideas, since the clock came in', [0.1, 0.2, 0.3, 0.45, 0.6, 0.8, 1]),
-        kpi('Ideas with no owner', '14', 'was 9', false, 'of 147 in play · 6 teams in motion', [0.4, 0.42, 0.5, 0.55, 0.62, 0.7, 0.8])
+        kpi('Idea → decision', M.ideaToDecision.now, M.ideaToDecision.was, true, 'median, last 90 days', M.ideaToDecision.spark),
+        kpi('Shipped this year', String(N.shippedTeams), M.shippedWas, N.shippedTeams >= was(M.shippedWas), M.stoppedEarly + ' stopped early, on purpose', M.shippedSpark),
+        kpi('Value booked', M.valueBooked.now, M.valueBooked.delta, true, M.valueBooked.sub, M.valueBooked.spark),
+        kpi('Waiting days saved', M.waitingDaysSaved.now, 'vs old route', true, 'across ' + N.ideas + ' ideas, since the clock came in', M.waitingDaysSaved.spark),
+        kpi('Ideas with no owner', String(N.noOwner), M.noOwnerWas, N.noOwner <= was(M.noOwnerWas), 'of ' + N.ideas + ' in play · ' + N.teamsInMotion + ' teams in motion', M.noOwnerSpark)
       ];
 
       const stallMax = Math.max.apply(null, [1].concat(D.stall.map(x => x.days)));
@@ -438,7 +484,7 @@ window.createDashboardComponent = function (DCLogic) {
             replyBy: 'the 14-day clock started today',
             outcome: 'pending', outcomeNote: 'measured 90 days after launch'
           };
-          this.setState({ sent: [entry].concat(s.sent), draft: '' });
+          this.persist({ sent: [entry].concat(s.sent), draft: '' });
           this.toast('Sent to ' + owner + '. Answer owed by ' + due + '.');
         },
         onWrong: () => this.toast('Noted — a human routes it instead, and the override is logged against the map.')
@@ -453,9 +499,12 @@ window.createDashboardComponent = function (DCLogic) {
         { n: '100%', label: 'of shipped work names everyone who contributed, anonymous handles included' }
       ];
 
-      const myStats = demo
-        ? [{ v: '7', l: 'problems you raised' }, { v: '3', l: 'ideas you sent' }, { v: '1', l: 'shipped, credited to you' }, { v: '4 d', l: 'your median wait for a reply' }]
-        : [{ v: String(s.sent.length), l: 'problems you raised' }, { v: '0', l: 'ideas you sent' }, { v: '0', l: 'shipped, credited to you' }, { v: '—', l: 'your median wait for a reply' }];
+      const myStats = [
+        { v: String(D.mine.length), l: 'problems and ideas you raised' },
+        { v: String(D.mine.filter(m => m.status === 'Shipped').length), l: 'shipped, credited to you' },
+        { v: String(D.mine.filter(m => m.status === 'Building' || m.status === 'In trial').length), l: 'being built right now' },
+        { v: demo ? METRICS.you.medianWait : '—', l: 'your median wait for a reply' }
+      ];
 
       // ── team leader: inbox ──
       const inboxSorted = openCases.slice().sort((a, b) => b.age - a.age);
@@ -473,7 +522,7 @@ window.createDashboardComponent = function (DCLogic) {
       const sc0 = inboxSorted.some(c => c.id === s.cid) ? CASES.find(c => c.id === s.cid) : inboxSorted[0];
       const scRoute = sc0 ? ROUTES.find(r => r.id === sc0.routeId) : null;
       const scMine = scRoute && scRoute.owner.name === who.name;
-      const act = (id, status, msg) => () => { this.setState({ cases: Object.assign({}, s.cases, { [id]: status }) }); this.toast(msg); };
+      const act = (id, status, msg) => () => { this.persist({ cases: Object.assign({}, s.cases, { [id]: status }) }); this.toast(msg); };
       const sc = sc0 ? {
         title: sc0.title, body: sc0.body, from: sc0.from, fromDept: sc0.fromDept, fromIni: this.ini(sc0.from),
         age: sc0.age + ' days open', reason: sc0.reason, reasonStyle: this.reasonStyle(sc0.reason), upside: sc0.upside,
@@ -501,8 +550,8 @@ window.createDashboardComponent = function (DCLogic) {
       const inboxStats = [
         { v: String(openCases.length), l: 'open, addressed to you' },
         { v: String(overdueCases), l: 'past the 14-day promise', hot: overdueCases > 0 },
-        { v: dash('3 d'), l: 'your median time to answer' },
-        { v: dash('9 / 11'), l: 'answered within the promise, Q3' }
+        { v: dash(METRICS.lead.medianAnswer), l: 'your median time to answer' },
+        { v: dash(METRICS.lead.withinPromise), l: 'answered within the promise, Q3' }
       ].map(x => ({ v: x.v, l: x.l, vStyle: { fontSize: '19px', fontWeight: 800, letterSpacing: '-0.025em', color: x.hot ? this.accentInk() : '#141414' } }));
 
       const waitingOn = D.waitingOn.map(w => ({
@@ -563,12 +612,44 @@ window.createDashboardComponent = function (DCLogic) {
         noteStyle: { fontSize: '11.5px', color: this.accentInk(), marginTop: '6px', lineHeight: 1.5, display: note && demo ? 'block' : 'none' }
       });
 
+      // ── progress: stalled + contributors, counted from the rows ──
+      const stalled = D.ideas
+        .filter(i => i.status === 'Awaiting decision' || i.status === 'Unfunded')
+        .sort((a, b) => (b.wait || 0) - (a.wait || 0) || (a.status === 'Unfunded' ? 1 : -1))
+        .map(i => ({
+          title: i.title, days: i.wait ? i.wait + ' days' : 'no owner',
+          at: i.wait ? (i.blocker || i.teamNote) : i.teamNote,
+          style: i.wait ? this.pill(this.accentSoft(), this.accentInk()) : this.pill(INK, '#fff')
+        }));
+
+      const tally = {};
+      const person = (name, dept) => { if (!name || name === '—') return null; const k = name.trim(); if (!tally[k]) tally[k] = { name: k, dept: dept || '', signals: 0, ideas: 0, shipped: 0, building: 0, awaiting: 0 }; if (dept && !tally[k].dept) tally[k].dept = dept; return tally[k]; };
+      D.problems.forEach(p => p.signals.forEach(sg => {
+        const parts = sg.by.split(' · '); const r = person(parts[0], (parts[1] || '').replace(/,.*$/, '')); if (r) r.signals++;
+      }));
+      D.ideas.forEach(i => {
+        const parts = i.proposedBy.split(', '); const r = /^\d+ people/.test(i.proposedBy) ? null : person(parts[0], parts[1]); if (r) r.ideas++;
+      });
+      D.initiatives.forEach(t => t.members.forEach(m => {
+        const r = person(m.name, /^proposed/.test(m.role) ? '' : m.role); if (!r) return;
+        if (t.status === 'Shipped') r.shipped++; else if (t.status === 'Awaiting decision') r.awaiting++; else if (t.people > 0) r.building++;
+      }));
+      const contributors = Object.keys(tally).map(k => tally[k])
+        .filter(r => r.signals + r.ideas > 0 && !r.name.startsWith('Anonymous') || r.name === who.handle)
+        .sort((a, b) => (b.signals + b.ideas + b.shipped) - (a.signals + a.ideas + a.shipped))
+        .slice(0, 5)
+        .map(r => ({
+          name: r.name, ini: this.ini(r.name), dept: r.dept || '—',
+          raised: r.signals + (r.signals === 1 ? ' signal' : ' signals') + ' · ' + r.ideas + (r.ideas === 1 ? ' idea' : ' ideas'),
+          credit: r.shipped ? r.shipped + ' shipped' : r.building ? r.building + ' building' : r.awaiting ? 'awaiting decision' : 'no team yet'
+        }));
+
       const mv = (label, now, was, spark) => ({ label, now: dash(now), was: demo ? was : 'measured in pilot', bars: demo ? this.bars(spark) : this.flatBars() });
 
       return {
         // rail + shell
         navItems, scopeItems, sorts,
-        viewTitle: view.title, viewSub: view.sub,
+        viewTitle: view.title, viewSub: view.sub.replace('{signals}', demo ? fmt(METRICS.signals) : '0'),
         scoped: s.dept !== 'All', scopeLabel: this.deptName(s.dept),
         clearScope: () => this.set('dept', 'All'),
         clearScopeStyle: { fontFamily: MONO, fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#c9c8c0', cursor: 'pointer', display: s.dept === 'All' ? 'none' : 'inline' },
@@ -576,7 +657,7 @@ window.createDashboardComponent = function (DCLogic) {
         isNetwork: s.tab === 'network', isProgress: s.tab === 'progress', isMine: s.tab === 'mine', isInbox: s.tab === 'inbox',
         isManager, isLead, isEmployee, demo, noDemo: !demo,
         goProblems: () => this.set('tab', 'problems'), goIdeas: () => this.set('tab', 'ideas'), goNetwork: () => this.set('tab', 'network'),
-        problemCountLabel: demo ? 'All 38 →' : 'All →', ideaCountLabel: demo ? 'All 147 →' : 'All →',
+        problemCountLabel: N.problems ? 'All ' + N.problems + ' →' : 'All →', ideaCountLabel: N.ideas ? 'All ' + N.ideas + ' →' : 'All →',
 
         // shell: mobile drawer
         railClass: 'nh-rail' + (s.menu ? ' nh-open' : ''),
@@ -606,19 +687,21 @@ window.createDashboardComponent = function (DCLogic) {
         roles, dev: s.dev, toggleDev: () => this.setState({ dev: !s.dev, pop: null }),
         toggleDemo: () => this.setState({ demo: !s.demo, dev: false }), resetDemo: () => this.resetDemo(),
         demoLabel: demo ? 'Demo data on' : 'Demo data off',
+        copySnippet: () => this.copySnippet(),
+        newCount: s.sent.length ? s.sent.length + (s.sent.length === 1 ? ' new case this session' : ' new cases this session') : 'nothing new this session',
         demoTrack: { width: '30px', height: '17px', borderRadius: '999px', padding: '2px', boxSizing: 'border-box', background: demo ? this.accent() : '#4a4a44', cursor: 'pointer', display: 'flex', justifyContent: demo ? 'flex-end' : 'flex-start' },
         devBtnStyle: { display: 'flex', alignItems: 'center', gap: '7px', background: s.dev ? '#fbfbf9' : '#2e2e28', color: s.dev ? '#1a1a17' : '#c9c8c0', border: '1px solid ' + (s.dev ? '#fbfbf9' : '#3d3d38'), borderRadius: '9px', padding: '7px 11px', fontFamily: MONO, fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', boxShadow: '0 6px 20px rgba(0,0,0,0.35)' },
         devStatus: role.label + ' · demo ' + (demo ? 'on' : 'off'),
 
         // overview
         kpis, decisions, noDecisions: decisions.length === 0, stall, noStall: stall.length === 0, ledger,
-        nextCall: demo ? 'Thursday 14:00 · 25 min' : 'not scheduled yet',
+        nextCall: demo ? METRICS.nextCall : 'not scheduled yet',
         nextCallNote: demo ? 'Agenda is built from the items above — nothing else on it.' : 'The first decision call is booked when the first item passes its 14 days.',
         movement: [
-          mv('Idea → decision', '11 days', 'was 34', [0.95, 1, 0.9, 0.6, 0.45, 0.35, 0.3]),
-          mv('Ideas shipped / yr', '23', 'was 6', [0.25, 0.3, 0.22, 0.5, 0.7, 0.85, 1]),
-          mv('Value from ideas', '€1.42M', 'was €270k', [0.18, 0.2, 0.19, 0.45, 0.62, 0.82, 1]),
-          mv('People contributing', '64%', 'was 21%', [0.2, 0.22, 0.21, 0.4, 0.52, 0.6, 0.64])
+          mv('Idea → decision', M.ideaToDecision.now, M.ideaToDecision.was, M.ideaToDecision.spark),
+          mv('Ideas shipped / yr', String(N.shippedTeams), M.shippedWas, M.shippedSpark),
+          mv('Value from ideas', M.valueBooked.now, M.valueBooked.was, M.valueBooked.spark),
+          mv('People contributing', M.contributing.now, M.contributing.was, M.contributing.spark)
         ],
         legendAccentStyle: { width: '20px', height: '3px', borderRadius: '2px', background: this.accent() },
         unansweredStyle: { fontSize: '22px', fontWeight: 800, color: demo ? this.accentInk() : '#141414', letterSpacing: '-0.025em' },
@@ -629,8 +712,12 @@ window.createDashboardComponent = function (DCLogic) {
         emptyProblemTitle: demo ? 'Nobody in ' + (s.dept === 'All' ? 'the company' : this.deptName(s.dept)) + ' has named a problem yet' : 'No problems recorded yet',
         emptyProblemSub: demo ? 'Either nothing here is broken, or nobody has said so yet. Silence from a whole department is usually the second one.'
           : 'Problems arrive two ways: a forwarded email thread, or one field in the app. The first interview round clusters them into root problems.',
-        discovery: demo ? { done: '1,180 of 1,840 interviewed', w: { width: '64%', height: '7px', borderRadius: '999px', background: INK }, note: '64% coverage · Production and Field Service still under 50%' }
-          : { done: '0 of 1,840 interviewed', w: { width: '0%', height: '7px', borderRadius: '999px', background: INK }, note: 'Round 1 not started' },
+        discovery: (() => {
+          const done = demo ? METRICS.discovery.interviewed : 0, pct = Math.round(done / N.people * 100);
+          return { done: fmt(done) + ' of ' + fmt(N.people) + ' interviewed', w: { width: pct + '%', height: '7px', borderRadius: '999px', background: INK },
+            note: demo ? pct + '% coverage · ' + METRICS.discovery.note : 'Round 1 not started' };
+        })(),
+        discoveryRound: 'Discovery round ' + (demo ? METRICS.discovery.round : 1),
         ideas, topIdeas: ideas.slice(0, 5), si, noIdeas: ideas.length === 0,
         initiatives, st, nodes, edges, clusters, noInitiatives: initiatives.length === 0,
 
@@ -646,35 +733,30 @@ window.createDashboardComponent = function (DCLogic) {
         actHand: { flex: 1, textAlign: 'center', background: this.accent(), color: '#1a1a17', borderRadius: '10px', padding: '10px 12px', fontSize: '12.5px', fontWeight: 800, cursor: 'pointer' },
 
         // progress
-        funnel: [
-          fnl('412', 'Said out loud', 'signals from interviews and the app', '100%', ''),
-          fnl('38', 'Clustered into root problems', 'duplicates merged, named plainly', '82%', ''),
-          fnl('147', 'Answered with an idea', 'employees proposed the fix themselves', '64%', ''),
-          fnl('61', 'Given a team and a budget', '86 ideas stopped here', '34%', 'This is the hierarchy gate. It is the narrowest point in the system and the only one leadership controls directly.', true),
-          fnl('23', 'Shipped', '38 stopped early on purpose', '18%', '')
-        ],
-        funnelTotals: demo ? '412 in · 23 out' : 'nothing in yet',
+        funnel: (() => {
+          const top = Math.max(1, N.signals);
+          const w = x => Math.round(x / top * 100) + '%';
+          return [
+            fnl(String(N.signals), 'Said out loud', 'quotes kept from interviews and the app', w(N.signals), ''),
+            fnl(String(N.problems), 'Clustered into root problems', 'duplicates merged, named plainly', w(N.problems), ''),
+            fnl(String(N.ideas), 'Answered with an idea', 'employees proposed the fix themselves', w(N.ideas), ''),
+            fnl(String(N.funded), 'Given a team and a budget', (N.ideas - N.funded) + ' ideas stopped here', w(N.funded), 'This is the hierarchy gate. It is the narrowest point in the system and the only one leadership controls directly.', true),
+            fnl(String(N.shippedIdeas), 'Shipped', (N.funded - N.shippedIdeas) + ' still in trial or being built', w(N.shippedIdeas), '')
+          ];
+        })(),
+        funnelTotals: N.signals ? N.signals + ' in · ' + N.shippedIdeas + ' out' : 'nothing in yet',
         outcomes: D.outcomes.map(o => ({
           title: o.title, promised: o.promised, actual: o.actual, verdict: o.verdict,
           style: o.verdict === 'Short' ? this.pill(this.accentSoft(), this.accentInk()) : o.verdict === 'Beat it' ? this.pill('#dcf3e3', '#116634') : this.pill('#f0efea', '#5b5b5b', 600)
         })),
         noOutcomes: D.outcomes.length === 0,
-        stalled: demo ? [
-          { title: 'Team-level spend authority up to €5k', days: '41 days', at: 'waiting on CFO signature', style: this.pill(this.accentSoft(), this.accentInk()) },
-          { title: 'One measurement record, one place', days: '8 days', at: 'waiting on IT capacity', style: this.pill(this.accentSoft(), this.accentInk()) },
-          { title: 'Protect one day a fortnight for improvement', days: 'no owner', at: 'needs a board decision', style: this.pill(INK, '#fff') },
-          { title: 'Blameless review, separate from ownership', days: 'no owner', at: 'nobody assigned in 9 weeks', style: this.pill(INK, '#fff') }
-        ] : [],
-        noStalled: !demo,
-        answered: demo ? { replied: '91%', median: '6d', credited: '214', unanswered: '23' } : { replied: '—', median: '—', credited: '0', unanswered: '0' },
-        contributors: demo ? [
-          { name: 'H. Sander', ini: 'HS', dept: 'Quality', raised: '9 signals · 3 ideas', credit: '2 shipped' },
-          { name: 'Anonymous #4471', ini: '?', dept: 'Production', raised: '7 signals · 2 ideas', credit: '1 shipped' },
-          { name: 'N. Kaya', ini: 'NK', dept: 'Sales', raised: '6 signals · 4 ideas', credit: '2 shipped' },
-          { name: 'C. Ilg', ini: 'CI', dept: 'Ops & Admin', raised: '5 signals · 1 idea', credit: 'awaiting decision' },
-          { name: 'D. Ferraro', ini: 'DF', dept: 'Field Service', raised: '4 signals · 2 ideas', credit: '1 building' }
-        ] : [],
-        noContributors: !demo
+        stalled: stalled, noStalled: stalled.length === 0,
+        answered: {
+          replied: demo ? METRICS.answered.replied : '—', median: demo ? METRICS.answered.median : '—',
+          credited: demo ? fmt(METRICS.answered.credited) : '0',
+          unanswered: String(N.overdueIdeas + openCases.filter(c => c.age > 14).length)
+        },
+        contributors, noContributors: contributors.length === 0
       };
     }
   }
