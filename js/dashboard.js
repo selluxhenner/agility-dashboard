@@ -35,7 +35,9 @@ window.createDashboardComponent = function (DCLogic) {
       const role = ROLES.find(r => r.id === (props.defaultRole || 'manager')) || ROLES[2];
       this.state = {
         role: role.id, tab: props.defaultView || role.home, dept: role.dept,
-        pid: 'p1', iid: 'i1', tid: 't3', cid: 'c1', sort: 'people',
+        pid: 'p1', iid: 'i1', tid: 't3', cid: 'c1',
+        // list tools: sort + filter for the problems and ideas views
+        sort: 'people', pTrend: 'All', pOwner: 'All', iSort: 'score', iStatus: 'All',
         demo: props.demoData !== false, dev: false,
         q: '', pop: null, draft: '', log: NHStore.load(), toast: null,
         sheet: null, // the one input sheet: { kind, id, text, picked, people } — see sheetVals()
@@ -105,6 +107,7 @@ window.createDashboardComponent = function (DCLogic) {
         this.setState({ pop: 'search' });
       } else if (e.key === 'Escape') {
         const el = document.getElementById('nh-search');
+        if (el && e.target === el) return; // handled by onSearchKey: clear the text first, close on the second press
         if (el) el.blur();
         this.setState({ pop: null, q: '', menu: false, sheet: null });
       }
@@ -490,10 +493,6 @@ window.createDashboardComponent = function (DCLogic) {
           onSel: () => this.setState({ dept: id, menu: false }), style: this.scopeStyle(active), countStyle: this.countStyle(active) };
       });
 
-      const sorts = [['people', 'Most people'], ['trend', 'Getting worse'], ['age', 'Longest open']].map(([id, label]) => ({
-        label, onSel: () => this.set('sort', id), style: this.chip(s.sort === id)
-      }));
-
       const openIdea = id => () => this.setState({ tab: 'ideas', iid: id, pop: null, q: '' });
       const openProblem = id => () => this.setState({ tab: 'problems', pid: id, pop: null, q: '' });
       const openInitiative = id => () => this.setState({ tab: 'network', tid: id, pop: null, q: '' });
@@ -511,10 +510,13 @@ window.createDashboardComponent = function (DCLogic) {
       const ideaPool = D.ideas.filter(i => this.matches((PROBLEMS.find(p => p.id === i.problem) || { depts: [] }).depts));
       const ideas = ideaPool.slice().sort((a, b) => this.criteriaCount(b.criteria) - this.criteriaCount(a.criteria) || b.wait - a.wait).map(decorateIdea);
 
-      const problemPool = D.problems.filter(p => this.matches(p.depts));
+      const problemScope = D.problems.filter(p => this.matches(p.depts));
+      const problemSearched = problemScope.filter(p => qFilter(this.problemHay(p)));
+      const problemPool = problemSearched.filter(p => (s.pTrend === 'All' || p.trend === s.pTrend) && (s.pOwner === 'All' || p.owner === s.pOwner));
       const sorted = problemPool.slice().sort((a, b) => {
         if (s.sort === 'people') return b.people - a.people;
         if (s.sort === 'trend') return (b.spark[6] - b.spark[0]) - (a.spark[6] - a.spark[0]);
+        if (s.sort === 'title') return a.title.localeCompare(b.title);
         return (b.months || 0) - (a.months || 0);
       });
 
@@ -577,7 +579,7 @@ window.createDashboardComponent = function (DCLogic) {
       };
 
       // ── collaboration ──
-      const activeIds = D.initiatives.filter(t => this.matches(t.depts)).map(t => t.id);
+      const activeIds = D.initiatives.filter(t => this.matches(t.depts) && qFilter(this.teamHay(t))).map(t => t.id);
       const initiatives = D.initiatives.map(t => ({
         id: t.id, name: t.name, status: t.status, statusStyle: this.statusStyle(t.status),
         deptLabel: t.depts.map(d => this.deptName(d)).join(' × '),
@@ -837,9 +839,64 @@ window.createDashboardComponent = function (DCLogic) {
         const p = people[n];
         results.push({ kind: 'Person', title: p.name, meta: p.meta, onOpen: p.tid ? openInitiative(p.tid) : () => this.setState({ pop: null, q: '' }) });
       });
-      const searchResults = results.slice(0, 8).map(r => Object.assign(r, {
-        kindStyle: { fontFamily: MONO, fontSize: '9.5px', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#a0a099', minWidth: '52px' }
+      const onSearchKey = e => {
+        if (e.key === 'ArrowDown') { e.preventDefault(); this.setState({ pop: 'search', cursor: results.length ? (cursor + 1) % results.length : 0 }); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); this.setState({ pop: 'search', cursor: results.length ? (cursor - 1 + results.length) % results.length : 0 }); }
+        else if (e.key === 'Enter') { if (results[cursor]) this.pick(results[cursor]); }
+        else if (e.key === 'Escape') {
+          e.preventDefault();
+          if (s.q) this.setState({ q: '', cursor: 0 }); else { e.target.blur(); this.setState({ pop: null, menu: false }); }
+        }
+      };
+
+      // ── sort + filter menus (problems and ideas views) ──
+      const isProblems = s.tab === 'problems', isIdeas = s.tab === 'ideas';
+      const hasListTools = isProblems || isIdeas;
+      const sortDefs = isProblems
+        ? [['people', 'Most people affected'], ['trend', 'Getting worse fastest'], ['age', 'Longest open'], ['title', 'A → Z']]
+        : [['score', 'Highest score'], ['wait', 'Longest waiting'], ['upside', 'Biggest upside'], ['title', 'A → Z']];
+      const sortKey = isProblems ? 'sort' : 'iSort';
+      const sortOptions = sortDefs.map(([id, label]) => ({
+        label, check: s[sortKey] === id ? '✓' : '', onSel: () => this.setState({ [sortKey]: id, pop: null }),
+        rowClass: 'nh-opt' + (s[sortKey] === id ? ' nh-opt--on' : '')
       }));
+      const sortLabel = (sortDefs.find(d => d[0] === s[sortKey]) || sortDefs[0])[1];
+
+      const countBy = (list, fn) => list.reduce((n, x) => n + (fn(x) ? 1 : 0), 0);
+      const facet = (key, label, opts, list, get) => ({
+        label,
+        options: [['All', 'All']].concat(opts).map(([id, name]) => {
+          const on = s[key] === id;
+          const count = id === 'All' ? list.length : countBy(list, x => get(x) === id);
+          return { label: name, count: String(count), onSel: () => this.set(key, id),
+            chipClass: 'nh-fchip' + (on ? ' nh-fchip--on' : '') + (count === 0 && !on ? ' nh-fchip--empty' : '') };
+        })
+      });
+      const filterGroups = isProblems ? [
+        facet('pTrend', 'Trend', [['Worsening', 'Worsening'], ['Flat', 'Flat'], ['Improving', 'Improving']],
+          problemSearched.filter(p => s.pOwner === 'All' || p.owner === s.pOwner), p => p.trend),
+        facet('pOwner', 'Ownership', [['none', 'No owner'], ['ideas', 'Ideas submitted'], ['trial', 'Fix in trial']],
+          problemSearched.filter(p => s.pTrend === 'All' || p.trend === s.pTrend), p => p.owner)
+      ] : isIdeas ? [
+        facet('iStatus', 'Status', [['Awaiting decision', 'Awaiting decision'], ['In trial', 'In trial'], ['Building', 'Building'], ['Unfunded', 'Unfunded'], ['Shipped', 'Shipped']],
+          ideaSearched, i => i.status)
+      ] : [];
+      const filterCount = isProblems ? (s.pTrend !== 'All' ? 1 : 0) + (s.pOwner !== 'All' ? 1 : 0) : isIdeas ? (s.iStatus !== 'All' ? 1 : 0) : 0;
+      const clearFilters = () => this.setState(isProblems ? { pTrend: 'All', pOwner: 'All' } : { iStatus: 'All' });
+      const clearAll = () => this.setState({ q: '', pTrend: 'All', pOwner: 'All', iStatus: 'All', cursor: 0 });
+
+      const shown = isProblems ? sorted.length : ideaSorted.length;
+      const total = isProblems ? problemScope.length : ideaScope.length;
+      const filtered = hasListTools && (filterCount > 0 || hasQuery) && total > 0;
+      const activeChips = [];
+      if (hasQuery && listTab) activeChips.push({ label: '“' + q + '”', onRemove: () => this.setState({ q: '', cursor: 0 }) });
+      if (isProblems && s.pTrend !== 'All') activeChips.push({ label: s.pTrend, onRemove: () => this.set('pTrend', 'All') });
+      if (isProblems && s.pOwner !== 'All') activeChips.push({ label: this.ownerLabel(s.pOwner), onRemove: () => this.set('pOwner', 'All') });
+      if (isIdeas && s.iStatus !== 'All') activeChips.push({ label: s.iStatus, onRemove: () => this.set('iStatus', 'All') });
+
+      const toolBtn = on => ({ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '7px 11px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+        cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', background: on ? INK : '#fff', color: on ? '#fff' : '#3d3d3a',
+        border: '1px solid ' + (on ? INK : '#e6e5e0'), position: 'relative', zIndex: 31 });
 
       const overdueMine = mine.filter(m => m.overdue);
       const dropItems = isManager
@@ -912,7 +969,7 @@ window.createDashboardComponent = function (DCLogic) {
         sheet, sheetOpen: sheet.open,
         replyBtn: this.btn('accent'),
         // rail + shell
-        navItems, scopeItems, sorts,
+        navItems, scopeItems,
         viewTitle: view.title, viewSub: view.sub.replace('{signals}', demo ? fmt(METRICS.signals) : '0'),
         scoped: s.dept !== 'All', scopeLabel: this.deptName(s.dept),
         clearScope: () => this.set('dept', 'All'),
@@ -928,11 +985,28 @@ window.createDashboardComponent = function (DCLogic) {
         menuOpen: s.menu, toggleMenu: () => this.setState({ menu: !s.menu, pop: null }), closeMenu: () => this.set('menu', false),
 
         // top bar
-        q: s.q, onQ: e => this.setState({ q: e.target.value, pop: 'search' }),
-        onQFocus: () => this.set('pop', 'search'),
-        searchOpen: s.pop === 'search' && q.length >= 2, searchResults, noResults: searchResults.length === 0,
+        q: s.q, hasQuery,
+        onQ: e => this.setState({ q: e.target.value, pop: 'search', cursor: 0 }),
+        onQFocus: () => this.setState({ pop: 'search', menu: false }),
+        onSearchKey,
+        clearQuery: () => { this.setState({ q: '', cursor: 0 }); this.focusSearch(); },
+        kbdHint: searchOpen ? 'esc' : '⌘K',
+        searchOpen, resultGroups, noResults: results.length === 0,
+        resultCountLabel: results.length === 1 ? '1 result' : results.length + ' results',
+        searchClass: 'nh-search' + (s.pop === 'search' ? ' nh-search--focus' : ''),
         searchWrapStyle: { flex: '1 1 90px', minWidth: 0, maxWidth: '340px', position: 'relative', display: 'flex', alignItems: 'center', gap: '8px',
-          background: s.pop === 'search' ? '#fff' : '#f4f3f0', border: '1px solid ' + (s.pop === 'search' ? INK : '#e6e5e0'), borderRadius: '9px', padding: '7px 10px', boxSizing: 'border-box' },
+          background: s.pop === 'search' ? '#fff' : '#f4f3f0', border: '1px solid ' + (s.pop === 'search' ? INK : '#e6e5e0'), borderRadius: '9px', padding: '0 10px', height: '34px', boxSizing: 'border-box',
+          zIndex: s.pop === 'search' ? 31 : 'auto' },
+
+        // list tools (problems + ideas)
+        hasListTools,
+        sortLabel, sortOptions, sortOpen: s.pop === 'sort', toggleSort: () => this.setState({ pop: s.pop === 'sort' ? null : 'sort' }),
+        sortBtnStyle: toolBtn(s.pop === 'sort'),
+        filterGroups, filterOpen: s.pop === 'filter', toggleFilter: () => this.setState({ pop: s.pop === 'filter' ? null : 'filter' }),
+        filterBtnStyle: toolBtn(s.pop === 'filter' || filterCount > 0),
+        filterCount: String(filterCount), hasFilters: filterCount > 0, clearFilters, clearAll,
+        filtered, activeChips,
+        showingLabel: 'Showing ' + shown + ' of ' + total + (isProblems ? ' problems' : ' ideas'),
         decisionBtnLabel, decisionShort: !demo && !dropCount ? '0' : String(dropCount), dropdown, noDropdown: dropdown.length === 0,
         dropdownEmpty: isManager ? 'Nothing is waiting on you.' : isLead ? 'Nothing in your inbox is close to its deadline.' : 'Everything you sent has been answered on time.',
         dropdownTitle: isManager ? 'Waiting on a decision' : isLead ? 'Answer owed this week' : 'Answers owed to you',
@@ -973,9 +1047,13 @@ window.createDashboardComponent = function (DCLogic) {
 
         // problems / ideas / collaboration
         problems, topProblems: problems.slice(0, 5), sp, noProblems: problems.length === 0,
-        emptyProblemTitle: demo ? 'Nobody in ' + (s.dept === 'All' ? 'the company' : this.deptName(s.dept)) + ' has named a problem yet' : 'No problems recorded yet',
-        emptyProblemSub: demo ? 'Either nothing here is broken, or nobody has said so yet. Silence from a whole department is usually the second one.'
+        emptyProblemTitle: filtered ? 'No problems match'
+          : demo ? 'Nobody in ' + (s.dept === 'All' ? 'the company' : this.deptName(s.dept)) + ' has named a problem yet' : 'No problems recorded yet',
+        emptyProblemSub: filtered ? 'Try fewer words, or clear the search and filters to see everything in scope.'
+          : demo ? 'Either nothing here is broken, or nobody has said so yet. Silence from a whole department is usually the second one.'
           : 'Problems arrive two ways: a forwarded email thread, or one field in the app. The first interview round clusters them into root problems.',
+        emptyIdeaTitle: filtered ? 'No ideas match' : 'No ideas yet',
+        emptyIdeaSub: filtered ? 'Try fewer words, or clear the search and filters to see everything in scope.' : si.rationale,
         discovery: (() => {
           const done = demo ? METRICS.discovery.interviewed : 0, pct = Math.round(done / N.people * 100);
           return { done: fmt(done) + ' of ' + fmt(N.people) + ' interviewed', w: { width: pct + '%', height: '7px', borderRadius: '999px', background: INK },

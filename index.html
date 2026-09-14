@@ -100,31 +100,44 @@
           <span class="nh-period"
             style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:#a0a099; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:0 1 auto; min-width:0;">Innovation
             &amp; agility · Q3 2026</span>
-          <div class="nh-search" style="{{ searchWrapStyle }}">
-            <span style="width:11px; height:11px; border:1.5px solid #a0a099; border-radius:50%; flex:none;"></span>
-            <input id="nh-search" type="text" placeholder="Search problems, ideas, people" value="{{ q }}"
-              oninput="{{ onQ }}" onfocus="{{ onQFocus }}" autocomplete="off"
-              style="flex:1; min-width:0; border:0; outline:0; background:transparent; font-family:inherit; font-size:12.5px; color:#141414; padding:0;">
+          <div class="{{ searchClass }}" style="{{ searchWrapStyle }}">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8c8c88" stroke-width="2.4" stroke-linecap="round" style="flex:none;">
+              <circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.6-3.6"></path>
+            </svg>
+            <input id="nh-search" class="nh-search-input" type="text" placeholder="Search problems, ideas, people" value="{{ q }}"
+              oninput="{{ onQ }}" onfocus="{{ onQFocus }}" onkeydown="{{ onSearchKey }}" autocomplete="off" spellcheck="false"
+              aria-label="Search" aria-expanded="{{ searchOpen }}">
+            <sc-if value="{{ hasQuery }}" hint-placeholder-val="{{ false }}">
+              <span class="nh-search-clear" onclick="{{ clearQuery }}" title="Clear (esc)">×</span>
+            </sc-if>
             <span class="nh-kbd"
-              style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#b8b7b0; margin-left:auto; flex:none;">⌘K</span>
+              style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#b8b7b0; flex:none;">{{ kbdHint }}</span>
 
             <sc-if value="{{ searchOpen }}" hint-placeholder-val="{{ false }}">
-              <div class="nh-pop"
-                style="position:absolute; top:calc(100% + 6px); left:0; right:0; min-width:340px; background:#fff; border:1px solid #e6e5e0; border-radius:12px; padding:6px; box-shadow:0 14px 40px rgba(20,20,20,0.14); z-index:40;">
+              <div class="nh-pop nh-search-pop">
                 <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
-                  <div style="padding:14px 12px; font-size:12.5px; color:#8c8c88;">Nothing matches. Try a word from the problem, an idea, or a
-                    person's name.</div>
-                </sc-if>
-                <sc-for list="{{ searchResults }}" as="r" hint-placeholder-count="5">
-                  <div onClick="{{ r.onOpen }}" style-hover="background:#faf9f7;"
-                    style="display:flex; align-items:baseline; gap:12px; padding:9px 10px; border-radius:8px; cursor:pointer;">
-                    <span style="{{ r.kindStyle }}">{{ r.kind }}</span>
-                    <span style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;">
-                      <span style="font-size:12.5px; font-weight:700; color:#141414; line-height:1.35;">{{ r.title }}</span>
-                      <span style="font-size:11px; color:#a0a099;">{{ r.meta }}</span>
-                    </span>
+                  <div style="padding:22px 14px 20px; text-align:center;">
+                    <div style="font-size:13px; font-weight:700; color:#141414;">Nothing matches “{{ q }}”</div>
+                    <div style="font-size:12px; color:#8c8c88; margin-top:5px; line-height:1.5;">Try a name, a department, a status, or fewer words.</div>
                   </div>
+                </sc-if>
+                <sc-for list="{{ resultGroups }}" as="g" hint-placeholder-count="2">
+                  <div class="nh-result-group">{{ g.label }}</div>
+                  <sc-for list="{{ g.items }}" as="r" hint-placeholder-count="3">
+                    <div class="{{ r.rowClass }}" onclick="{{ r.onPick }}" onmouseenter="{{ r.onHover }}">
+                      <span style="{{ r.kindStyle }}">{{ r.kind }}</span>
+                      <div style="flex:1; min-width:0;">
+                        <div class="nh-result-title"><sc-for list="{{ r.parts }}" as="x" hint-placeholder-count="3"><span class="{{ x.cls }}">{{ x.t }}</span></sc-for></div>
+                        <div class="nh-result-meta">{{ r.meta }}</div>
+                      </div>
+                      <span class="nh-result-right">{{ r.right }}</span>
+                    </div>
+                  </sc-for>
                 </sc-for>
+                <div class="nh-search-foot">
+                  <span>{{ resultCountLabel }}</span>
+                  <span class="nh-search-keys"><kbd>↑</kbd><kbd>↓</kbd> move <kbd>↵</kbd> open <kbd>esc</kbd> clear</span>
+                </div>
               </div>
             </sc-if>
           </div>
@@ -210,13 +223,62 @@
                     style="display:flex; align-items:center; gap:7px; background:#1a1a17; color:#fff; border-radius:8px; padding:7px 11px; font-size:12px; font-weight:700; cursor:pointer;">{{
                     scopeLabel }}<span style="color:#a0a099;">×</span></span>
                 </sc-if>
-                <sc-if value="{{ isProblems }}" hint-placeholder-val="{{ false }}">
-                  <sc-for list="{{ sorts }}" as="s" hint-placeholder-count="3">
-                    <span onClick="{{ s.onSel }}" style="{{ s.style }}">{{ s.label }}</span>
-                  </sc-for>
+                <sc-if value="{{ hasListTools }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:relative;">
+                    <span onclick="{{ toggleSort }}" style="{{ sortBtnStyle }}">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M7 20l-3.5-3.5M7 20l3.5-3.5M17 20V4M17 4l-3.5 3.5M17 4l3.5 3.5"/></svg>
+                      <span style="color:inherit; opacity:.6; font-weight:600;">Sort</span>{{ sortLabel }}
+                    </span>
+                    <sc-if value="{{ sortOpen }}" hint-placeholder-val="{{ false }}">
+                      <div class="nh-pop nh-menu nh-menu--left" style="min-width:220px;">
+                        <sc-for list="{{ sortOptions }}" as="o" hint-placeholder-count="4">
+                          <div class="{{ o.rowClass }}" onclick="{{ o.onSel }}">{{ o.label }}<span class="nh-opt-check">{{ o.check }}</span></div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                  </div>
+                  <div style="position:relative;">
+                    <span onclick="{{ toggleFilter }}" style="{{ filterBtnStyle }}">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18M6 12h12M10 19h4"/></svg>
+                      Filter
+                      <sc-if value="{{ hasFilters }}" hint-placeholder-val="{{ false }}">
+                        <span class="nh-badge">{{ filterCount }}</span>
+                      </sc-if>
+                    </span>
+                    <sc-if value="{{ filterOpen }}" hint-placeholder-val="{{ false }}">
+                      <div class="nh-pop nh-menu" style="min-width:280px; padding:12px 12px 10px;">
+                        <sc-for list="{{ filterGroups }}" as="g" hint-placeholder-count="2">
+                          <div class="nh-fgroup">
+                            <div class="nh-flabel">{{ g.label }}</div>
+                            <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                              <sc-for list="{{ g.options }}" as="o" hint-placeholder-count="4">
+                                <span class="{{ o.chipClass }}" onclick="{{ o.onSel }}">{{ o.label }}<span class="nh-fcount">{{ o.count }}</span></span>
+                              </sc-for>
+                            </div>
+                          </div>
+                        </sc-for>
+                        <div class="nh-pop-foot">
+                          <span>{{ showingLabel }}</span>
+                          <sc-if value="{{ hasFilters }}" hint-placeholder-val="{{ false }}">
+                            <span class="nh-link" onclick="{{ clearFilters }}">Clear filters</span>
+                          </sc-if>
+                        </div>
+                      </div>
+                    </sc-if>
+                  </div>
                 </sc-if>
               </div>
             </div>
+
+            <sc-if value="{{ filtered }}" hint-placeholder-val="{{ false }}">
+              <div class="nh-strip">
+                <span class="nh-strip-label">{{ showingLabel }}</span>
+                <sc-for list="{{ activeChips }}" as="c" hint-placeholder-count="2">
+                  <span class="nh-strip-chip" onclick="{{ c.onRemove }}">{{ c.label }}<span class="nh-strip-x">×</span></span>
+                </sc-for>
+                <span class="nh-link" onclick="{{ clearAll }}" style="margin-left:auto;">Clear all</span>
+              </div>
+            </sc-if>
 
             <!-- ░░ MY IDEAS (EMPLOYEE) ░░ -->
             <sc-if value="{{ isMine }}" hint-placeholder-val="{{ false }}">
@@ -868,6 +930,9 @@
                         <div style="font-size:14.5px; font-weight:700; color:#141414; line-height:1.4;">{{
                           emptyProblemTitle }}</div>
                         <div style="font-size:12.5px; color:#8c8c88; margin-top:7px; line-height:1.55;">{{ emptyProblemSub }}</div>
+                        <sc-if value="{{ filtered }}" hint-placeholder-val="{{ false }}">
+                          <span class="nh-btn-ghost" onclick="{{ clearAll }}">Clear search and filters</span>
+                        </sc-if>
                       </div>
                     </sc-if>
                     <div style="display:flex; flex-direction:column;">
@@ -971,8 +1036,11 @@
                 <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:6px 18px 12px;">
                   <sc-if value="{{ noIdeas }}" hint-placeholder-val="{{ false }}">
                     <div style="padding:26px 4px;">
-                      <div style="font-size:14.5px; font-weight:700; color:#141414; line-height:1.4;">No ideas yet</div>
-                      <div style="font-size:12.5px; color:#8c8c88; margin-top:7px; line-height:1.55;">{{ si.rationale }}</div>
+                      <div style="font-size:14.5px; font-weight:700; color:#141414; line-height:1.4;">{{ emptyIdeaTitle }}</div>
+                      <div style="font-size:12.5px; color:#8c8c88; margin-top:7px; line-height:1.55;">{{ emptyIdeaSub }}</div>
+                      <sc-if value="{{ filtered }}" hint-placeholder-val="{{ false }}">
+                        <span class="nh-btn-ghost" onclick="{{ clearAll }}">Clear search and filters</span>
+                      </sc-if>
                     </div>
                   </sc-if>
                   <div style="display:flex; flex-direction:column;">
