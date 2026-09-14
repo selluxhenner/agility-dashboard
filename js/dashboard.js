@@ -29,13 +29,26 @@ window.createDashboardComponent = function (DCLogic) {
         role: role.id, tab: props.defaultView || role.home, dept: role.dept,
         pid: 'p1', iid: 'i1', tid: 't3', cid: 'c1', sort: 'people',
         demo: props.demoData !== false, dev: false,
-        q: '', pop: null, draft: '', sent: [], cases: {}, toast: null
+        q: '', pop: null, draft: '', sent: [], cases: {}, toast: null,
+        mobile: false, menu: false
       };
       this.onKey = this.onKey.bind(this);
+      this.onMedia = this.onMedia.bind(this);
     }
 
-    componentDidMount() { window.addEventListener('keydown', this.onKey); }
-    componentWillUnmount() { window.removeEventListener('keydown', this.onKey); clearTimeout(this.toastTimer); }
+    componentDidMount() {
+      window.addEventListener('keydown', this.onKey);
+      // Narrow viewports: the rail becomes an off-canvas drawer (see css/dashboard.css).
+      this.mq = window.matchMedia('(max-width: 760px)');
+      this.mq.addEventListener('change', this.onMedia);
+      this.onMedia(this.mq);
+    }
+    componentWillUnmount() {
+      window.removeEventListener('keydown', this.onKey);
+      if (this.mq) this.mq.removeEventListener('change', this.onMedia);
+      clearTimeout(this.toastTimer);
+    }
+    onMedia(e) { this.setState({ mobile: e.matches, menu: false }); }
 
     // ⌘K / Ctrl+K focuses the search box; Escape closes whatever is open.
     onKey(e) {
@@ -47,7 +60,7 @@ window.createDashboardComponent = function (DCLogic) {
       } else if (e.key === 'Escape') {
         const el = document.getElementById('nh-search');
         if (el) el.blur();
-        this.setState({ pop: null, q: '' });
+        this.setState({ pop: null, q: '', menu: false });
       }
     }
 
@@ -157,11 +170,11 @@ window.createDashboardComponent = function (DCLogic) {
     // ── role switching / dev panel ───────────────────────────────────────
     setRole(id) {
       const r = ROLES.find(x => x.id === id) || ROLES[2];
-      this.setState({ role: r.id, tab: r.home, dept: r.dept, pop: null, q: '' });
+      this.setState({ role: r.id, tab: r.home, dept: r.dept, pop: null, q: '', dev: false, menu: false });
     }
 
     resetDemo() {
-      this.setState({ sent: [], cases: {}, draft: '', q: '', pop: null });
+      this.setState({ sent: [], cases: {}, draft: '', q: '', pop: null, dev: false });
       this.toast('Demo state reset');
     }
 
@@ -192,13 +205,13 @@ window.createDashboardComponent = function (DCLogic) {
           : [['overview', 'Overview', ''], ['problems', 'Problems', cnt(38)], ['ideas', 'Ideas', cnt(147)],
             ['network', 'Collaboration', cnt(8)], ['progress', 'Progress', '']];
       const navItems = navDefs.map(([id, label, count]) => ({
-        label, count, onSel: () => this.setState({ tab: id, pop: null }), style: this.navStyle(s.tab === id), countStyle: this.countStyle(s.tab === id)
+        label, count, onSel: () => this.setState({ tab: id, pop: null, menu: false }), style: this.navStyle(s.tab === id), countStyle: this.countStyle(s.tab === id)
       }));
 
       const scopeItems = [{ id: 'All', name: 'All departments', people: '1,840' }].concat(DEPTS).map(d => {
         const id = d.id || 'All', active = s.dept === id;
         return { label: d.name, people: typeof d.people === 'number' ? String(d.people) : d.people,
-          onSel: () => this.set('dept', id), style: this.scopeStyle(active), countStyle: this.countStyle(active) };
+          onSel: () => this.setState({ dept: id, menu: false }), style: this.scopeStyle(active), countStyle: this.countStyle(active) };
       });
 
       const sorts = [['people', 'Most people'], ['trend', 'Getting worse'], ['age', 'Longest open']].map(([id, label]) => ({
@@ -565,13 +578,17 @@ window.createDashboardComponent = function (DCLogic) {
         goProblems: () => this.set('tab', 'problems'), goIdeas: () => this.set('tab', 'ideas'), goNetwork: () => this.set('tab', 'network'),
         problemCountLabel: demo ? 'All 38 →' : 'All →', ideaCountLabel: demo ? 'All 147 →' : 'All →',
 
+        // shell: mobile drawer
+        railClass: 'nh-rail' + (s.menu ? ' nh-open' : ''),
+        menuOpen: s.menu, toggleMenu: () => this.setState({ menu: !s.menu, pop: null }), closeMenu: () => this.set('menu', false),
+
         // top bar
         q: s.q, onQ: e => this.setState({ q: e.target.value, pop: 'search' }),
         onQFocus: () => this.set('pop', 'search'),
         searchOpen: s.pop === 'search' && q.length >= 2, searchResults, noResults: searchResults.length === 0,
         searchWrapStyle: { flex: '1 1 90px', minWidth: 0, maxWidth: '340px', position: 'relative', display: 'flex', alignItems: 'center', gap: '8px',
           background: s.pop === 'search' ? '#fff' : '#f4f3f0', border: '1px solid ' + (s.pop === 'search' ? INK : '#e6e5e0'), borderRadius: '9px', padding: '7px 10px', boxSizing: 'border-box' },
-        decisionBtnLabel, dropdown, noDropdown: dropdown.length === 0,
+        decisionBtnLabel, decisionShort: !demo && !dropCount ? '0' : String(dropCount), dropdown, noDropdown: dropdown.length === 0,
         dropdownEmpty: isManager ? 'Nothing is waiting on you.' : isLead ? 'Nothing in your inbox is close to its deadline.' : 'Everything you sent has been answered on time.',
         dropdownTitle: isManager ? 'Waiting on a decision' : isLead ? 'Answer owed this week' : 'Answers owed to you',
         toggleDecisions: pop('decisions'), decisionsOpen: s.pop === 'decisions',
@@ -587,7 +604,7 @@ window.createDashboardComponent = function (DCLogic) {
 
         // dev panel
         roles, dev: s.dev, toggleDev: () => this.setState({ dev: !s.dev, pop: null }),
-        toggleDemo: () => this.set('demo', !s.demo), resetDemo: () => this.resetDemo(),
+        toggleDemo: () => this.setState({ demo: !s.demo, dev: false }), resetDemo: () => this.resetDemo(),
         demoLabel: demo ? 'Demo data on' : 'Demo data off',
         demoTrack: { width: '30px', height: '17px', borderRadius: '999px', padding: '2px', boxSizing: 'border-box', background: demo ? this.accent() : '#4a4a44', cursor: 'pointer', display: 'flex', justifyContent: demo ? 'flex-end' : 'flex-start' },
         devBtnStyle: { display: 'flex', alignItems: 'center', gap: '7px', background: s.dev ? '#fbfbf9' : '#2e2e28', color: s.dev ? '#1a1a17' : '#c9c8c0', border: '1px solid ' + (s.dev ? '#fbfbf9' : '#3d3d38'), borderRadius: '9px', padding: '7px 11px', fontFamily: MONO, fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', boxShadow: '0 6px 20px rgba(0,0,0,0.35)' },

@@ -23,19 +23,21 @@
       <link rel="stylesheet" href="./css/dashboard.css">
     </helmet>
 
-    <div style="background:#f4f3f0; height:100vh; overflow:hidden; display:flex; box-sizing:border-box;">
+    <div class="nh-root" style="background:#f4f3f0; height:100vh; overflow:hidden; display:flex; box-sizing:border-box;">
 
       <!-- ░░ RAIL ░░ -->
-      <div
+      <div class="{{ railClass }}"
         style="width:246px; flex:none; background:#1a1a17; display:flex; flex-direction:column; padding:20px 14px 70px; box-sizing:border-box; overflow:auto;">
         <div style="display:flex; align-items:center; gap:10px; padding:0 8px 20px;">
           <span
             style="width:28px; height:28px; border-radius:8px; background:#f4f3f0; color:#1a1a17; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; flex:none;">K</span>
-          <span style="display:flex; flex-direction:column; min-width:0;">
+          <span style="display:flex; flex-direction:column; min-width:0; flex:1;">
             <span style="font-size:14px; font-weight:700; color:#fbfbf9; letter-spacing:-0.01em;">Kessler</span>
             <span
               style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:#7d7c73;">Antriebstechnik</span>
           </span>
+          <span class="nh-close" onClick="{{ closeMenu }}"
+            style="display:none; width:30px; height:30px; border-radius:8px; background:#2e2e28; color:#fbfbf9; align-items:center; justify-content:center; font-size:16px; cursor:pointer; flex:none;">×</span>
         </div>
 
         <div
@@ -83,21 +85,27 @@
       <!-- ░░ MAIN ░░ -->
       <div style="flex:1; min-width:0; display:flex; flex-direction:column;">
 
-        <div
+        <div class="nh-topbar"
           style="height:58px; flex:none; display:flex; align-items:center; gap:16px; padding:0 22px; background:#fff; border-bottom:1px solid #e6e5e0; box-sizing:border-box;">
-          <span
+          <span class="nh-burger" onClick="{{ toggleMenu }}"
+            style="display:none; width:34px; height:34px; border-radius:9px; border:1px solid #e6e5e0; background:#f4f3f0; flex-direction:column; align-items:center; justify-content:center; gap:4px; cursor:pointer; flex:none;">
+            <span style="width:14px; height:2px; background:#141414; border-radius:2px;"></span>
+            <span style="width:14px; height:2px; background:#141414; border-radius:2px;"></span>
+            <span style="width:14px; height:2px; background:#141414; border-radius:2px;"></span>
+          </span>
+          <span class="nh-period"
             style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:#a0a099; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:0 1 auto; min-width:0;">Innovation
             &amp; agility · Q3 2026</span>
-          <div style="{{ searchWrapStyle }}">
+          <div class="nh-search" style="{{ searchWrapStyle }}">
             <span style="width:11px; height:11px; border:1.5px solid #a0a099; border-radius:50%; flex:none;"></span>
             <input id="nh-search" type="text" placeholder="Search problems, ideas, people" value="{{ q }}"
               oninput="{{ onQ }}" onfocus="{{ onQFocus }}" autocomplete="off"
               style="flex:1; min-width:0; border:0; outline:0; background:transparent; font-family:inherit; font-size:12.5px; color:#141414; padding:0;">
-            <span
+            <span class="nh-kbd"
               style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#b8b7b0; margin-left:auto; flex:none;">⌘K</span>
 
             <sc-if value="{{ searchOpen }}" hint-placeholder-val="{{ false }}">
-              <div
+              <div class="nh-pop"
                 style="position:absolute; top:calc(100% + 6px); left:0; right:0; min-width:340px; background:#fff; border:1px solid #e6e5e0; border-radius:12px; padding:6px; box-shadow:0 14px 40px rgba(20,20,20,0.14); z-index:40;">
                 <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
                   <div style="padding:14px 12px; font-size:12.5px; color:#8c8c88;">Nothing matches. Try a word from the problem, an idea, or a
@@ -119,12 +127,13 @@
 
           <div style="display:flex; align-items:center; gap:10px; margin-left:auto; flex:none; position:relative;">
             <span onClick="{{ toggleDecisions }}" style="{{ decisionBtnStyle }}">
-              <span style="{{ decisionDotStyle }}"></span>{{ decisionBtnLabel }}
+              <span style="{{ decisionDotStyle }}"></span><span class="nh-dlong">{{ decisionBtnLabel }}</span><span class="nh-dshort"
+                style="display:none;">{{ decisionShort }}</span>
             </span>
             <span onClick="{{ toggleMe }}" style="{{ avatarStyle }}">{{ who.ini }}</span>
 
             <sc-if value="{{ decisionsOpen }}" hint-placeholder-val="{{ false }}">
-              <div
+              <div class="nh-pop"
                 style="position:absolute; top:calc(100% + 8px); right:38px; width:360px; background:#1a1a17; border-radius:12px; padding:14px 14px 10px; box-shadow:0 14px 40px rgba(20,20,20,0.3); z-index:40;">
                 <div style="display:flex; align-items:baseline; justify-content:space-between; gap:10px;">
                   <span
@@ -152,7 +161,7 @@
             </sc-if>
 
             <sc-if value="{{ meOpen }}" hint-placeholder-val="{{ false }}">
-              <div
+              <div class="nh-pop"
                 style="position:absolute; top:calc(100% + 8px); right:0; width:280px; background:#fff; border:1px solid #e6e5e0; border-radius:12px; padding:14px; box-shadow:0 14px 40px rgba(20,20,20,0.14); z-index:40;">
                 <div style="display:flex; align-items:center; gap:10px;">
                   <span
@@ -182,13 +191,13 @@
           </div>
         </div>
 
-        <div style="flex:1; overflow:auto; padding:20px 22px 32px; box-sizing:border-box;">
+        <div class="nh-content" style="flex:1; overflow:auto; padding:20px 22px 32px; box-sizing:border-box;">
           <div style="min-width:0; display:flex; flex-direction:column; gap:14px;">
 
             <!-- page head -->
             <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap;">
               <div style="min-width:0;">
-                <div style="font-size:23px; font-weight:800; color:#141414; letter-spacing:-0.028em; line-height:1.15;">
+                <div class="nh-title" style="font-size:23px; font-weight:800; color:#141414; letter-spacing:-0.028em; line-height:1.15;">
                   {{ viewTitle }}</div>
                 <div style="font-size:13px; color:#8c8c88; margin-top:5px; line-height:1.45; max-width:640px;">{{
                   viewSub }}</div>
@@ -261,7 +270,7 @@
                   </sc-for>
                 </div>
 
-                <div style="position:sticky; top:0; display:flex; flex-direction:column; gap:12px;">
+                <div class="nh-sticky" style="position:sticky; top:0; display:flex; flex-direction:column; gap:12px;">
                   <div style="background:#1a1a17; border-radius:14px; padding:18px 20px 20px;">
                     <div style="font-size:15px; font-weight:800; color:#fbfbf9; letter-spacing:-0.015em;">Raise a problem</div>
                     <div style="font-size:12.5px; color:#a3a29a; margin-top:6px; line-height:1.55;">One field. Say what is
@@ -371,7 +380,7 @@
             <sc-if value="{{ isInbox }}" hint-placeholder-val="{{ false }}">
               <div style="display:flex; flex-direction:column; gap:14px;">
 
-                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px;">
+                <div class="nh-stats" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px;">
                   <sc-for list="{{ inboxStats }}" as="k" hint-placeholder-count="4">
                     <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:14px 17px 13px;">
                       <div style="{{ k.vStyle }}">{{ k.v }}</div>
@@ -402,7 +411,7 @@
                                   <div style="font-size:12px; color:#8c8c88; margin-top:4px;">{{ c.from }}</div>
                                 </div>
                                 <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-                                  <span style="{{ c.clockStyle }}">{{ c.clock }}</span>
+                                  <span class="nh-clock" style="{{ c.clockStyle }}">{{ c.clock }}</span>
                                   <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#a0a099;">open {{ c.age }}</span>
                                 </div>
                               </div>
@@ -462,7 +471,7 @@
                     </div>
                   </div>
 
-                  <div style="position:sticky; top:0; display:flex; flex-direction:column; gap:12px;">
+                  <div class="nh-sticky" style="position:sticky; top:0; display:flex; flex-direction:column; gap:12px;">
                     <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:20px 20px 18px;">
                       <div
                         style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099;">
@@ -567,7 +576,7 @@
                   </div>
                 </div>
 
-                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:10px;">
+                <div class="nh-stats" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:10px;">
                   <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
                     <div style="background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:15px 17px 14px;">
                       <div
@@ -865,7 +874,7 @@
                   </div>
                 </div>
 
-                <div
+                <div class="nh-sticky"
                   style="position:sticky; top:0; background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:20px 20px 18px;">
                   <div
                     style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099;">
@@ -959,7 +968,7 @@
                   </div>
                 </div>
 
-                <div
+                <div class="nh-sticky"
                   style="position:sticky; top:0; background:#fff; border:1px solid #e6e5e0; border-radius:14px; padding:20px 20px 18px;">
                   <div
                     style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:0.13em; text-transform:uppercase; color:#a0a099;">
@@ -1313,16 +1322,21 @@
 
       <!-- ░░ TOAST ░░ -->
       <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
-        <div
+        <div class="nh-toast"
           style="position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:60; max-width:520px; background:#1a1a17; color:#fbfbf9; border-radius:11px; padding:11px 16px; font-size:12.5px; font-weight:600; line-height:1.45; box-shadow:0 14px 40px rgba(20,20,20,0.3);">
           {{ toast }}</div>
       </sc-if>
 
-      <!-- ░░ DEV PANEL ░░ fixed bottom-left: role switch + demo data toggle -->
-      <div style="position:fixed; right:14px; bottom:14px; z-index:50; display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+      <!-- ░░ DRAWER SCRIM ░░ (mobile: tap outside the rail to close it) -->
+      <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closeMenu }}" style="position:fixed; inset:0; z-index:70; background:rgba(20,20,20,0.45);"></div>
+      </sc-if>
+
+      <!-- ░░ DEV PANEL ░░ fixed bottom-right: role switch + demo data toggle -->
+      <div class="nh-dev" style="position:fixed; right:14px; bottom:14px; z-index:50; display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
         <sc-if value="{{ dev }}" hint-placeholder-val="{{ false }}">
           <div
-            style="width:256px; background:#1a1a17; border:1px solid #33332e; border-radius:12px; padding:12px; box-shadow:0 14px 40px rgba(0,0,0,0.45); box-sizing:border-box;">
+            class="nh-devpanel" style="width:256px; background:#1a1a17; border:1px solid #33332e; border-radius:12px; padding:12px; box-shadow:0 14px 40px rgba(0,0,0,0.45); box-sizing:border-box;">
             <div
               style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.16em; text-transform:uppercase; color:#a3a29a; padding:0 2px 8px;">
               Viewing as</div>
