@@ -1,6 +1,6 @@
 // Smoke test: load the dashboard in headless Chromium and fail on anything a
 // human would notice in the first ten seconds. Runs in CI; you can run it
-// locally too:  python -m http.server 8765  then  node .github/ci/smoke.cjs
+// locally too:  npm run demo  then  node .github/ci/smoke.cjs
 // (needs `npm i playwright` somewhere on NODE_PATH).
 //
 // Deliberately shallow — it doesn't test features, it tests "the page is not

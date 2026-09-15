@@ -1,6 +1,6 @@
 // End-to-end flow test: the process the demo exists to show, driven through
 // the real UI in headless Chromium. Runs in CI after the smoke test; locally:
-//   python -m http.server 8765   then   node .github/ci/flow.test.cjs
+//   npm run demo   then   node .github/ci/flow.test.cjs
 //
 // The story (docs/ACTIONS_PLAN.md, phase 2 exit test):
 //   employee raises → lead sees it → lead asks one question → employee answers

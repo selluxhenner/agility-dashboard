@@ -1,0 +1,102 @@
+// "My cases" rows: facts in, sentences out. Port of mineRow / cosignRow in legacy/demo/js/dashboard.js.
+// Nothing here is stored - every string is rebuilt from the reduced case at render time.
+import { days } from "@/lib/utils/format";
+import type { ReducedCase, ReducedIdea } from "./reducer";
+
+export type StepTone = "done" | "now" | "late" | "todo";
+export type Step = { label: string; when: string; tone: StepTone };
+export type MineStatus = "Shipped" | "Building" | "Approved" | "Declined" | "Question for you" | "Sent" | ReducedIdea["status"];
+
+export type MineRow = {
+  id: string; kind: "case" | "idea"; sortDay: number; title: string; status: MineStatus; overdue: boolean;
+  canReply: boolean; replyTo: string; submitted: string; clock: string; steps: Step[];
+  reply: string; replyBy: string; outcome: string; outcomeNote: string;
+};
+
+// A day offset (0 = demo today) as a short date; 'today' / 'yesterday' near now.
+export type DayFmt = (d: number) => string;
+
+export function dayFormatter(today: Date, demoDay: number): DayFmt {
+  return (d) => {
+    const rel = d - demoDay;
+    if (rel === 0) return "today";
+    if (rel === -1) return "yesterday";
+    const date = new Date(today);
+    date.setDate(date.getDate() + d);
+    return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  };
+}
+
+// One case, seen by the person who raised it.
+export function mineRow(c: ReducedCase, day: number, f: DayFmt, promiseDays: number, outcomeDays: number): MineRow {
+  const P = promiseDays;
+  const deputy = c.route ? (c.route.owner.name === c.assignee ? c.route.deputy : c.route.owner.name) : "their deputy";
+  const q = c.question, dec = c.decided, b = c.building, sh = c.shipped;
+  const buildDay = b ? Math.min(b.days, day - b.day) : 0;
+  const status: MineStatus = sh ? "Shipped" : b ? "Building" : dec ? (dec.answer === "yes" ? "Approved" : "Declined") : c.status === "asked" ? "Question for you" : "Sent";
+  const steps: Step[] = [
+    { label: "Sent", when: f(c.raisedDay), tone: "done" },
+    { label: "Read by a human", when: c.read !== null ? f(c.read) : "pending", tone: c.read !== null ? "done" : "now" },
+    dec ? { label: "Decided", when: f(dec.day), tone: "done" }
+      : c.status === "asked" ? { label: "Decided", when: "question for you", tone: "now" }
+        : c.overdue ? { label: "Decided", when: "overdue", tone: "late" }
+          : { label: "Decided", when: "due " + f(c.dueDay), tone: c.read !== null ? "now" : "todo" },
+    sh ? { label: "Shipped", when: f(sh.day), tone: "done" }
+      : b ? { label: "Shipped", when: "due " + f(b.day + b.days), tone: "now" }
+        : { label: "Shipped", when: "—", tone: "todo" },
+  ];
+  const clock = sh ? "Answered in " + days(c.clock) + ". Live since " + f(sh.day) + "."
+    : b ? "Answered in " + days(c.clock) + ". In build since " + f(b.day) + " — day " + buildDay + " of " + b.days + "."
+      : dec ? (dec.answer === "yes" ? "Answered “yes” in " : "Answered “no” in ") + days(c.clock) + (dec.reason ? " — " + dec.reason : "") + "."
+        : c.status === "asked" && q ? q.by + " asked you a question " + f(q.day) + ". The clock is paused until you answer."
+          : c.overdue ? c.clock + " days waiting — " + days(c.clock - P) + " past the promise." + (c.escalated ? " Moved to " + c.escalated.to + " automatically." : "")
+            : c.read !== null ? c.assignee + " read this " + f(c.read) + ". They owe you a yes, a no or a question by " + f(c.dueDay) + "."
+              : "Sent to " + c.assignee + ". They owe you a yes, a no or a question by " + f(c.dueDay) + ".";
+  const answered = !!(q && q.answer && !dec);
+  const last = c.handed[c.handed.length - 1];
+  const reply = dec ? (dec.note || (dec.answer === "yes" ? "Yes — we are doing this." : "No." + (dec.reason ? " Reason: " + dec.reason + "." : "")))
+    : c.status === "asked" && q ? "“" + (q.text || "One question for you before this can be decided.") + "”"
+      : answered && q && q.answer ? "“" + (q.text || "One question.") + "” — you answered: “" + q.answer.text + "”. The clock is running again."
+        : last ? "Handed from " + last.from + " to " + c.assignee + " " + f(last.day) + ". The clock kept running."
+          : "No reply yet. " + c.assignee + " has been told; if they miss the date it moves to " + deputy + " automatically.";
+  const replyBy = dec ? dec.by + " · " + f(dec.day)
+    : c.status === "asked" && q ? q.by + " · " + f(q.day)
+      : answered && q && q.answer ? q.by + " · " + f(q.day) + ", you · " + f(q.answer.day)
+        : "the " + P + "-day clock started " + f(c.raisedDay);
+  return {
+    id: c.id, kind: "case", sortDay: c.raisedDay, title: c.title, status, overdue: c.overdue,
+    canReply: c.status === "asked", replyTo: q ? q.by : "",
+    submitted: "You raised this " + f(c.raisedDay) + " · " + c.from,
+    clock, steps, reply, replyBy,
+    outcome: sh ? sh.outcome : b && b.expected ? "expected " + b.expected : "pending",
+    outcomeNote: sh ? sh.outcomeNote : b ? "will be measured " + outcomeDays + " days after launch" : "measured " + outcomeDays + " days after launch",
+  };
+}
+
+// An idea I co-signed, as a row in My cases.
+export function cosignRow(i: ReducedIdea, day: number, f: DayFmt, handle: string, promiseDays: number): MineRow {
+  const P = promiseDays;
+  const cs = i.cosigners.find((x) => x.name === handle);
+  const since = cs ? cs.day : 0;
+  const waiting = i.status === "Awaiting decision", late = waiting && i.wait > P, ap = i.approved;
+  const raised = day - (i.wait || 0), lead = i.team[0] === "—" ? "the proposer" : i.team[0];
+  return {
+    id: i.id, kind: "idea", sortDay: since, title: i.title, status: i.status, overdue: late,
+    canReply: false, replyTo: "",
+    submitted: "You co-signed this " + f(since) + " · " + handle,
+    clock: ap ? "Approved " + f(ap.day) + " by " + ap.by + "." + (i.team[0] !== "—" ? " " + i.team.filter((n) => n !== "Anonymous").join(", ") + " are on it." : "")
+      : waiting ? i.wait + " days waiting" + (late ? " — " + (i.wait - P) + " days past the promise. Escalated one level up." : ". Answer owed by " + f(raised + P) + ".")
+        : i.status === "Shipped" ? "Shipped. " + (i.expected || "") : i.status + ". " + (i.expected || ""),
+    steps: [
+      { label: "Sent", when: f(raised), tone: "done" },
+      { label: "Read by a human", when: f(raised + 1), tone: "done" },
+      ap ? { label: "Decided", when: f(ap.day), tone: "done" }
+        : waiting ? (late ? { label: "Decided", when: "overdue", tone: "late" } : { label: "Decided", when: "due " + f(raised + P), tone: "now" })
+          : { label: "Decided", when: "—", tone: i.status === "Unfunded" ? "todo" : "done" },
+      i.status === "Shipped" ? { label: "Shipped", when: "live", tone: "done" } : { label: "Shipped", when: "—", tone: "todo" },
+    ],
+    reply: i.teamNote, replyBy: lead + " · proposer",
+    outcome: ap ? "approved" : i.status === "Shipped" ? i.expected : "pending",
+    outcomeNote: i.upside && i.upside !== "not modelled" ? i.upside + " / yr expected" + (ap || i.status === "Shipped" ? "" : " if approved") : "upside not modelled yet",
+  };
+}

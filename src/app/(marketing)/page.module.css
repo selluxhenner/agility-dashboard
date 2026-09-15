@@ -1,0 +1,85 @@
+/* Landing page. Widths vary on purpose:
+   hero 880px · clock 720px · metric 720px · how 1040px · roles 1240px · close 560px. */
+
+.hero {
+  max-width: 880px; margin: 0 auto;
+  padding: clamp(56px, 9vw, 120px) var(--nh-page-x) 0;
+  display: grid; gap: 22px; justify-items: start;
+}
+.hero h1 { font-size: clamp(40px, 6.5vw, 76px); font-weight: 800; max-width: 12ch; }
+.lead { font-size: clamp(16px, 1.6vw, 19px); color: var(--nh-ink-2); max-width: 52ch; line-height: 1.55; }
+.cta { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* The clock: an open figure, no box - two rules and the bars. */
+.clock {
+  max-width: 720px; margin: 56px auto 0;
+  padding: 0 var(--nh-page-x) clamp(56px, 8vw, 96px);
+  display: grid; gap: 18px;
+}
+.clockRow { display: grid; grid-template-columns: 220px 1fr 84px; align-items: center; gap: 20px; padding-top: 16px; border-top: 1px solid var(--nh-line); }
+.clockLabel { font-size: 13px; font-weight: 600; }
+.clockLabel span { display: block; font-weight: 400; color: var(--nh-mute); font-size: 12px; }
+.bar { height: 8px; background: var(--nh-line-soft); border-radius: 999px; overflow: hidden; }
+.barFill { height: 100%; background: var(--nh-ink); border-radius: 999px; }
+.barAccent { background: var(--nh-accent); }
+.clockVal { text-align: right; font-size: 14px; font-weight: 600; }
+.clockNote { font-size: 14px; color: var(--nh-mute); max-width: 48ch; margin-top: 4px; }
+
+/* Metric: full-bleed dark, narrow text. */
+.metric { background: var(--nh-dark); color: var(--nh-on-dark); }
+.metricInner { max-width: 720px; margin: 0 auto; padding: clamp(56px, 8vw, 88px) var(--nh-page-x); display: grid; gap: 14px; }
+.metric :global(.nh-eyebrow) { color: var(--nh-on-dark-mute); }
+.metricBig { font-size: clamp(26px, 3.6vw, 42px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+.metricBig :global(.nh-mono) { color: var(--nh-accent); font-weight: 500; }
+.metricSub { color: var(--nh-on-dark-mute); max-width: 52ch; }
+
+/* How: heading column left, the three moves as a plain list right. */
+.how {
+  max-width: 1040px; margin: 0 auto;
+  padding: clamp(64px, 8vw, 104px) var(--nh-page-x) 0;
+  display: grid; grid-template-columns: minmax(200px, 5fr) 7fr; gap: 40px clamp(32px, 6vw, 96px); align-items: start;
+}
+.howHead { display: grid; gap: 12px; position: sticky; top: 88px; }
+.howHead h2 { font-size: clamp(28px, 3.4vw, 40px); }
+.steps { display: grid; }
+.step { padding: 22px 0; border-top: 1px solid var(--nh-line); display: grid; gap: 8px; }
+.step:last-child { border-bottom: 1px solid var(--nh-line); }
+.step h3 { font-size: 19px; }
+.step p { color: var(--nh-ink-2); font-size: 15px; max-width: 52ch; }
+
+/* Roles: the widest section, one row per role, hairlines instead of boxes. */
+.roles { max-width: 1240px; margin: 0 auto; padding: clamp(64px, 8vw, 104px) var(--nh-page-x) 0; display: grid; gap: 14px; }
+.roles h2 { font-size: clamp(28px, 3.4vw, 40px); }
+.roleTable { margin-top: 24px; display: grid; }
+.roleRow {
+  display: grid; grid-template-columns: 200px minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 16px clamp(24px, 4vw, 64px); padding: 26px 0; border-top: 1px solid var(--nh-line); align-items: start;
+}
+.roleRow:last-child { border-bottom: 1px solid var(--nh-line); }
+.roleWho { display: grid; gap: 6px; }
+.roleWho h3 { font-size: 22px; }
+.roleBody { color: var(--nh-ink-2); font-size: 15px; max-width: 40ch; }
+.roleRows { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 13px; color: var(--nh-ink-2); }
+.roleRows li { display: flex; gap: 12px; align-items: baseline; padding-left: 12px; border-left: 2px solid var(--nh-line); }
+.roleRows :global(.nh-mono) { color: var(--nh-ink); font-weight: 600; }
+.age { min-width: 30px; color: var(--nh-accent) !important; }
+
+/* Close: a short statement, centered, narrow. */
+.close {
+  max-width: 560px; margin: 0 auto; padding: clamp(80px, 10vw, 128px) var(--nh-page-x) 24px;
+  display: grid; gap: 14px; justify-items: start;
+}
+.close h2 { font-size: clamp(26px, 3vw, 34px); }
+.close p { color: var(--nh-ink-2); font-size: 15px; }
+.close :global(.nh-btn) { margin-top: 8px; }
+
+@media (max-width: 900px) {
+  .how { grid-template-columns: 1fr; gap: 24px; }
+  .howHead { position: static; }
+  .roleRow { grid-template-columns: 1fr; gap: 12px; }
+  .roleBody { max-width: none; }
+}
+@media (max-width: 640px) {
+  .clockRow { grid-template-columns: 1fr 64px; }
+  .clockRow .bar { grid-column: 1 / -1; order: 3; }
+}

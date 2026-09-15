@@ -9,11 +9,11 @@
 ## How I tested it
 
 <!-- Tick what you actually did. -->
-- [ ] Page loads, no console errors
-- [ ] Checked all three roles (Employee / Team leader / Manager)
-- [ ] Checked with Demo data **off**
+- [ ] `npm run lint && npm run typecheck && npm test && npm run build` pass
+- [ ] The pages I touched load, no console errors
 - [ ] Checked below 760px
+- [ ] (if it affects a role view) checked as Manager / Team leader / Team member
 
 ## Anything Kevin should know
 
-<!-- New files? Touched the data model shape? Needed something that was blocked? Leave empty if nothing. -->
+<!-- New dependency? Touched config, roles, auth, or the data model? Needed something that was blocked? Leave empty if nothing. -->

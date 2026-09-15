@@ -10,7 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
 
-const root = path.join(__dirname, '..', '..');
+const root = path.join(__dirname, '..', '..', 'legacy', 'demo');
 const mem = {};
 const sandbox = {
   console,

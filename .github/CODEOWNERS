@@ -5,9 +5,18 @@
 
 # Places where a change has a large blast radius — listed separately so it's
 # visible in the diff of this file when ownership ever gets split up.
-/support.js             @selluxhenner
-/js/store.js            @selluxhenner
-/index.html             @selluxhenner
+/legacy/demo/support.js @selluxhenner
+/legacy/demo/js/store.js @selluxhenner
+/package.json           @selluxhenner
+/package-lock.json      @selluxhenner
+/next.config.ts         @selluxhenner
+/tsconfig.json          @selluxhenner
+/eslint.config.mjs      @selluxhenner
+/src/proxy.ts           @selluxhenner
+/src/config/roles.ts    @selluxhenner
+/src/features/auth/     @selluxhenner
+/src/features/cases/reducer.ts @selluxhenner
+/prisma/schema.prisma   @selluxhenner
 /.github/               @selluxhenner
 /.gitignore             @selluxhenner
 /CLAUDE.md              @selluxhenner
