@@ -11,7 +11,7 @@ export default async function AppLayout({ children, params }: { children: React.
   const tenant = (await findTenant(company))!;
   const seed = seedFor(tenant.slug);
   return (
-    <DemoProvider tenant={{ slug: tenant.slug, name: tenant.name }} seed={seed}>
+    <DemoProvider tenant={{ slug: tenant.slug, name: tenant.name, users: tenant.users.map((u) => ({ name: u.name, email: u.email })) }} seed={seed}>
       <AppShell>{children}</AppShell>
     </DemoProvider>
   );
