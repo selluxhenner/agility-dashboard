@@ -16,7 +16,7 @@ import { dayFormatter, type DayFmt } from "@/features/cases/rows";
 import { exportSnippet } from "@/features/cases/selectors";
 import type { Persona, RolePersona, Seed } from "@/features/demo/types";
 import { counts, demoData, type Counts, type DemoData } from "@/features/metrics";
-import { getServerSnapshot, getSnapshot, resetLog, setPrefs, subscribe, updateLog } from "@/lib/demo-log";
+import { clearPrefs, getServerSnapshot, getSnapshot, resetLog, setPrefs, subscribe, updateLog } from "@/lib/demo-log";
 import { deptName as deptNameOf } from "@/lib/utils/format";
 
 export type Pop = "search" | "decisions" | "me" | "sort" | "filter";
@@ -39,13 +39,13 @@ export type Act = {
 };
 
 export type DemoContext = {
-  tenant: { slug: string; name: string };
+  tenant: TenantInfo;
   seed: Seed;
   ready: boolean;
   S: State; D: DemoData; N: Counts; log: EventLog;
   role: Role; setRole: (r: Role) => void;
   leadAs: string | null; setLeadAs: (name: string) => void;
-  persona: { role: RolePersona; who: Persona }; actor: string;
+  persona: { role: RolePersona; who: Persona }; actor: string; email: string | null;
   demo: boolean; toggleDemo: () => void;
   dept: string; setDept: (id: string) => void; matches: (depts: readonly string[]) => boolean; deptName: (id: string) => string;
   q: string; setQ: (q: string) => void;
@@ -55,7 +55,7 @@ export type DemoContext = {
   menu: boolean; setMenu: (b: boolean) => void;
   dev: boolean; setDev: (b: boolean) => void;
   act: Act;
-  resetDemo: () => void; copySnippet: () => void;
+  resetDemo: () => void; copySnippet: () => void; logout: () => void;
   f: DayFmt; // demo day offset -> "today" / "12 Sep"
   href: (path: string) => string; // "/ideas?id=i1" -> "/acme/ideas?id=i1"
 };
@@ -77,7 +77,9 @@ function roleFromPath(path: string): Role {
 
 const iniOf = (name: string) => name.split(" ").map((w) => w[0]).join("").slice(0, 2);
 
-type Props = { tenant: { slug: string; name: string }; seed: Seed; children: React.ReactNode };
+// What the shell knows about the company: slug + name for chrome, the user list only to show an email in the profile menu.
+export type TenantInfo = { slug: string; name: string; users?: { name: string; email: string }[] };
+type Props = { tenant: TenantInfo; seed: Seed; children: React.ReactNode };
 
 export function DemoProvider({ tenant, seed, children }: Props) {
   const router = useRouter();
@@ -147,6 +149,7 @@ export function DemoProvider({ tenant, seed, children }: Props) {
 
   // Who is acting: the employee posts under their handle, everyone else by name.
   const actor = persona.role.id === "member" && persona.who.handle ? persona.who.handle : persona.who.name;
+  const email = tenant.users?.find((u) => u.name === persona.who.name)?.email ?? null;
 
   const showToast = useCallback((msg: string) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -205,6 +208,13 @@ export function DemoProvider({ tenant, seed, children }: Props) {
     showToast("Demo state reset");
   }, [slug, showToast]);
 
+  // Log out: forget the persona in this browser and go back to the company login. Demo log stays.
+  const logout = useCallback(() => {
+    clearPrefs(slug);
+    closeAll(); setSheet(null);
+    router.push(href("/login"));
+  }, [slug, closeAll, router, href]);
+
   // Session-created cases as seed rows (with their history) for src/features/demo/seed.ts.
   const copySnippet = useCallback(() => {
     const txt = exportSnippet(S);
@@ -217,13 +227,13 @@ export function DemoProvider({ tenant, seed, children }: Props) {
 
   const value: DemoContext = {
     tenant, seed, ready, S, D, N, log,
-    role, setRole, leadAs, setLeadAs, persona, actor,
+    role, setRole, leadAs, setLeadAs, persona, actor, email,
     demo, toggleDemo: () => { setPrefs(slug, { demo: !demo }); setDev(false); },
     dept, setDept: (id) => { setPrefs(slug, { dept: id }); setMenu(false); }, matches: (depts) => dept === "All" || depts.includes(dept), deptName,
     q, setQ, pop, setPop, togglePop: (p) => setPop((cur) => (cur === p ? null : p)),
     sheet, openSheet: (kind, id, init) => { setSheet({ kind, id, text: "", picked: null, people: [], ...init }); setPop(null); },
     closeSheet: () => setSheet(null), patchSheet: (p) => setSheet((s) => (s ? { ...s, ...p } : s)),
-    toast, showToast, menu, setMenu, dev, setDev, act, resetDemo, copySnippet,
+    toast, showToast, menu, setMenu, dev, setDev, act, resetDemo, copySnippet, logout,
     f: dayFormatter(today, S.day), href,
   };
 
