@@ -5,7 +5,9 @@
 //
 // Rule carried over: UI code changes domain state only through `act.*`, which appends one
 // event as the current persona. Everything shown is reduce(seed, log) - see features/cases.
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+// The log and the dev-panel settings persist in localStorage (src/lib/demo-log.ts); the
+// server renders with an empty log and `ready` false, the browser swaps in what it remembers.
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { canAccess, ROLE_HOME, type Role } from "@/config/roles";
 import { appendEvent, newId, type EventLog, type EventPayload, type CaseEventType } from "@/features/cases/events";
@@ -14,7 +16,7 @@ import { dayFormatter, type DayFmt } from "@/features/cases/rows";
 import { exportSnippet } from "@/features/cases/selectors";
 import type { Persona, RolePersona, Seed } from "@/features/demo/types";
 import { counts, demoData, type Counts, type DemoData } from "@/features/metrics";
-import { loadLog, loadPrefs, resetLog, saveLog, savePrefs } from "@/lib/demo-log";
+import { getServerSnapshot, getSnapshot, resetLog, setPrefs, subscribe, updateLog } from "@/lib/demo-log";
 import { deptName as deptNameOf } from "@/lib/utils/format";
 
 export type Pop = "search" | "decisions" | "me" | "sort" | "filter";
@@ -29,7 +31,7 @@ export type Act = {
   ask: (id: string, text: string) => void;
   answer: (id: string, text: string) => void;
   override: (id: string, proposed: string | null, chosen: string) => void;
-  cosign: (ideaId: string) => boolean; // returns true when the co-sign was added, false when withdrawn
+  cosign: (ideaId: string) => boolean; // true when the co-sign was added, false when withdrawn
   askIdea: (ideaId: string, text: string) => void;
   approve: (ideaId: string, team: string[], note: string) => void;
   fund: (ideaId: string, team: string[], note: string) => void;
@@ -73,46 +75,38 @@ function roleFromPath(path: string): Role {
   return "manager";
 }
 
+const iniOf = (name: string) => name.split(" ").map((w) => w[0]).join("").slice(0, 2);
+
 type Props = { tenant: { slug: string; name: string }; seed: Seed; children: React.ReactNode };
 
 export function DemoProvider({ tenant, seed, children }: Props) {
   const router = useRouter();
   const pathname = usePathname();
-  const appPath = pathname.startsWith("/" + tenant.slug) ? pathname.slice(tenant.slug.length + 1) || "/" : pathname;
+  const slug = tenant.slug;
+  const appPath = pathname.startsWith("/" + slug) ? pathname.slice(slug.length + 1) || "/" : pathname;
 
-  const [ready, setReady] = useState(false);
-  const [log, setLog] = useState<EventLog>({ events: [], day: 0 });
-  const [role, setRoleState] = useState<Role>(() => roleFromPath(appPath));
-  const [leadAs, setLeadAsState] = useState<string | null>(null);
-  const [demo, setDemo] = useState(true);
-  const [dept, setDept] = useState("PRD");
+  // What this browser remembers: the event log and the dev-panel settings.
+  const persisted = useSyncExternalStore(subscribe, () => getSnapshot(slug), getServerSnapshot);
+  const ready = persisted.loaded;
+  const log = persisted.log;
+  const role: Role = persisted.prefs.role ?? roleFromPath(appPath);
+  const leadAs = persisted.prefs.leadAs ?? null;
+  const demo = persisted.prefs.demo ?? true;
+  const dept = persisted.prefs.dept ?? "PRD";
+
   const [q, setQ] = useState("");
   const [pop, setPop] = useState<Pop | null>(null);
   const [sheet, setSheet] = useState<Sheet | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [menu, setMenu] = useState(false);
   const [dev, setDev] = useState(false);
-  const [today, setToday] = useState(() => new Date());
+  const [today] = useState(() => new Date()); // views render dates only once `ready`, so server/client never disagree on screen
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Load what this browser remembers, once, after mount (never during server render).
-  useEffect(() => {
-    const prefs = loadPrefs(tenant.slug);
-    setLog(loadLog(tenant.slug));
-    if (prefs.role) setRoleState(prefs.role);
-    if (prefs.leadAs !== undefined) setLeadAsState(prefs.leadAs);
-    if (prefs.demo !== undefined) setDemo(prefs.demo);
-    if (prefs.dept) setDept(prefs.dept);
-    setToday(new Date());
-    setReady(true);
-  }, [tenant.slug]);
-
-  useEffect(() => { if (ready) savePrefs(tenant.slug, { role, leadAs, demo, dept }); }, [ready, tenant.slug, role, leadAs, demo, dept]);
 
   // Roles are data: a role that may not open this path is sent home.
   useEffect(() => {
-    if (ready && !canAccess(role, appPath)) router.replace("/" + tenant.slug + ROLE_HOME[role]);
-  }, [ready, role, appPath, router, tenant.slug]);
+    if (ready && !canAccess(role, appPath)) router.replace("/" + slug + ROLE_HOME[role]);
+  }, [ready, role, appPath, router, slug]);
 
   // ⌘K / Ctrl+K focuses the search box; Escape closes whatever is open.
   useEffect(() => {
@@ -137,7 +131,6 @@ export function DemoProvider({ tenant, seed, children }: Props) {
   const N = useMemo(() => counts(seed, D), [seed, D]);
 
   const deptName = useCallback((id: string) => deptNameOf(seed.depts, id), [seed.depts]);
-  const iniOf = (name: string) => name.split(" ").map((w) => w[0]).join("").slice(0, 2);
 
   // The effective role + person. The team-leader role can be viewed as any desk holder (dev
   // panel -> "inbox of"), so a hand-over or an escalation can be followed into the other inbox.
@@ -162,8 +155,8 @@ export function DemoProvider({ tenant, seed, children }: Props) {
   }, []);
 
   const emit = useCallback((type: CaseEventType, target: string | null, payload?: EventPayload) => {
-    setLog((prev) => { const next = appendEvent(prev, { type, actor, target, payload }); saveLog(tenant.slug, next); return next; });
-  }, [actor, tenant.slug]);
+    updateLog(slug, (prev) => appendEvent(prev, { type, actor, target, payload }));
+  }, [actor, slug]);
 
   const act = useMemo<Act>(() => ({
     raise: (p) => { const id = newId("c"); emit("case.raised", id, p); return id; },
@@ -184,30 +177,33 @@ export function DemoProvider({ tenant, seed, children }: Props) {
     advanceDay: (by) => emit("day.advanced", null, { by: by ?? 1 }),
   }), [emit, S.ideas, actor]);
 
-  const href = useCallback((path: string) => "/" + tenant.slug + path, [tenant.slug]);
+  const href = useCallback((path: string) => "/" + slug + path, [slug]);
+  const closeAll = useCallback(() => { setPop(null); setQ(""); setDev(false); setMenu(false); }, []);
 
   const setRole = useCallback((r: Role) => {
-    setRoleState(r); setLeadAsState(null); setPop(null); setQ(""); setDev(false); setMenu(false);
     const rp = seed.personas.find((x) => x.id === r);
-    if (rp) setDept(rp.dept);
+    setPrefs(slug, { role: r, leadAs: null, dept: rp?.dept ?? dept });
+    closeAll();
     router.push(href(ROLE_HOME[r]));
-  }, [seed.personas, router, href]);
+  }, [seed.personas, slug, dept, closeAll, router, href]);
 
   // Dev panel: look at the team-leader screens as another desk holder.
   const setLeadAs = useCallback((name: string) => {
     const lead = seed.personas.find((r) => r.id === "leader");
-    const next = lead && name === lead.who.name ? null : name;
-    setRoleState("leader"); setLeadAsState(next); setPop(null); setQ(""); setDev(false); setMenu(false);
     const r = seed.routes.find((x) => x.owner.name === name);
     const b = seed.buddies.find((x) => x.name === name);
-    setDept(r ? r.owner.dept : b ? (seed.depts.find((d) => d.name === b.dept)?.id ?? lead?.dept ?? "PRD") : lead?.dept ?? "PRD");
+    const nextDept = r ? r.owner.dept : b ? (seed.depts.find((d) => d.name === b.dept)?.id ?? lead?.dept ?? "PRD") : lead?.dept ?? "PRD";
+    setPrefs(slug, { role: "leader", leadAs: lead && name === lead.who.name ? null : name, dept: nextDept });
+    closeAll();
     router.push(href(ROLE_HOME.leader));
-  }, [seed, router, href]);
+  }, [seed, slug, closeAll, router, href]);
 
   const resetDemo = useCallback(() => {
-    setLog(resetLog(tenant.slug)); setQ(""); setPop(null); setDev(false); setLeadAsState(null); setSheet(null);
+    resetLog(slug);
+    setPrefs(slug, { leadAs: null });
+    setQ(""); setPop(null); setDev(false); setSheet(null);
     showToast("Demo state reset");
-  }, [tenant.slug, showToast]);
+  }, [slug, showToast]);
 
   // Session-created cases as seed rows (with their history) for src/features/demo/seed.ts.
   const copySnippet = useCallback(() => {
@@ -222,8 +218,8 @@ export function DemoProvider({ tenant, seed, children }: Props) {
   const value: DemoContext = {
     tenant, seed, ready, S, D, N, log,
     role, setRole, leadAs, setLeadAs, persona, actor,
-    demo, toggleDemo: () => { setDemo((d) => !d); setDev(false); },
-    dept, setDept: (id) => { setDept(id); setMenu(false); }, matches: (depts) => dept === "All" || depts.includes(dept), deptName,
+    demo, toggleDemo: () => { setPrefs(slug, { demo: !demo }); setDev(false); },
+    dept, setDept: (id) => { setPrefs(slug, { dept: id }); setMenu(false); }, matches: (depts) => dept === "All" || depts.includes(dept), deptName,
     q, setQ, pop, setPop, togglePop: (p) => setPop((cur) => (cur === p ? null : p)),
     sheet, openSheet: (kind, id, init) => { setSheet({ kind, id, text: "", picked: null, people: [], ...init }); setPop(null); },
     closeSheet: () => setSheet(null), patchSheet: (p) => setSheet((s) => (s ? { ...s, ...p } : s)),

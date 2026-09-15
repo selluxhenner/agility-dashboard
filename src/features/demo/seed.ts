@@ -310,10 +310,8 @@ export const VIEWS: Record<string, ViewCopy> = {
   progress: { title: 'Does the system actually move', sub: 'Twelve months of flow, where ideas stall, and whether people got an answer.' }
 };
 
-export const COMPANY = 'Kessler Antriebstechnik';
-
 export const SEED: Seed = {
-  company: COMPANY, promiseDays: PROMISE_DAYS, outcomeDays: OUTCOME_DAYS,
+  promiseDays: PROMISE_DAYS, outcomeDays: OUTCOME_DAYS,
   depts: DEPTS, problems: PROBLEMS, ideas: IDEAS, initiatives: INITIATIVES, outcomes: OUTCOMES,
   personas: ROLES, routes: ROUTES, cases: CASES, waitingOn: WAITING_ON, buddies: BUDDIES,
   stall: STALL, ledger: LEDGER, metrics: METRICS, views: VIEWS

@@ -1,0 +1,38 @@
+.rowTop { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.rowMain { flex: 1 1 220px; min-width: 170px; }
+.caseTitle { font-size: 14px; font-weight: 700; color: var(--nh-ink); line-height: 1.35; }
+.rowRight { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.clock { font-family: var(--nh-mono); font-size: 11px; font-weight: 700; white-space: nowrap; border-radius: 6px; padding: 4px 8px; background: #f0efea; color: var(--nh-ink-2); }
+.clock[data-tone="soon"] { background: #ffe7dc; color: #b23c07; }
+.clock[data-tone="late"] { background: var(--nh-accent); color: #1a1a17; }
+.clock[data-tone="paused"] { background: transparent; color: var(--nh-on-dark-mute); border: 1px dashed #dedcd5; }
+.open { font-family: var(--nh-mono); font-size: 11px; color: var(--nh-on-dark-mute); }
+.why { margin-top: 9px; }
+.whyLabel { font-size: 11px; color: var(--nh-on-dark-mute); }
+
+.clearedCard { padding: 16px 18px 10px; }
+.clearedRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid #f0efea; padding: 10px 0; }
+.clearedTitle { font-size: 12.5px; font-weight: 600; color: var(--nh-ink-2); line-height: 1.35; }
+
+.waitingCard { padding: 18px 18px 10px; }
+.waitRow { border-top: 1px solid #f0efea; padding: 11px 0 10px; }
+.waitTitle { font-size: 13px; font-weight: 700; color: var(--nh-ink); line-height: 1.35; }
+.waitAge { font-family: var(--nh-mono); font-size: 12px; font-weight: 700; color: var(--nh-ink); white-space: nowrap; }
+.waitMeta { margin-top: 6px; gap: 8px; }
+.waitWith { font-size: 11.5px; color: var(--nh-ink-2); }
+.waitState { font-family: var(--nh-mono); font-size: 10.5px; font-weight: 600; color: var(--nh-on-dark-mute); }
+.waitState[data-hot="true"] { color: #b23c07; }
+
+.selMeta { margin-top: 11px; gap: 9px; }
+.section { margin-top: 18px; }
+.routeTile { margin-top: 9px; }
+.handedNote { font-size: 11.5px; color: var(--nh-ink-2); margin-top: 10px; line-height: 1.5; padding: 9px 12px; background: #f4f3f0; border-radius: 9px; }
+.q { margin-top: 9px; }
+.a { margin-top: 10px; }
+.pausedNote { font-size: 12px; color: var(--nh-ink-2); margin-top: 16px; line-height: 1.5; padding: 11px 13px; background: var(--nh-surface); border: 1px dashed #dedcd5; border-radius: 10px; }
+.actions { margin-top: 9px; }
+.actionNote { font-size: 11px; color: var(--nh-on-dark-mute); margin-top: 11px; line-height: 1.5; }
+
+@media (max-width: 760px) {
+  .clock { white-space: normal; text-align: right; max-width: 118px; line-height: 1.35; }
+}

@@ -1,0 +1,9 @@
+.meta { margin-top: 11px; gap: 9px; }
+.timeline { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; }
+.event { display: flex; gap: 12px; padding: 10px 0; border-top: 1px solid #f0efea; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--nh-ink); flex: none; margin-top: 6px; }
+.dot[data-seed="true"] { background: #c9c8c0; }
+.dot[data-tone="accent"] { background: var(--nh-accent); }
+.eventBody { flex: 1; min-width: 0; }
+.eventText { font-size: 12.5px; color: var(--nh-ink); line-height: 1.5; }
+.eventWhen { font-family: var(--nh-mono); font-size: 10.5px; color: var(--nh-on-dark-mute); margin-top: 3px; }

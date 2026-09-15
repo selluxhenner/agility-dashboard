@@ -75,7 +75,6 @@ export type Metrics = {
 export type ViewCopy = { title: string; sub: string };
 
 export type Seed = {
-  company: string;
   promiseDays: number; outcomeDays: number;
   depts: Dept[]; problems: Problem[]; ideas: Idea[]; initiatives: Initiative[]; outcomes: Outcome[];
   personas: RolePersona[]; routes: Route[]; cases: SeedCase[]; waitingOn: WaitingOn[]; buddies: Buddy[];
