@@ -42,7 +42,14 @@ to `NHStore` (`js/store.js`); the page renders `reduce(seed, events)`.
   `this.act.*`. Do not add a second modal, popover or inline form; the one in
   `index.html` (`.nh-sheet`) already handles keyboard, scrim and mobile.
 - Do not `setState` new keys for domain data. Component state is for UI only
-  (which tab, which row is selected, what is typed in a field, `sheet`).
+  (which tab, which row is selected, what is typed in a field, `sheet`, `leadAs`).
+- **Who is looking / acting comes from `this.persona()`**, never from `ROLES`
+  directly. The team-leader role can be viewed as any desk holder (dev panel
+  "Inbox of"), and `this.actor()` records events under that name.
+- **"Is this case mine?" is `NHStore.onDesk(c, name)`** — assigned to me *or*
+  escalated to me. Don't compare `c.assignee === name` in UI code.
+- Time is `S.day` (the demo clock). Never use `Date.now()` for anything the
+  page shows; `this.fmtDay(dayOffset, S)` turns an offset into a label.
 - Tests: `.github/ci/store.test.cjs` (reducer), `.github/ci/smoke.cjs`
   (renders), `.github/ci/flow.test.cjs` (the whole inbox loop through the UI).
   All run in CI. If your change makes one fail, the change is wrong, not the

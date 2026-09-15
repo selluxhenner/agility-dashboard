@@ -130,7 +130,9 @@ const NHStore = (function () {
     };
 
     (seed.cases || []).forEach(row => freshCase(row.id, row, true));
-    (seed.ideas || []).forEach(i => { ideas[i.id] = Object.assign({}, i, { team: i.team.slice(), cosigners: [], thread: [], approved: null }); });
+    // An idea that is still waiting keeps waiting as the demo clock advances.
+    (seed.ideas || []).forEach(i => { ideas[i.id] = Object.assign({}, i, { team: i.team.slice(), cosigners: [], thread: [], approved: null,
+      wait: i.status === 'Awaiting decision' ? (i.wait | 0) + day : (i.wait | 0), seedWait: i.wait | 0 }); });
     (seed.problems || []).forEach(p => { problems[p.id] = Object.assign({}, p); });
 
     // Seed history first (in day order), then live events (in log order).
@@ -234,13 +236,19 @@ const NHStore = (function () {
       c.clock = Math.max(0, (stopDay !== null ? stopDay : day) - c.raisedDay - paused);
       c.open = c.status === 'open';
       c.overdue = c.open && c.clock > promise;
-      c.escalated = c.overdue && route ? { to: route.owner.name === c.assignee ? route.deputy : route.owner.name } : null;
       c.dueDay = c.raisedDay + promise + paused;
+      // The promise rule (§11): miss the date and it moves to the deputy
+      // automatically — the original owner keeps it too, both can act. The
+      // route's owner takes it if the case sat with someone else, otherwise
+      // the owner's deputy. `live` = it crossed the line during this demo
+      // session (day 0 or later), which is what the manager's ledger counts.
+      const to = route ? (route.owner.name === c.assignee ? route.deputy : route.owner.name) : null;
+      c.escalated = c.overdue && to ? { to, from: c.assignee, day: c.dueDay + 1, live: c.dueDay + 1 >= 0 } : null;
     });
 
     const ledger = {
       handedOver: order.reduce((a, id) => a + cases[id].handed.length, 0),
-      escalated: order.reduce((a, id) => a + (cases[id].escalated ? 1 : 0), 0),
+      escalated: order.reduce((a, id) => a + (cases[id].escalated && cases[id].escalated.live ? 1 : 0), 0),
       overrides: order.reduce((a, id) => a + (cases[id].override ? 1 : 0), 0)
     };
 
@@ -254,7 +262,8 @@ const NHStore = (function () {
   }
 
   // ── selectors ──────────────────────────────────────────────────────────
-  const inboxFor = (state, name) => state.cases.filter(c => c.assignee === name && c.open);
+  const onDesk = (c, name) => c.assignee === name || !!(c.escalated && c.escalated.to === name);
+  const inboxFor = (state, name) => state.cases.filter(c => onDesk(c, name) && c.open);
   const mineFor = (state, handle) => state.cases.filter(c => c.from === handle);
   const cosignedBy = (state, handle) => state.ideas.filter(i => i.cosigners.some(x => x.name === handle));
 
@@ -272,7 +281,16 @@ const NHStore = (function () {
     return null;
   }
   // Open cases on someone's desk: live ones plus the ones paused on a question.
-  const deskFor = (state, name) => state.cases.filter(c => c.assignee === name && (c.open || c.status === 'asked'));
+  const deskFor = (state, name) => state.cases.filter(c => onDesk(c, name) && (c.open || c.status === 'asked'));
+  // Everyone who currently has, or could act on, a case: route owners plus
+  // whoever holds one right now (hand-overs, escalations). For "view inbox as".
+  function deskHolders(state, routes) {
+    const names = [];
+    const add = n => { if (n && names.indexOf(n) < 0) names.push(n); };
+    (routes || []).forEach(r => add(r.owner.name));
+    state.cases.forEach(c => { if (c.open || c.status === 'asked') { add(c.assignee); if (c.escalated) add(c.escalated.to); } });
+    return names;
+  }
   const clearedBy = (state, name) => state.cases.filter(c => actedBy(c, name) !== null);
 
   // Session-created cases as CASES rows (with their history as seedEvents),
@@ -288,5 +306,5 @@ const NHStore = (function () {
     return rows.length ? '// paste into CASES in js/data.js\n' + rows.join(',\n') + ',' : '';
   }
 
-  return { T, KEY, load, save, reset, append, reduce, propose, inboxFor, deskFor, mineFor, cosignedBy, actedBy, clearedBy, exportSnippet, newId };
+  return { T, KEY, load, save, reset, append, reduce, propose, onDesk, inboxFor, deskFor, deskHolders, mineFor, cosignedBy, actedBy, clearedBy, exportSnippet, newId };
 })();

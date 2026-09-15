@@ -41,6 +41,7 @@ window.createDashboardComponent = function (DCLogic) {
         demo: props.demoData !== false, dev: false,
         q: '', pop: null, draft: '', log: NHStore.load(), toast: null,
         sheet: null, // the one input sheet: { kind, id, text, picked, people } — see sheetVals()
+        leadAs: null, // dev panel "inbox of …": the team-leader role seen as another desk holder
         mobile: false, menu: false
       };
       this.onKey = this.onKey.bind(this);
@@ -77,8 +78,32 @@ window.createDashboardComponent = function (DCLogic) {
 
     // Who is acting: the employee posts under their handle, everyone else by name.
     actor() {
-      const r = ROLES.find(x => x.id === this.state.role) || ROLES[2];
-      return r.id === 'employee' && r.who.handle ? r.who.handle : r.who.name;
+      const { role, who } = this.persona();
+      return role.id === 'employee' && who.handle ? who.handle : who.name;
+    }
+
+    // The effective role + person. The team-leader role can be viewed as any
+    // desk holder (dev panel → "inbox of"), so a hand-over or an escalation
+    // can be followed into the other inbox. Everything reads through this.
+    persona() {
+      const s = this.state;
+      const role = ROLES.find(r => r.id === s.role) || ROLES[2];
+      if (role.id !== 'lead' || !s.leadAs || s.leadAs === role.who.name) return { role, who: role.who };
+      const r = ROUTES.find(x => x.owner.name === s.leadAs);
+      const b = BUDDIES.find(x => x.name === s.leadAs);
+      const dept = r ? r.owner.dept : b ? ((DEPTS.find(d => d.name === b.dept) || {}).id || role.dept) : role.dept;
+      const line = r ? r.owner.role + ' · ' + this.deptName(r.owner.dept) : b ? 'Team lead · ' + b.dept : 'Deputy · ' + this.deptName(dept);
+      return { role: Object.assign({}, role, { dept }), who: { name: s.leadAs, ini: this.ini(s.leadAs), line, handle: null } };
+    }
+
+    // Dev panel: look at the team-leader screens as another desk holder.
+    setLeadAs(name) {
+      const lead = ROLES.find(r => r.id === 'lead');
+      const leadAs = name === lead.who.name ? null : name;
+      this.setState({ role: 'lead', leadAs, pop: null, q: '', dev: false, menu: false, tab: 'inbox' }, () => {
+        const { role } = this.persona();
+        this.setState({ dept: role.dept });
+      });
     }
 
     // Seed + log → state. Cheap; called once per render.
@@ -346,11 +371,11 @@ window.createDashboardComponent = function (DCLogic) {
     // ── role switching / dev panel ───────────────────────────────────────
     setRole(id) {
       const r = ROLES.find(x => x.id === id) || ROLES[2];
-      this.setState({ role: r.id, tab: r.home, dept: r.dept, pop: null, q: '', dev: false, menu: false });
+      this.setState({ role: r.id, leadAs: null, tab: r.home, dept: r.dept, pop: null, q: '', dev: false, menu: false });
     }
 
     resetDemo() {
-      this.setState({ log: NHStore.reset(), draft: '', q: '', pop: null, dev: false });
+      this.setState({ log: NHStore.reset(), draft: '', q: '', pop: null, dev: false, leadAs: null, sheet: null });
       this.toast('Demo state reset');
     }
 
@@ -420,7 +445,7 @@ window.createDashboardComponent = function (DCLogic) {
       const f = d => this.fmtDay(d, S);
       const P = PROMISE_DAYS, cs = i.cosigners.find(x => x.name === handle), since = cs ? cs.day : 0;
       const waiting = i.status === 'Awaiting decision', late = waiting && i.wait > P, ap = i.approved;
-      const raised = -(i.wait || 0), lead = i.team[0] === '—' ? 'the proposer' : i.team[0];
+      const raised = S.day - (i.wait || 0), lead = i.team[0] === '—' ? 'the proposer' : i.team[0];
       return {
         id: i.id, sortDay: since, title: i.title, status: i.status, overdue: late,
         submitted: 'You co-signed this ' + f(since) + ' · ' + handle,
@@ -548,8 +573,7 @@ window.createDashboardComponent = function (DCLogic) {
     renderVals() {
       const s = this.state;
       const S = this.reduce();
-      const role = ROLES.find(r => r.id === s.role) || ROLES[2];
-      const who = role.who;
+      const { role, who } = this.persona();
       const isEmployee = s.role === 'employee', isLead = s.role === 'lead', isManager = s.role === 'manager';
       const demo = s.demo;
       const view = VIEWS[s.tab] || VIEWS.overview;
@@ -580,8 +604,8 @@ window.createDashboardComponent = function (DCLogic) {
       };
 
       // ── rail ──
-      const openCases = D.cases.filter(c => c.assignee === who.name && c.open);
-      const deskCases = D.cases.filter(c => c.assignee === who.name && (c.open || c.status === 'asked'));
+      const openCases = D.cases.filter(c => NHStore.onDesk(c, who.name) && c.open);
+      const deskCases = D.cases.filter(c => NHStore.onDesk(c, who.name) && (c.open || c.status === 'asked'));
       const mineCases = D.cases.filter(c => c.from === who.handle);
       const mineCount = mineCases.length + D.ideas.filter(i => i.cosigners.some(x => x.name === who.handle)).length;
       const navDefs = isEmployee
@@ -803,8 +827,9 @@ window.createDashboardComponent = function (DCLogic) {
       const ledger = {
         firstAnswer: dash(LEDGER.firstAnswer), firstAnswerWas: demo ? LEDGER.firstAnswerWas : 'measured in pilot',
         withinPromise: dash(LEDGER.withinPromise), withinPromiseWas: demo ? LEDGER.withinPromiseWas : 'measured in pilot',
-        overrides: dash(live(E.ROUTE_OVERRIDDEN) ? ((parseFloat(LEDGER.overrides) || 0) + live(E.ROUTE_OVERRIDDEN)) + '%' : LEDGER.overrides), overridesNote: demo ? LEDGER.overridesNote : 'every overruled proposal is logged — this number is the map’s accuracy',
-        escalated: dash(String(LEDGER.escalated)), handedOver: dash(String(LEDGER.handedOver + live(E.CASE_HANDED)))
+        // Seed reads "6 of 54" (or a bare percentage); every live override adds one to both sides.
+        overrides: dash((n => { if (!n) return LEDGER.overrides; const m = /^(\d+)\s+of\s+(\d+)$/.exec(String(LEDGER.overrides)); return m ? (+m[1] + n) + ' of ' + (+m[2] + n) : ((parseFloat(LEDGER.overrides) || 0) + n) + '%'; })(live(E.ROUTE_OVERRIDDEN))), overridesNote: demo ? LEDGER.overridesNote : 'every overruled proposal is logged — this number is the map’s accuracy',
+        escalated: dash(String(LEDGER.escalated + S.ledger.escalated)), handedOver: dash(String(LEDGER.handedOver + live(E.CASE_HANDED)))
       };
 
       // ── employee: my cases + intake ──
@@ -876,9 +901,12 @@ window.createDashboardComponent = function (DCLogic) {
       const inboxSorted = deskCases.slice().sort((a, b) => (a.open === b.open ? 0 : a.open ? -1 : 1) || b.clock - a.clock || b.age - a.age);
       const decorateCase = c => {
         const paused = c.status === 'asked';
+        const toMe = !!(c.escalated && c.escalated.to === who.name && c.assignee !== who.name);
         const late = c.clock > PROMISE_DAYS, soon = c.clock >= PROMISE_DAYS - 2 && !late;
         return {
-          id: c.id, title: c.title, from: c.from + ' · ' + c.fromDept, age: c.clock + ' d', reason: paused ? 'waiting on ' + c.from : c.reason, reasonStyle: paused ? this.pill('#f0efea', '#5b5b5b', 600) : this.reasonStyle(c.reason),
+          id: c.id, title: c.title, from: c.from + ' · ' + c.fromDept, age: c.clock + ' d',
+          reason: paused ? 'waiting on ' + c.from : toMe ? 'escalated from ' + c.assignee : c.reason,
+          reasonStyle: paused ? this.pill('#f0efea', '#5b5b5b', 600) : toMe ? this.pill(INK, '#fff', 600) : this.reasonStyle(c.reason),
           clock: paused ? 'clock paused' : late ? (c.clock - PROMISE_DAYS) + ' d past the promise' : (PROMISE_DAYS - c.clock) + ' d left',
           clockStyle: { fontFamily: MONO, fontSize: '11px', fontWeight: 700, whiteSpace: 'nowrap', borderRadius: '6px', padding: '4px 8px',
             background: paused ? 'transparent' : late ? this.accent() : soon ? this.accentSoft() : '#f0efea', color: paused ? '#a0a099' : late ? '#1a1a17' : soon ? this.accentInk() : '#5b5b5b',
@@ -895,10 +923,10 @@ window.createDashboardComponent = function (DCLogic) {
       const handTo = scRoute ? (scMine ? scRoute.deputy : scRoute.owner.name) : 'the triage desk';
       const sc = sc0 ? {
         title: sc0.title, body: sc0.body, from: sc0.from, fromDept: sc0.fromDept, fromIni: this.ini(sc0.from),
-        age: sc0.clock + ' days open', reason: sc0.reason, reasonStyle: this.reasonStyle(sc0.reason), upside: sc0.upside,
+        age: sc0.clock + ' days open', reason: sc0.reason, reasonStyle: this.reasonStyle(sc0.reason), upside: sc0.upside || 'not estimated yet',
         routeEyebrow: !scRoute ? 'The map has no entry for this' : scMine ? 'The map says this is yours' : 'The map proposes another owner',
         routeType: scRoute ? scRoute.type : 'no matching route — a human triages it',
-        routeOwner: !scRoute ? 'Triage desk' : scMine ? 'You · ' + scRoute.owner.role : scRoute.owner.name + ' · ' + scRoute.owner.role + ', ' + this.deptName(scRoute.owner.dept),
+        routeOwner: !scRoute ? 'Triage desk' : scMine ? 'You · ' + scRoute.owner.role : scRoute.owner.name + ' · ' + scRoute.owner.role + (scRoute.owner.role.indexOf(this.deptName(scRoute.owner.dept)) >= 0 ? '' : ', ' + this.deptName(scRoute.owner.dept)),
         routeDeputy: scRoute ? scRoute.deputy : '—', routeBuddy: scRoute ? scRoute.buddy : '—',
         handLabel: scMine ? 'Hand to ' + handTo : 'Pass to ' + handTo,
         canAct: sc0.open,
@@ -910,7 +938,11 @@ window.createDashboardComponent = function (DCLogic) {
         hasAnswer: !!(sc0.question && sc0.question.answer),
         answer: sc0.question && sc0.question.answer ? '“' + sc0.question.answer.text + '”' : '',
         answerBy: sc0.question && sc0.question.answer ? sc0.from + ' answered ' + this.fmtDay(sc0.question.answer.day, S) : '',
-        handedNote: sc0.handed.length ? 'Came to you from ' + sc0.handed[sc0.handed.length - 1].from + ' ' + this.fmtDay(sc0.handed[sc0.handed.length - 1].day, S) + (sc0.handed[sc0.handed.length - 1].why ? ' — “' + sc0.handed[sc0.handed.length - 1].why + '”' : '') + '.' : '',
+        handedNote: sc0.escalated && sc0.escalated.to === who.name && sc0.assignee !== who.name
+          ? 'Escalated to you ' + this.fmtDay(sc0.escalated.day, S) + ': ' + sc0.assignee + ' missed the ' + PROMISE_DAYS + '-day promise, so the map moved it sideways. Either of you can answer; whoever does, stops the clock.'
+          : sc0.escalated && sc0.assignee === who.name
+            ? 'Past the promise since ' + this.fmtDay(sc0.escalated.day, S) + ' — ' + sc0.escalated.to + ' now sees it too. Answer before they do.'
+            : sc0.handed.length ? 'Came to you from ' + sc0.handed[sc0.handed.length - 1].from + ' ' + this.fmtDay(sc0.handed[sc0.handed.length - 1].day, S) + (sc0.handed[sc0.handed.length - 1].why ? ' — “' + sc0.handed[sc0.handed.length - 1].why + '”' : '') + '.' : '',
         onYes: () => { this.act.decide(sc0.id, 'yes'); this.toast('Answered “yes” in ' + sc0.clock + ' days. ' + sc0.from + ' has been told; the clock is stopped.'); },
         onNo: () => this.openSheet('no', sc0.id),
         onHand: () => this.openSheet('hand', sc0.id, { picked: handTo }),
@@ -939,12 +971,12 @@ window.createDashboardComponent = function (DCLogic) {
 
       const myDeptName = this.deptName(role.dept);
       const deptOfPerson = name => { const r = ROUTES.find(x => x.owner.name === name); return r ? this.deptName(r.owner.dept) : (BUDDIES.find(b => b.name === name) || {}).dept || '—'; };
-      const liveWaiting = D.cases
-        .filter(c => (c.open || c.status === 'asked') && c.assignee !== who.name && c.fromDept.indexOf(myDeptName) === 0)
-        .map(c => ({ title: c.title, owner: c.assignee, dept: deptOfPerson(c.assignee), age: c.clock, promised: PROMISE_DAYS, paused: c.status === 'asked' }));
-      const waitingOn = liveWaiting.concat(D.waitingOn).map(w => ({
+      const liveWaitingRows = D.cases
+        .filter(c => (c.open || c.status === 'asked') && !NHStore.onDesk(c, who.name) && c.fromDept.indexOf(myDeptName) === 0)
+        .map(c => ({ title: c.title, owner: c.assignee, dept: deptOfPerson(c.assignee), age: c.clock, promised: PROMISE_DAYS, paused: c.status === 'asked', escalatedTo: c.escalated ? c.escalated.to : null }));
+      const waitingOn = liveWaitingRows.concat(D.waitingOn.map(w => Object.assign({}, w, { age: w.age + S.day }))).map(w => ({
         title: w.title, owner: w.owner + ' · ' + w.dept, age: w.age + ' d',
-        state: w.paused ? 'paused · they asked the sender a question' : w.age > w.promised ? (w.age - w.promised) + ' d past the promise · escalated' : 'answer owed in ' + (w.promised - w.age) + ' d',
+        state: w.paused ? 'paused · they asked the sender a question' : w.age > w.promised ? (w.age - w.promised) + ' d past the promise · escalated' + (w.escalatedTo ? ' to ' + w.escalatedTo : '') : 'answer owed in ' + (w.promised - w.age) + ' d',
         stateStyle: { fontFamily: MONO, fontSize: '10.5px', fontWeight: 600, color: w.age > w.promised ? this.accentInk() : '#a0a099' }
       }));
 
@@ -1053,6 +1085,15 @@ window.createDashboardComponent = function (DCLogic) {
         style: { textAlign: 'center', padding: '7px 6px', borderRadius: '8px', fontSize: '12px', fontWeight: s.role === r.id ? 700 : 600, cursor: 'pointer',
           background: s.role === r.id ? '#f4f3f0' : 'transparent', color: s.role === r.id ? '#1a1a17' : '#a3a29a' }
       }));
+      // "Inbox of …": every desk holder, with how much sits on their desk right now.
+      const leadPersonas = NHStore.deskHolders(S, ROUTES).map(n => {
+        const on = isLead && who.name === n, count = NHStore.deskFor(S, n).length;
+        return { label: n, count: count ? String(count) : '', onSel: () => this.setLeadAs(n),
+          style: { display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: on ? 700 : 600, cursor: 'pointer',
+            background: on ? '#f4f3f0' : '#26261f', color: on ? '#1a1a17' : '#a3a29a', border: '1px solid ' + (on ? '#f4f3f0' : '#33332e') },
+          countStyle: { fontFamily: MONO, fontSize: '9.5px', color: on ? '#7d7c73' : '#5b5b5b' } };
+      });
+      const dayLabel = S.day === 0 ? 'Today' : 'Today + ' + S.day + (S.day === 1 ? ' day' : ' days');
 
       const fnl = (n, label, sub, w, note, gate) => ({
         n: dash(n), label, sub: demo ? sub : '', note: demo ? note : '', w: { width: demo ? w : '0%' },
@@ -1153,14 +1194,16 @@ window.createDashboardComponent = function (DCLogic) {
         toast: s.toast, hasToast: !!s.toast,
 
         // dev panel
-        roles, dev: s.dev, toggleDev: () => this.setState({ dev: !s.dev, pop: null }),
+        roles, leadPersonas, dev: s.dev, toggleDev: () => this.setState({ dev: !s.dev, pop: null }),
+        dayLabel, dayNote: S.day === 0 ? 'clocks run from the real date' : 'every open clock moved ' + S.day + (S.day === 1 ? ' day' : ' days') + ' — past the promise, cases escalate',
+        advanceDay: () => { this.act.advanceDay(1); this.toast('One day later. ' + (S.day + 1) + (S.day + 1 === 1 ? ' day' : ' days') + ' into the demo — watch the clocks.'); },
         toggleDemo: () => this.setState({ demo: !s.demo, dev: false }), resetDemo: () => this.resetDemo(),
         demoLabel: demo ? 'Demo data on' : 'Demo data off',
         copySnippet: () => this.copySnippet(),
         newCount: (n => n ? n + (n === 1 ? ' new case this session' : ' new cases this session') : 'nothing new this session')(S.cases.filter(c => !c.seed).length),
         demoTrack: { width: '30px', height: '17px', borderRadius: '999px', padding: '2px', boxSizing: 'border-box', background: demo ? this.accent() : '#4a4a44', cursor: 'pointer', display: 'flex', justifyContent: demo ? 'flex-end' : 'flex-start' },
         devBtnStyle: { display: 'flex', alignItems: 'center', gap: '7px', background: s.dev ? '#fbfbf9' : '#2e2e28', color: s.dev ? '#1a1a17' : '#c9c8c0', border: '1px solid ' + (s.dev ? '#fbfbf9' : '#3d3d38'), borderRadius: '9px', padding: '7px 11px', fontFamily: MONO, fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', boxShadow: '0 6px 20px rgba(0,0,0,0.35)' },
-        devStatus: role.label + ' · demo ' + (demo ? 'on' : 'off'),
+        devStatus: (isLead && s.leadAs ? who.name : role.label) + ' · demo ' + (demo ? 'on' : 'off') + (S.day ? ' · +' + S.day + ' d' : ''),
 
         // overview
         kpis, decisions, noDecisions: decisions.length === 0, stall, noStall: stall.length === 0, ledger,

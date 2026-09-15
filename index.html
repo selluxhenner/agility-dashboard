@@ -1515,6 +1515,25 @@
               </sc-for>
             </div>
 
+            <sc-if value="{{ isLead }}" hint-placeholder-val="{{ false }}">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:0.13em; text-transform:uppercase; color:#7d7c73; margin-top:12px;">
+                Inbox of</div>
+              <div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:7px;">
+                <sc-for list="{{ leadPersonas }}" as="p" hint-placeholder-count="4">
+                  <span onClick="{{ p.onSel }}" style="{{ p.style }}">{{ p.label }}<span style="{{ p.countStyle }}">{{ p.count }}</span></span>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <div onClick="{{ advanceDay }}"
+              style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px; padding:9px 10px; border-radius:9px; background:#26261f; border:1px solid #33332e; cursor:pointer;">
+              <span style="display:flex; flex-direction:column; gap:2px;">
+                <span style="font-size:12.5px; font-weight:700; color:#fbfbf9;">{{ dayLabel }}</span>
+                <span style="font-size:10.5px; color:#7d7c73;">{{ dayNote }}</span>
+              </span>
+              <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:#fbfbf9; background:#ff5a1f; border-radius:7px; padding:5px 8px; white-space:nowrap;">+1 day</span>
+            </div>
+
             <div onClick="{{ toggleDemo }}"
               style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px; padding:9px 2px 0; border-top:1px solid #2c2c27; cursor:pointer;">
               <span style="display:flex; flex-direction:column; gap:2px;">
@@ -1530,7 +1549,7 @@
               style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px; padding:9px 2px 0; border-top:1px solid #2c2c27; cursor:pointer;">
               <span style="display:flex; flex-direction:column; gap:2px;">
                 <span style="font-size:12.5px; font-weight:700; color:#fbfbf9;">Copy for data.js</span>
-                <span style="font-size:10.5px; color:#7d7c73;">{{ newCount }} · pastes into MY_IDEAS</span>
+                <span style="font-size:10.5px; color:#7d7c73;">{{ newCount }} · pastes into CASES</span>
               </span>
               <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#a3a29a;">⧉</span>
             </div>

@@ -124,6 +124,36 @@ test('day.advanced ages every open case; a fresh case crosses the promise', () =
   assert.strictEqual(c.escalated.to, 'S. Dahl', 'r6 owner is T. Vogel, so escalation goes to the deputy');
 });
 
+test('escalation: an overdue case lands on the deputy\'s desk too; seed overdue is not "live"', () => {
+  const S0 = NHStore.reduce(SEED, logOf());
+  const c1 = S0.cases.find(c => c.id === 'c1'); // raised -7, r7 owner T. Vogel → deputy J. Klein
+  assert.strictEqual(c1.escalated.to, 'J. Klein');
+  assert.strictEqual(c1.escalated.live, false, 'already overdue at day 0 — not counted as a demo escalation');
+  assert.strictEqual(S0.ledger.escalated, 0);
+  assert.ok(NHStore.inboxFor(S0, 'J. Klein').some(c => c.id === 'c1'), 'deputy sees it');
+  assert.ok(NHStore.inboxFor(S0, 'T. Vogel').some(c => c.id === 'c1'), 'original owner keeps it');
+  // a case raised today, six days later
+  const S6 = NHStore.reduce(SEED, { events: [ev(T.CASE_RAISED, 'Anonymous #4471', 'c_x', { title: 'x', routeId: 'r1', assignee: 'T. Vogel' }, 0)], day: PROMISE_DAYS + 1 });
+  const cx = S6.cases.find(c => c.id === 'c_x');
+  assert.strictEqual(cx.escalated.to, 'R. Nowak', 'sat with T. Vogel but r1 is owned by R. Nowak → goes to the owner');
+  assert.strictEqual(cx.escalated.live, true);
+  assert.strictEqual(cx.escalated.day, PROMISE_DAYS + 1);
+  assert.strictEqual(S6.ledger.escalated, 6, 'the new case + five seed cases (raised 1-4 d ago) all crossed the line during the session; c1 was already over');
+  assert.ok(NHStore.deskHolders(S6, ROUTES).indexOf('R. Nowak') >= 0);
+  // the deputy can close it
+  const S7 = NHStore.reduce(SEED, { events: S6.cases.find(c => c.id === 'c_x').history.concat([ev(T.CASE_DECIDED, 'R. Nowak', 'c_x', { answer: 'yes' }, PROMISE_DAYS + 1)]), day: PROMISE_DAYS + 1 });
+  assert.strictEqual(S7.cases.find(c => c.id === 'c_x').decided.by, 'R. Nowak');
+  assert.strictEqual(NHStore.inboxFor(S7, 'T. Vogel').some(c => c.id === 'c_x'), false);
+});
+
+test('advancing the day ages waiting ideas but not decided ones', () => {
+  const S = NHStore.reduce(SEED, { events: [], day: 3 });
+  assert.strictEqual(S.ideas.find(i => i.id === 'i1').wait, 22, 'was 19');
+  assert.strictEqual(S.ideas.find(i => i.id === 'i3').wait, 0, 'In trial stays 0');
+  const A = NHStore.reduce(SEED, { events: [ev(T.IDEA_APPROVED, 'B. Hartmann', 'i1', {}, 1)], day: 3 });
+  assert.strictEqual(A.ideas.find(i => i.id === 'i1').wait, 0, 'approved → clock stopped');
+});
+
 test('idea.cosigned is idempotent per actor; idea.uncosigned removes it', () => {
   const S1 = NHStore.reduce(SEED, logOf(ev(T.IDEA_COSIGNED, 'Anonymous #4471', 'i2'), ev(T.IDEA_COSIGNED, 'Anonymous #4471', 'i2')));
   assert.strictEqual(S1.ideas.find(i => i.id === 'i2').cosigners.length, 1);
