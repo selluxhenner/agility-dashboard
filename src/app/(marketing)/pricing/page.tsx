@@ -123,14 +123,19 @@ export default function PricingPage() {
 
       <section className={styles.faq}>
         <p className="nh-eyebrow">Questions we get</p>
-        <dl>
+        <div className={styles.faqList}>
           {FAQ.map(([q, a]) => (
-            <div key={q}>
-              <dt>{q}</dt>
-              <dd>{a}</dd>
-            </div>
+            <details key={q} className={styles.faqItem} name="faq">
+              <summary>
+                {q}
+                <span className={styles.faqIcon} aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M7 1v12M1 7h12" /></svg>
+                </span>
+              </summary>
+              <p>{a}</p>
+            </details>
           ))}
-        </dl>
+        </div>
       </section>
     </>
   );

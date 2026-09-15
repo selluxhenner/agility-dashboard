@@ -27,11 +27,21 @@
 .everyGrid p { font-size: 14px; color: var(--nh-ink-2); }
 
 .faq { max-width: var(--nh-max); margin: 0 auto; padding: 64px var(--nh-page-x) 24px; display: grid; gap: 18px; }
-.faq dl { margin: 0; display: grid; gap: 0; max-width: 760px; }
-.faq dl div { display: grid; gap: 8px; padding: 18px 0; border-top: 1px solid var(--nh-line); }
-.faq dl div:last-child { border-bottom: 1px solid var(--nh-line); }
-.faq dt { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
-.faq dd { margin: 0; font-size: 14px; color: var(--nh-ink-2); line-height: 1.55; max-width: 66ch; }
+.faqList { display: grid; max-width: 760px; }
+.faqItem { border-top: 1px solid var(--nh-line); }
+.faqItem:last-child { border-bottom: 1px solid var(--nh-line); }
+.faqItem summary {
+  list-style: none; cursor: pointer; user-select: none;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 18px 0; font-size: 16px; font-weight: 700; letter-spacing: -0.01em;
+}
+.faqItem summary::-webkit-details-marker { display: none; }
+.faqItem summary:hover { color: var(--nh-ink-2); }
+.faqItem summary:focus-visible { outline: 2px solid var(--nh-ink); outline-offset: 4px; border-radius: 4px; }
+.faqIcon { flex: none; width: 24px; height: 24px; display: grid; place-items: center; color: var(--nh-mute); transition: transform 0.2s ease; }
+.faqItem[open] .faqIcon { transform: rotate(45deg); }
+.faqItem[open] summary { color: var(--nh-ink); }
+.faqItem p { margin: 0; padding: 0 40px 20px 0; font-size: 14px; color: var(--nh-ink-2); line-height: 1.55; max-width: 66ch; }
 
 @media (max-width: 900px) {
   .tiers, .everyGrid { grid-template-columns: 1fr; }
