@@ -1,5 +1,5 @@
 /* Landing page. Widths vary on purpose:
-   hero 880px · clock 720px · metric 720px · how 1040px · roles 1240px · close 560px. */
+   hero 880px · product 1240px · clock 720px · metric 720px · how 1040px · roles 1240px · close 560px. */
 
 .hero {
   max-width: 880px; margin: 0 auto;
@@ -10,9 +10,21 @@
 .lead { font-size: clamp(16px, 1.6vw, 19px); color: var(--nh-ink-2); max-width: 52ch; line-height: 1.55; }
 .cta { display: flex; gap: 10px; flex-wrap: wrap; }
 
+/* Product: the real overview in a quiet window frame, fading out at the bottom. */
+.product { max-width: 1240px; margin: clamp(48px, 7vw, 80px) auto 0; padding: 0 var(--nh-page-x); }
+.frame {
+  border: 1px solid var(--nh-line); border-radius: var(--nh-r-xl); overflow: hidden; background: var(--nh-card);
+  box-shadow: 0 1px 2px rgb(20 20 20 / 0.04), 0 24px 60px -24px rgb(20 20 20 / 0.18);
+  mask-image: linear-gradient(to bottom, #000 72%, transparent);
+}
+.frameBar { display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-bottom: 1px solid var(--nh-line); }
+.frameBar span { width: 9px; height: 9px; border-radius: 999px; background: var(--nh-line); }
+.frameBar p { flex: 1; text-align: center; margin-right: 40px; font-size: 11px; color: var(--nh-mute); }
+.frame img, .roleShot img { display: block; width: 100%; height: auto; }
+
 /* The clock: an open figure, no box - two rules and the bars. */
 .clock {
-  max-width: 720px; margin: 56px auto 0;
+  max-width: 720px; margin: 8px auto 0;
   padding: 0 var(--nh-page-x) clamp(56px, 8vw, 96px);
   display: grid; gap: 18px;
 }
@@ -47,22 +59,22 @@
 .step h3 { font-size: 19px; }
 .step p { color: var(--nh-ink-2); font-size: 15px; max-width: 52ch; }
 
-/* Roles: the widest section, one row per role, hairlines instead of boxes. */
+/* Roles: the widest section, one row per role, hairlines instead of boxes; the screen itself below the words. */
 .roles { max-width: 1240px; margin: 0 auto; padding: clamp(64px, 8vw, 104px) var(--nh-page-x) 0; display: grid; gap: 14px; }
 .roles h2 { font-size: clamp(28px, 3.4vw, 40px); }
 .roleTable { margin-top: 24px; display: grid; }
 .roleRow {
-  display: grid; grid-template-columns: 200px minmax(0, 1fr) minmax(0, 1.1fr);
+  display: grid; grid-template-columns: 200px minmax(0, 1fr);
   gap: 16px clamp(24px, 4vw, 64px); padding: 26px 0; border-top: 1px solid var(--nh-line); align-items: start;
 }
 .roleRow:last-child { border-bottom: 1px solid var(--nh-line); }
 .roleWho { display: grid; gap: 6px; }
 .roleWho h3 { font-size: 22px; }
-.roleBody { color: var(--nh-ink-2); font-size: 15px; max-width: 40ch; }
-.roleRows { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 13px; color: var(--nh-ink-2); }
-.roleRows li { display: flex; gap: 12px; align-items: baseline; padding-left: 12px; border-left: 2px solid var(--nh-line); }
-.roleRows :global(.nh-mono) { color: var(--nh-ink); font-weight: 600; }
-.age { min-width: 30px; color: var(--nh-accent) !important; }
+.roleBody { color: var(--nh-ink-2); font-size: 15px; max-width: 56ch; }
+.roleShot {
+  grid-column: 1 / -1; margin-top: 8px; border: 1px solid var(--nh-line); border-radius: var(--nh-r-lg); overflow: hidden;
+  mask-image: linear-gradient(to bottom, #000 78%, transparent);
+}
 
 /* Close: a short statement, centered, narrow. */
 .close {
@@ -80,6 +92,11 @@
   .roleBody { max-width: none; }
 }
 @media (max-width: 640px) {
+  .frame { border-radius: var(--nh-r-lg); }
+  .frameBar { height: 26px; }
+  .frameBar p { display: none; }
+  /* Too small to read whole on a phone: show the left column of each screen at a legible size. */
+  .roleShot img { aspect-ratio: 5 / 4; object-fit: cover; object-position: left top; }
   .clockRow { grid-template-columns: 1fr 64px; }
   .clockRow .bar { grid-column: 1 / -1; order: 3; }
 }

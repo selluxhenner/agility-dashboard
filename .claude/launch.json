@@ -3,10 +3,10 @@
   "configurations": [
     {
       "name": "nexthub",
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "/bin/sh",
       "runtimeArgs": [
-        "run",
-        "dev"
+        "-c",
+        ". \"$HOME/.nvm/nvm.sh\" && npm run dev"
       ],
       "port": 3000
     },
