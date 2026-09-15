@@ -1,28 +1,50 @@
-.root { min-height: 100dvh; display: grid; grid-template-columns: 240px 1fr; background: var(--nh-ground); }
+/* The app chrome. Ports nh-root / nh-rail / nh-topbar / nh-content from legacy/demo. */
+.root { height: 100dvh; overflow: hidden; display: flex; background: #f4f3f0; }
 
-.rail { background: var(--nh-dark); color: var(--nh-on-dark); padding: 20px 16px; display: flex; flex-direction: column; gap: 18px; }
-.logo { display: flex; align-items: center; gap: 10px; font-weight: 800; color: var(--nh-on-dark); padding: 0 8px; }
-.logo:hover { color: #fff; }
-.logo img { border-radius: 6px; }
-.tenant { color: var(--nh-on-dark-mute); padding: 0 8px; }
-.nav { display: grid; gap: 2px; }
-.nav a { padding: 8px 10px; border-radius: var(--nh-r-sm); color: var(--nh-on-dark-mute); font-size: 14px; font-weight: 500; }
-.nav a:hover { background: var(--nh-dark-2); color: var(--nh-on-dark); }
-.user { margin-top: auto; padding: 12px 10px; border-top: 1px solid var(--nh-dark-line); display: grid; gap: 2px; font-size: 12px; color: var(--nh-on-dark-mute); }
-.user strong { color: var(--nh-on-dark); font-size: 13px; }
-.user a { color: var(--nh-on-dark-mute); margin-top: 6px; }
-.user a:hover { color: var(--nh-on-dark); }
+.rail { width: 246px; flex: none; background: var(--nh-dark); display: flex; flex-direction: column; padding: 20px 14px 70px; overflow: auto; transition: transform 0.22s ease; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 0 8px 20px; }
+.logo { border-radius: 8px; flex: none; }
+.brandText { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.brandName { font-size: 14px; font-weight: 700; color: var(--nh-on-dark); letter-spacing: -0.01em; }
+.brandTenant { font-family: var(--nh-mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: #7d7c73; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.close { display: none; width: 30px; height: 30px; border-radius: 8px; background: #2e2e28; color: var(--nh-on-dark); align-items: center; justify-content: center; font-size: 16px; cursor: pointer; flex: none; border: 0; }
 
-.body { display: flex; flex-direction: column; min-width: 0; }
-.topbar { height: 60px; display: flex; align-items: center; gap: 12px; padding: 0 20px; border-bottom: 1px solid var(--nh-line); background: var(--nh-surface); }
-.search { max-width: 420px; height: 38px; }
-.content { padding: 24px 20px 96px; display: grid; gap: 12px; align-content: start; }
-.content h1 { font-size: 24px; }
+.railLabel { font-family: var(--nh-mono); font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--nh-mute-2); padding: 0 8px 8px; }
+.railLabelRow { display: flex; align-items: baseline; justify-content: space-between; padding: 0 8px 8px; gap: 8px; }
+.railLabelRow .railLabel { padding: 0; }
+.clearScope { font-family: var(--nh-mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: #c9c8c0; cursor: pointer; background: none; border: 0; padding: 0; }
+.rule { height: 1px; background: var(--nh-dark-line); margin: 20px 8px 16px; }
 
+.nav { display: flex; flex-direction: column; gap: 2px; }
+.scope { margin-bottom: 22px; }
+.navItem, .scopeItem { display: flex; align-items: center; justify-content: space-between; gap: 8px; border-radius: 9px; cursor: pointer; text-align: left; background: transparent; border: 0; font-family: inherit; width: 100%; }
+.navItem { padding: 9px 10px; font-size: 13.5px; font-weight: 600; color: var(--nh-mute-2); }
+.navItem:hover, .scopeItem:hover { color: var(--nh-on-dark); }
+.navItem[data-active="true"] { background: #2e2e28; color: var(--nh-on-dark); font-weight: 700; }
+.scopeItem { padding: 7px 10px; border-radius: 8px; font-size: 12.5px; font-weight: 500; color: #93928a; }
+.scopeItem[data-active="true"] { background: #2e2e28; color: var(--nh-on-dark); font-weight: 700; }
+.navCount { font-family: var(--nh-mono); font-size: 10px; color: var(--nh-mute-2); }
+.navItem[data-active="true"] .navCount, .scopeItem[data-active="true"] .navCount { color: #e4e3db; }
+
+.user { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 10px 8px 0; border-top: 1px solid var(--nh-dark-line); }
+.userAvatar { width: 26px; height: 26px; border-radius: 50%; background: #2e2e28; color: var(--nh-on-dark); display: flex; align-items: center; justify-content: center; font-family: var(--nh-mono); font-size: 9.5px; flex: none; }
+.userText { display: flex; flex-direction: column; min-width: 0; }
+.userName { font-size: 12px; font-weight: 700; color: var(--nh-on-dark); }
+.userLine { font-size: 10.5px; color: #7d7c73; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.content { flex: 1; overflow: auto; padding: 20px 22px 32px; }
+.contentInner { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+
+.backdrop { position: fixed; inset: 0; z-index: 30; }
+.scrim { position: fixed; inset: 0; z-index: 70; background: rgba(20, 20, 20, 0.45); }
+.toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 60; max-width: 520px; background: var(--nh-dark); color: var(--nh-on-dark); border-radius: 11px; padding: 11px 16px; font-size: 12.5px; font-weight: 600; line-height: 1.45; box-shadow: 0 14px 40px rgba(20, 20, 20, 0.3); }
+
+/* Narrow viewports: the rail becomes an off-canvas drawer. */
 @media (max-width: 760px) {
-  .root { grid-template-columns: 1fr; }
-  .rail { flex-direction: row; flex-wrap: wrap; align-items: center; padding: 12px var(--nh-page-x); }
-  .nav { display: flex; flex-wrap: wrap; gap: 4px; width: 100%; }
-  .user { margin: 0; padding: 0; border: 0; display: none; }
-  .content { padding: 16px var(--nh-page-x) 80px; }
+  .rail { position: fixed; top: 0; left: 0; bottom: 0; z-index: 80; width: min(300px, 86vw); transform: translateX(-104%); box-shadow: 0 0 60px rgba(0, 0, 0, 0.4); padding-bottom: 24px; }
+  .rail[data-open="true"] { transform: translateX(0); }
+  .close { display: flex; }
+  .content { padding: 14px 12px 96px; }
+  .toast { left: 12px; right: 12px; bottom: 66px; transform: none; max-width: none; }
 }

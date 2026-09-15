@@ -5,7 +5,7 @@
 
 .tiers { max-width: var(--nh-max); margin: 0 auto; padding: 16px var(--nh-page-x) 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items: stretch; }
 .tier {
-  display: grid; gap: 14px; align-content: start; padding: 26px;
+  display: flex; flex-direction: column; gap: 14px; padding: 26px;
   background: var(--nh-card); border: 1px solid var(--nh-line); border-radius: var(--nh-r-xl);
 }
 .tier h2 { font-size: 26px; }

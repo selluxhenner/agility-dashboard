@@ -1,0 +1,235 @@
+"use client";
+// The one place the dashboard's client state lives. Port of the state half of the legacy
+// Component class (legacy/demo/js/dashboard.js): the event log, the persona being viewed,
+// demo data on/off, the department scope, search, popovers, the input sheet and the toast.
+//
+// Rule carried over: UI code changes domain state only through `act.*`, which appends one
+// event as the current persona. Everything shown is reduce(seed, log) - see features/cases.
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { canAccess, ROLE_HOME, type Role } from "@/config/roles";
+import { appendEvent, newId, type EventLog, type EventPayload, type CaseEventType } from "@/features/cases/events";
+import { reduce, type State } from "@/features/cases/reducer";
+import { dayFormatter, type DayFmt } from "@/features/cases/rows";
+import { exportSnippet } from "@/features/cases/selectors";
+import type { Persona, RolePersona, Seed } from "@/features/demo/types";
+import { counts, demoData, type Counts, type DemoData } from "@/features/metrics";
+import { loadLog, loadPrefs, resetLog, saveLog, savePrefs } from "@/lib/demo-log";
+import { deptName as deptNameOf } from "@/lib/utils/format";
+
+export type Pop = "search" | "decisions" | "me" | "sort" | "filter";
+export type SheetKind = "no" | "ask" | "reply" | "hand" | "assign" | "askIdea";
+export type Sheet = { kind: SheetKind; id: string; text: string; picked: string | null; people: string[] };
+
+export type Act = {
+  raise: (p: EventPayload) => string;
+  read: (id: string) => void;
+  decide: (id: string, answer: "yes" | "no", reason?: string, note?: string) => void;
+  hand: (id: string, to: string, why?: string) => void;
+  ask: (id: string, text: string) => void;
+  answer: (id: string, text: string) => void;
+  override: (id: string, proposed: string | null, chosen: string) => void;
+  cosign: (ideaId: string) => boolean; // returns true when the co-sign was added, false when withdrawn
+  askIdea: (ideaId: string, text: string) => void;
+  approve: (ideaId: string, team: string[], note: string) => void;
+  fund: (ideaId: string, team: string[], note: string) => void;
+  advanceDay: (by?: number) => void;
+};
+
+export type DemoContext = {
+  tenant: { slug: string; name: string };
+  seed: Seed;
+  ready: boolean;
+  S: State; D: DemoData; N: Counts; log: EventLog;
+  role: Role; setRole: (r: Role) => void;
+  leadAs: string | null; setLeadAs: (name: string) => void;
+  persona: { role: RolePersona; who: Persona }; actor: string;
+  demo: boolean; toggleDemo: () => void;
+  dept: string; setDept: (id: string) => void; matches: (depts: readonly string[]) => boolean; deptName: (id: string) => string;
+  q: string; setQ: (q: string) => void;
+  pop: Pop | null; setPop: (p: Pop | null) => void; togglePop: (p: Pop) => void;
+  sheet: Sheet | null; openSheet: (kind: SheetKind, id: string, init?: Partial<Sheet>) => void; closeSheet: () => void; patchSheet: (p: Partial<Sheet>) => void;
+  toast: string | null; showToast: (msg: string) => void;
+  menu: boolean; setMenu: (b: boolean) => void;
+  dev: boolean; setDev: (b: boolean) => void;
+  act: Act;
+  resetDemo: () => void; copySnippet: () => void;
+  f: DayFmt; // demo day offset -> "today" / "12 Sep"
+  href: (path: string) => string; // "/ideas?id=i1" -> "/acme/ideas?id=i1"
+};
+
+const Ctx = createContext<DemoContext | null>(null);
+
+export function useDemo(): DemoContext {
+  const c = useContext(Ctx);
+  if (!c) throw new Error("useDemo() outside <DemoProvider>");
+  return c;
+}
+
+// First visit: the URL says which role the visitor meant (/leader -> leader, /team -> member).
+function roleFromPath(path: string): Role {
+  if (path === "/leader" || path.startsWith("/leader/")) return "leader";
+  if (path === "/team" || path.startsWith("/team/")) return "member";
+  return "manager";
+}
+
+type Props = { tenant: { slug: string; name: string }; seed: Seed; children: React.ReactNode };
+
+export function DemoProvider({ tenant, seed, children }: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const appPath = pathname.startsWith("/" + tenant.slug) ? pathname.slice(tenant.slug.length + 1) || "/" : pathname;
+
+  const [ready, setReady] = useState(false);
+  const [log, setLog] = useState<EventLog>({ events: [], day: 0 });
+  const [role, setRoleState] = useState<Role>(() => roleFromPath(appPath));
+  const [leadAs, setLeadAsState] = useState<string | null>(null);
+  const [demo, setDemo] = useState(true);
+  const [dept, setDept] = useState("PRD");
+  const [q, setQ] = useState("");
+  const [pop, setPop] = useState<Pop | null>(null);
+  const [sheet, setSheet] = useState<Sheet | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [menu, setMenu] = useState(false);
+  const [dev, setDev] = useState(false);
+  const [today, setToday] = useState(() => new Date());
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load what this browser remembers, once, after mount (never during server render).
+  useEffect(() => {
+    const prefs = loadPrefs(tenant.slug);
+    setLog(loadLog(tenant.slug));
+    if (prefs.role) setRoleState(prefs.role);
+    if (prefs.leadAs !== undefined) setLeadAsState(prefs.leadAs);
+    if (prefs.demo !== undefined) setDemo(prefs.demo);
+    if (prefs.dept) setDept(prefs.dept);
+    setToday(new Date());
+    setReady(true);
+  }, [tenant.slug]);
+
+  useEffect(() => { if (ready) savePrefs(tenant.slug, { role, leadAs, demo, dept }); }, [ready, tenant.slug, role, leadAs, demo, dept]);
+
+  // Roles are data: a role that may not open this path is sent home.
+  useEffect(() => {
+    if (ready && !canAccess(role, appPath)) router.replace("/" + tenant.slug + ROLE_HOME[role]);
+  }, [ready, role, appPath, router, tenant.slug]);
+
+  // ⌘K / Ctrl+K focuses the search box; Escape closes whatever is open.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        document.getElementById("nh-search")?.focus();
+        setPop("search");
+      } else if (e.key === "Escape") {
+        const el = document.getElementById("nh-search");
+        if (el && e.target === el) return; // the box clears its text first, closes on the second press
+        el?.blur();
+        setPop(null); setQ(""); setMenu(false); setSheet(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const S = useMemo(() => reduce(seed, log), [seed, log]);
+  const D = useMemo(() => demoData(seed, S, demo), [seed, S, demo]);
+  const N = useMemo(() => counts(seed, D), [seed, D]);
+
+  const deptName = useCallback((id: string) => deptNameOf(seed.depts, id), [seed.depts]);
+  const iniOf = (name: string) => name.split(" ").map((w) => w[0]).join("").slice(0, 2);
+
+  // The effective role + person. The team-leader role can be viewed as any desk holder (dev
+  // panel -> "inbox of"), so a hand-over or an escalation can be followed into the other inbox.
+  const persona = useMemo(() => {
+    const rp = seed.personas.find((r) => r.id === role) ?? seed.personas[seed.personas.length - 1];
+    if (rp.id !== "leader" || !leadAs || leadAs === rp.who.name) return { role: rp, who: rp.who };
+    const r = seed.routes.find((x) => x.owner.name === leadAs);
+    const b = seed.buddies.find((x) => x.name === leadAs);
+    const bDept = b ? seed.depts.find((d) => d.name === b.dept)?.id : undefined;
+    const pDept = r ? r.owner.dept : bDept ?? rp.dept;
+    const line = r ? r.owner.role + " · " + deptName(r.owner.dept) : b ? "Team lead · " + b.dept : "Deputy · " + deptName(pDept);
+    return { role: { ...rp, dept: pDept }, who: { name: leadAs, ini: iniOf(leadAs), line, handle: null } };
+  }, [seed, role, leadAs, deptName]);
+
+  // Who is acting: the employee posts under their handle, everyone else by name.
+  const actor = persona.role.id === "member" && persona.who.handle ? persona.who.handle : persona.who.name;
+
+  const showToast = useCallback((msg: string) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast(msg);
+    toastTimer.current = setTimeout(() => setToast(null), 3600);
+  }, []);
+
+  const emit = useCallback((type: CaseEventType, target: string | null, payload?: EventPayload) => {
+    setLog((prev) => { const next = appendEvent(prev, { type, actor, target, payload }); saveLog(tenant.slug, next); return next; });
+  }, [actor, tenant.slug]);
+
+  const act = useMemo<Act>(() => ({
+    raise: (p) => { const id = newId("c"); emit("case.raised", id, p); return id; },
+    read: (id) => emit("case.read", id),
+    decide: (id, answer, reason, note) => emit("case.decided", id, { answer, reason, note }),
+    hand: (id, to, why) => emit("case.handed", id, { to, why }),
+    ask: (id, text) => emit("case.asked", id, { text }),
+    answer: (id, text) => emit("case.answered", id, { text }),
+    override: (id, proposed, chosen) => emit("case.override", id, { proposed, chosen }),
+    cosign: (ideaId) => {
+      const already = S.ideas.find((x) => x.id === ideaId)?.cosigners.some((x) => x.name === actor) ?? false;
+      emit(already ? "idea.uncosigned" : "idea.cosigned", ideaId);
+      return !already;
+    },
+    askIdea: (ideaId, text) => emit("idea.asked", ideaId, { text }),
+    approve: (ideaId, team, note) => emit("idea.approved", ideaId, { team, note }),
+    fund: (ideaId, team, note) => emit("idea.funded", ideaId, { team, note }),
+    advanceDay: (by) => emit("day.advanced", null, { by: by ?? 1 }),
+  }), [emit, S.ideas, actor]);
+
+  const href = useCallback((path: string) => "/" + tenant.slug + path, [tenant.slug]);
+
+  const setRole = useCallback((r: Role) => {
+    setRoleState(r); setLeadAsState(null); setPop(null); setQ(""); setDev(false); setMenu(false);
+    const rp = seed.personas.find((x) => x.id === r);
+    if (rp) setDept(rp.dept);
+    router.push(href(ROLE_HOME[r]));
+  }, [seed.personas, router, href]);
+
+  // Dev panel: look at the team-leader screens as another desk holder.
+  const setLeadAs = useCallback((name: string) => {
+    const lead = seed.personas.find((r) => r.id === "leader");
+    const next = lead && name === lead.who.name ? null : name;
+    setRoleState("leader"); setLeadAsState(next); setPop(null); setQ(""); setDev(false); setMenu(false);
+    const r = seed.routes.find((x) => x.owner.name === name);
+    const b = seed.buddies.find((x) => x.name === name);
+    setDept(r ? r.owner.dept : b ? (seed.depts.find((d) => d.name === b.dept)?.id ?? lead?.dept ?? "PRD") : lead?.dept ?? "PRD");
+    router.push(href(ROLE_HOME.leader));
+  }, [seed, router, href]);
+
+  const resetDemo = useCallback(() => {
+    setLog(resetLog(tenant.slug)); setQ(""); setPop(null); setDev(false); setLeadAsState(null); setSheet(null);
+    showToast("Demo state reset");
+  }, [tenant.slug, showToast]);
+
+  // Session-created cases as seed rows (with their history) for src/features/demo/seed.ts.
+  const copySnippet = useCallback(() => {
+    const txt = exportSnippet(S);
+    const n = S.cases.filter((c) => !c.seed).length;
+    if (!txt) { showToast("Nothing new to copy — raise a case as the employee first."); return; }
+    const done = () => showToast("Copied " + n + (n === 1 ? " case" : " cases") + " — paste into CASES in seed.ts.");
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(txt).then(done, () => window.prompt("Copy this into seed.ts:", txt));
+    else window.prompt("Copy this into seed.ts:", txt);
+  }, [S, showToast]);
+
+  const value: DemoContext = {
+    tenant, seed, ready, S, D, N, log,
+    role, setRole, leadAs, setLeadAs, persona, actor,
+    demo, toggleDemo: () => { setDemo((d) => !d); setDev(false); },
+    dept, setDept: (id) => { setDept(id); setMenu(false); }, matches: (depts) => dept === "All" || depts.includes(dept), deptName,
+    q, setQ, pop, setPop, togglePop: (p) => setPop((cur) => (cur === p ? null : p)),
+    sheet, openSheet: (kind, id, init) => { setSheet({ kind, id, text: "", picked: null, people: [], ...init }); setPop(null); },
+    closeSheet: () => setSheet(null), patchSheet: (p) => setSheet((s) => (s ? { ...s, ...p } : s)),
+    toast, showToast, menu, setMenu, dev, setDev, act, resetDemo, copySnippet,
+    f: dayFormatter(today, S.day), href,
+  };
+
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
