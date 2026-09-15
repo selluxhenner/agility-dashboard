@@ -208,18 +208,23 @@ The core demo: raise → inbox → answer → seen.
 
 **Exit test:** as manager approve i1 with C. Ilg + R. Nowak → Awaiting decision drops by one, In trial rises by one, p1 reads "Fix in trial", contributors credit both, the employee's co-signed row reads "Approved".
 
-### Phase 4 — Time (Kevin, 1 day)
-- [ ] `day` in the store; Advance one day in the dev panel
-- [ ] Ages, "d left / d past the promise", overdue styling all from `day`
-- [ ] Escalation rule: open and age > PROMISE_DAYS → visible to deputy, ledger `escalated` +1, employee row reads "moved to ⟨deputy⟩ automatically"
-- [ ] View-inbox-as persona switch in the dev panel
+### Phase 4 — Time — DONE
+- [x] `day` in the store; **+1 day** in the dev panel (`day.advanced`); the panel stays open so you can press it repeatedly; status line shows `+N d`
+- [x] Ages, "d left / d past the promise", overdue styling, due dates all from `day`. Waiting ideas age too (`wait + day`), seed "waiting on" rows age too
+- [x] **Escalation rule** in the reducer: open and clock > PROMISE_DAYS → `escalated { to, from, day, live }`. `to` = the route's owner if the case sat with someone else, otherwise the owner's deputy. The case is now **on both desks** (`NHStore.onDesk`); either can act. The deputy's row reads "escalated from ⟨name⟩" and the selected case explains it; the original owner's case says "⟨deputy⟩ now sees it too". Employee row reads "Moved to ⟨deputy⟩ automatically". Manager ledger: seed + `live` escalations (those that crossed the line on day ≥ 0 — a seed case already overdue at day 0 doesn't count)
+- [x] **Inbox of ⟨name⟩** in the dev panel: every desk holder (route owners + whoever currently holds or was escalated a case) with a live count; `persona()` makes the team-leader role read as that person (name, role line, department scope). Actions are recorded under that name. `setRole` / Reset clear it
+- [x] Overrides ledger understands the "6 of 54" seed format (both sides +1 per live override)
+- [x] `flow.test.cjs` extended (step 9b): follow the gauge case into H. Sander's inbox → raise → +6 days → employee row "moved to S. Dahl automatically" → S. Dahl's inbox shows it "escalated from T. Vogel" → T. Vogel still has it, told the deputy sees it → manager's ledger = seed + 6 escalated, seed + 1 handed over
 
-**Exit test:** raise a case, advance 6 days → it turns orange, shows in the deputy's inbox, the manager's "escalated" tile goes up by one.
+**Exit test (passed 15 Sep, automated):** as above. Six escalations, not one: after six days the five seed cases raised 1–4 days ago cross the line as well — which is the honest picture of an inbox nobody clears.
+
+*Not done, by choice:* nothing auto-*closes* on escalation and nothing escalates a second time (to the manager). Both are product decisions; the reducer has the data (`escalated.day`) when you want them.
 
 ### Phase 5 — Demo polish (anyone)
-- [ ] Guided path: a "Play the story" button that resets and steps through phases 2–4 with toasts
-- [ ] Export events as a `seedEvents` snippet
-- [ ] Empty states re-checked with Demo data off
+- [ ] Guided path: a "Play the story" button that resets and steps through phases 2–4 with toasts (a helper task: it is a list of `this.act.*` calls with waits, no new state)
+- [x] Export events as CASES rows with `seedEvents` (dev panel → Copy for data.js)
+- [ ] Empty states re-checked with Demo data off after phases 2–4 (the flow test covers demo-on only)
+- [ ] The dev panel "Inbox of" list is dark-on-dark on a phone — check it at 375px
 
 ---
 

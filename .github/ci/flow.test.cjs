@@ -161,6 +161,59 @@ const check = (cond, m) => (cond ? ok(m) : fail(m));
   t = await text();
   check(/Declined/.test(t) && /Q4 at the earliest/.test(t), 'after reload: the no and its note are still there');
 
+  // ── 9b. time: follow a hand-over, then let a clock run out ──
+  // The gauge case went to H. Sander in step 6. "Inbox of" makes that visible.
+  await role('Team leader');
+  await dev().click();
+  await page.locator('.nh-devpanel span').filter({ hasText: /^H\. Sander\d*$/ }).first().click();
+  await page.waitForTimeout(300);
+  t = await text();
+  check(/H\. Sander/.test(t) && /Quality lead/.test(t), 'inbox of H. Sander: the persona switched (name + role line)');
+  check(/Tolerance drift on station 7/.test(t) && /Came to you from T\. Vogel/.test(t), 'H. Sander sees the handed case with its origin and the why');
+  // employee raises one more, routed to T. Vogel, then six days pass
+  await role('Employee');
+  const LATE = 'Holiday roster for the late shift is still missing for October';
+  await page.locator('textarea').first().fill(LATE);
+  await page.waitForTimeout(200);
+  await clickText('Send to T. Vogel');
+  // "+1 day" keeps the panel open (you press it several times), so only open it when closed.
+  const advance = async n => { for (let k = 0; k < n; k++) { if (!(await page.locator('.nh-devpanel').count())) await dev().click(); await page.locator('.nh-devpanel').getByText('+1 day').click(); await page.waitForTimeout(200); } if (await page.locator('.nh-devpanel').count()) await dev().click(); await page.waitForTimeout(150); };
+  await advance(6);
+  t = await text();
+  check(new RegExp(LATE.slice(0, 30) + '[\\s\\S]{0,400}6 days waiting — 1 day past the promise\\. Moved to S\\. Dahl automatically').test(t), 'employee: row says it moved to the deputy automatically');
+  check(/answers? overdue to you/.test(t), 'employee: top-bar counter shows an overdue answer');
+  // the deputy sees it
+  await role('Team leader');
+  await dev().click();
+  await page.locator('.nh-devpanel span').filter({ hasText: /^S\. Dahl\d*$/ }).first().click();
+  await page.waitForTimeout(300);
+  t = await text();
+  check(/S\. Dahl/.test(t) && new RegExp(LATE.slice(0, 30)).test(t), 'inbox of S. Dahl: the escalated case is there');
+  check(/escalated from T\. Vogel/.test(t), 'row is marked "escalated from T. Vogel"');
+  await clickRow(LATE.slice(0, 40));
+  t = await text();
+  check(/Escalated to you today: T\. Vogel missed the 5-day promise/.test(t), 'selected case explains the escalation');
+  // and the original owner still has it, marked overdue
+  await dev().click();
+  await page.locator('.nh-devpanel span').filter({ hasText: /^T\. Vogel\d*$/ }).first().click();
+  await page.waitForTimeout(300);
+  await clickRow(LATE.slice(0, 40));
+  t = await text();
+  check(/1 d past the promise/.test(t) && /S\. Dahl now sees it too/.test(t), 'T. Vogel: overdue, and told the deputy now sees it');
+  // manager's ledger counts it
+  await role('Manager');
+  t = await text();
+  const seedLedger = await page.evaluate(() => ({ escalated: LEDGER.escalated, handedOver: LEDGER.handedOver }));
+  // 6 crossed the line in this session: the new case + five seed cases raised 1–4 d ago (c1 was already over at day 0)
+  check(new RegExp('Escalated one level up this quarter\\s*\\n?\\s*' + (seedLedger.escalated + 6) + '\\b').test(t), 'manager: ledger reads seed + 6 escalated');
+  check(new RegExp('Handed sideways to a deputy or buddy\\s*\\n?\\s*' + (seedLedger.handedOver + 1) + '\\b').test(t), 'manager: hand-overs read seed + 1 (the gauge case)');
+  // reset the clock for the remaining steps
+  await dev().click();
+  await page.locator('.nh-devpanel').getByText('Reset', { exact: false }).first().click();
+  await page.waitForTimeout(300);
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.locator('.nh-root').first().waitFor({ state: 'visible' });
+
   // ── 10. phone: the sheet is a bottom sheet ──
   await page.setViewportSize({ width: 375, height: 812 });
   await page.waitForTimeout(300);

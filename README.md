@@ -85,11 +85,26 @@ real UI — needs `npm i playwright` on `NODE_PATH`).
 
 ## Dev panel
 
-Fixed bottom-right; closes after any press. **Viewing as** switches the role; **Demo data** on/off
-swaps every list for its empty state and every figure for "measured in pilot"
-— the honest day-one install. State you create in the session (a case you
-sent, an inbox item you answered) survives the toggle; **Reset demo state**
-clears it. `defaultRole` and `demoData` are also editable props.
+Fixed bottom-right; closes after any press except **+1 day**. **Viewing as**
+switches the role. With the team leader selected, **Inbox of** lets you look
+at the same screens as any other desk holder (route owners, and whoever
+currently holds a case) — this is how you follow a hand-over or an escalation
+into the other inbox; the count on each chip is what sits on their desk.
+**+1 day** advances the demo clock: every open clock ages, cases past the
+promise escalate to the deputy, waiting ideas wait longer. **Demo data**
+on/off swaps every list for its empty state and every figure for "measured in
+pilot" — the honest day-one install. State you create in the session survives
+the toggle; **Reset demo state** clears the event log, the clock and the
+persona. `defaultRole` and `demoData` are also editable props.
+
+### The promise rule, live
+
+A case owes its sender a yes, a no or a question within `PROMISE_DAYS`. Miss
+it and the reducer marks the case `escalated { to }` — to the route's owner if
+it sat with someone else, otherwise to the owner's deputy. From then on it is
+on **both** desks and either can answer; the sender's tracker says "moved to
+⟨name⟩ automatically", the manager's ledger counts it. A question pauses the
+clock; a hand-over keeps it running.
 
 ## Run
 
