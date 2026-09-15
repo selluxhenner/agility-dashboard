@@ -9,7 +9,7 @@
 // Linking rules: idea.problem -> problem.id; problem.ideas -> [idea.id]; case.routeId -> route.id;
 // signal.by / proposedBy / members[].name are the names the contributors list counts.
 import type {
-  Buddy, Dept, Idea, Initiative, Ledger, Metrics, Outcome, Problem, RolePersona, Route, Seed, SeedCase, Stall, ViewCopy, WaitingOn,
+  Buddy, Dept, Idea, Initiative, Ledger, Metrics, Outcome, OrgPerson, Problem, RolePersona, Route, Seed, SeedCase, Stall, ViewCopy, WaitingOn,
 } from "./types";
 
 // The two promises the whole page is built around: days to a first answer,
@@ -124,30 +124,54 @@ export const IDEAS: Idea[] = [
 ];
 
 export const INITIATIVES: Initiative[] = [
-  { id: 't1', name: 'Retrofit kit line', depts: ['SAL', 'ENG', 'PRD'], people: 5, status: 'In trial', stage: 'day 9 of phase two',
+  { id: 't1', idea: 'i3', name: 'Retrofit kit line', depts: ['SAL', 'ENG', 'PRD'], people: 5, status: 'In trial', stage: 'day 9 of phase two',
     why: 'customers kept asking to buy upgrade kits we did not sell',
     members: [{ name: 'A. Weber', role: 'Sales' }, { name: 'M. Roth', role: 'Engineering' }, { name: 'J. Klein', role: 'Production' }, { name: 'S. Dahl', role: 'Production' }, { name: 'P. Mayer', role: 'Sales' }] },
   { id: 't2', name: 'Offline job sheets for field service', depts: ['FLD', 'HIT'], people: 2, status: 'Building', stage: 'day 18',
     why: 'technicians enter the same job data twice, once on paper and once at the hotel',
     members: [{ name: 'D. Ferraro', role: 'Field Service' }, { name: 'L. Brandt', role: 'HR / IT' }] },
-  { id: 't3', name: 'Team spend authority', depts: ['OPS', 'FIN', 'PRD'], people: 3, status: 'Awaiting decision', stage: 'waiting 19 days',
+  { id: 't3', idea: 'i1', name: 'Team spend authority', depts: ['OPS', 'FIN', 'PRD'], people: 3, status: 'Awaiting decision', stage: 'waiting 19 days',
     why: 'three approvals were needed for any spend under €5k',
-    members: [{ name: 'C. Ilg', role: 'Ops & Admin' }, { name: 'R. Nowak', role: 'Finance' }, { name: 'Anonymous', role: 'Production' }] },
+    members: [{ name: 'C. Ilg', role: 'Ops & Admin' }, { name: 'R. Nowak', role: 'Finance' }, { name: 'Anonymous', role: 'Production' }],
+    stuckOn: { name: 'K. Adler', reason: 'CFO signature to leave the two pilot sites' } },
   { id: 't4', name: '4-series fixture redesign', depts: ['PRD', 'QUA', 'ENG'], people: 4, status: 'Shipped', stage: 'shipped day 54',
     why: 'rework on the 4-series housing was accepted as normal',
     members: [{ name: 'T. Vogel', role: 'Production' }, { name: 'H. Sander', role: 'Quality' }, { name: 'M. Roth', role: 'Engineering' }, { name: 'Anonymous', role: 'Production' }] },
   { id: 't5', name: 'Self-serve spare parts quoting', depts: ['SAL', 'HIT'], people: 3, status: 'Shipped', stage: 'shipped day 41',
     why: 'every spare part was quoted by hand, often twice',
     members: [{ name: 'N. Kaya', role: 'Sales' }, { name: 'B. Ehlers', role: 'HR / IT' }, { name: 'Anonymous', role: 'Sales' }] },
-  { id: 't6', name: 'Shared test-rig booking', depts: ['ENG', 'QUA'], people: 0, status: 'Proposed', stage: 'nobody assigned',
+  { id: 't6', idea: 'i2', name: 'Shared test-rig booking', depts: ['ENG', 'QUA'], people: 0, status: 'Proposed', stage: 'nobody assigned',
     why: 'the only endurance rig is booked six weeks out',
     members: [{ name: 'M. Roth', role: 'proposed lead' }] },
-  { id: 't7', name: 'Blameless incident reviews', depts: ['QUA', 'HIT'], people: 0, status: 'Proposed', stage: 'nobody assigned',
+  { id: 't7', idea: 'i5', name: 'Blameless incident reviews', depts: ['QUA', 'HIT'], people: 0, status: 'Proposed', stage: 'nobody assigned',
     why: 'people who flag a risk get handed the fix, so they stop flagging',
     members: [{ name: 'Anonymous', role: 'proposed by Quality' }] },
-  { id: 't8', name: 'One measurement record', depts: ['QUA', 'PRD', 'HIT'], people: 3, status: 'Awaiting decision', stage: 'waiting 3 days',
+  { id: 't8', idea: 'i6', name: 'One measurement record', depts: ['QUA', 'PRD', 'HIT'], people: 3, status: 'Awaiting decision', stage: 'waiting 3 days',
     why: 'quality data lives in three systems that disagree',
-    members: [{ name: 'H. Sander', role: 'Quality' }, { name: 'L. Brandt', role: 'HR / IT' }, { name: 'T. Vogel', role: 'Production' }] }
+    members: [{ name: 'H. Sander', role: 'Quality' }, { name: 'L. Brandt', role: 'HR / IT' }, { name: 'T. Vogel', role: 'Production' }],
+    stuckOn: { name: 'L. Brandt', reason: 'IT capacity for the integration' } }
+];
+
+// The org chart (collaboration page). Every name that appears in ROUTES, ROLES or an
+// initiative's members has a row here; `reportsTo` draws the tree. Anonymous members do not.
+export const PEOPLE: OrgPerson[] = [
+  { name: 'E. Lindqvist', role: 'Managing director', dept: 'OPS', reportsTo: null },
+  { name: 'B. Hartmann', role: 'Head of Production', dept: 'PRD', reportsTo: 'E. Lindqvist' },
+  { name: 'K. Adler', role: 'CFO', dept: 'FIN', reportsTo: 'E. Lindqvist' },
+  { name: 'M. Roth', role: 'Engineering lead', dept: 'ENG', reportsTo: 'E. Lindqvist' },
+  { name: 'H. Sander', role: 'Quality lead', dept: 'QUA', reportsTo: 'E. Lindqvist' },
+  { name: 'C. Ilg', role: 'Ops & Admin lead', dept: 'OPS', reportsTo: 'E. Lindqvist' },
+  { name: 'L. Brandt', role: 'IT service lead', dept: 'HIT', reportsTo: 'E. Lindqvist' },
+  { name: 'N. Kaya', role: 'Sales lead', dept: 'SAL', reportsTo: 'E. Lindqvist' },
+  { name: 'D. Ferraro', role: 'Field Service lead', dept: 'FLD', reportsTo: 'E. Lindqvist' },
+  { name: 'T. Vogel', role: 'Team lead, 4-series', dept: 'PRD', reportsTo: 'B. Hartmann' },
+  { name: 'J. Klein', role: 'Line 2', dept: 'PRD', reportsTo: 'T. Vogel' },
+  { name: 'S. Dahl', role: 'Line 3', dept: 'PRD', reportsTo: 'T. Vogel' },
+  { name: 'J. Schmidt', role: 'Line 3', dept: 'PRD', reportsTo: 'T. Vogel' },
+  { name: 'R. Nowak', role: 'Cost-centre lead', dept: 'FIN', reportsTo: 'K. Adler' },
+  { name: 'A. Weber', role: 'Key accounts', dept: 'SAL', reportsTo: 'N. Kaya' },
+  { name: 'P. Mayer', role: 'Inside sales', dept: 'SAL', reportsTo: 'N. Kaya' },
+  { name: 'B. Ehlers', role: 'HR services', dept: 'HIT', reportsTo: 'L. Brandt' }
 ];
 
 export const OUTCOMES: Outcome[] = [
@@ -306,13 +330,13 @@ export const VIEWS: Record<string, ViewCopy> = {
   overview: { title: 'Where your department is stuck', sub: 'One screen: what is blocked on you, how the system is performing, and what people are saying this quarter. Widen the scope to see the rest of the company.' },
   problems: { title: 'Problems named by employees', sub: 'Root problems clustered from {signals} signals. People choose whether to sign their name.' },
   ideas: { title: 'Ideas from the organisation', sub: 'Each idea is tagged on three case criteria — strategic fit, urgency and the manager KPI it moves. No score, no ranking of people.' },
-  network: { title: 'Collaboration across departments', sub: 'Cross-department work in motion — who is joined up, for what, and what is waiting.' },
+  network: { title: 'Collaboration across departments', sub: 'Every project, the people on it, and where in the company it is waiting. Click a project or a person.' },
   progress: { title: 'Does the system actually move', sub: 'Twelve months of flow, where ideas stall, and whether people got an answer.' }
 };
 
 export const SEED: Seed = {
   promiseDays: PROMISE_DAYS, outcomeDays: OUTCOME_DAYS,
-  depts: DEPTS, problems: PROBLEMS, ideas: IDEAS, initiatives: INITIATIVES, outcomes: OUTCOMES,
+  depts: DEPTS, people: PEOPLE, problems: PROBLEMS, ideas: IDEAS, initiatives: INITIATIVES, outcomes: OUTCOMES,
   personas: ROLES, routes: ROUTES, cases: CASES, waitingOn: WAITING_ON, buddies: BUDDIES,
   stall: STALL, ledger: LEDGER, metrics: METRICS, views: VIEWS
 };

@@ -2,7 +2,7 @@
 // Pure functions over seed + reduced state. Nothing here touches React or the database.
 // Port of the counting half of legacy/demo/js/dashboard.js renderVals().
 import type { ReducedCase, ReducedIdea, ReducedProblem, State } from "@/features/cases/reducer";
-import type { Buddy, Initiative, Outcome, Seed, Stall, WaitingOn } from "@/features/demo/types";
+import type { Buddy, Initiative, Outcome, OrgPerson, Seed, Stall, WaitingOn } from "@/features/demo/types";
 
 export function median(values: readonly number[]): number | null {
   if (values.length === 0) return null;
@@ -19,14 +19,14 @@ export function pctWithin(values: readonly number[], limit: number): number | nu
 // Demo data on/off: one switch, every list reads through it. With demo data off only what was
 // created in this browser remains - the honest day-one install.
 export type DemoData = {
-  problems: ReducedProblem[]; ideas: ReducedIdea[]; initiatives: Initiative[]; outcomes: Outcome[];
+  problems: ReducedProblem[]; ideas: ReducedIdea[]; initiatives: Initiative[]; outcomes: Outcome[]; people: OrgPerson[];
   cases: ReducedCase[]; waitingOn: WaitingOn[]; buddies: Buddy[]; stall: Stall[];
 };
 
 export function demoData(seed: Seed, S: State, demo: boolean): DemoData {
   return {
     problems: demo ? S.problems : [], ideas: demo ? S.ideas : [], initiatives: demo ? seed.initiatives : [],
-    outcomes: demo ? seed.outcomes : [],
+    outcomes: demo ? seed.outcomes : [], people: demo ? seed.people : [],
     cases: demo ? S.cases : S.cases.filter((c) => !c.seed), waitingOn: demo ? seed.waitingOn : [], buddies: seed.buddies, stall: demo ? seed.stall : [],
   };
 }

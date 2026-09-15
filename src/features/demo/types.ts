@@ -25,9 +25,16 @@ export type Idea = {
 
 export type InitiativeStatus = "In trial" | "Building" | "Awaiting decision" | "Shipped" | "Proposed";
 export type Member = { name: string; role: string };
+// stuckOn: the one person the initiative is waiting on right now (a decision, a signature, capacity).
+export type StuckOn = { name: string; reason: string };
 export type Initiative = {
   id: string; name: string; depts: string[]; people: number; status: InitiativeStatus; stage: string; why: string; members: Member[];
+  stuckOn?: StuckOn;
+  idea?: string; // -> idea.id, when the initiative is the trial of an idea
 };
+
+// One row of the org chart. reportsTo -> another OrgPerson.name; null for the top of the company.
+export type OrgPerson = { name: string; role: string; dept: string; reportsTo: string | null };
 
 export type Verdict = "As promised" | "Beat it" | "Short";
 export type Outcome = { title: string; promised: string; actual: string; verdict: Verdict };
@@ -76,7 +83,7 @@ export type ViewCopy = { title: string; sub: string };
 
 export type Seed = {
   promiseDays: number; outcomeDays: number;
-  depts: Dept[]; problems: Problem[]; ideas: Idea[]; initiatives: Initiative[]; outcomes: Outcome[];
+  depts: Dept[]; people: OrgPerson[]; problems: Problem[]; ideas: Idea[]; initiatives: Initiative[]; outcomes: Outcome[];
   personas: RolePersona[]; routes: Route[]; cases: SeedCase[]; waitingOn: WaitingOn[]; buddies: Buddy[];
   stall: Stall[]; ledger: Ledger; metrics: Metrics; views: Record<string, ViewCopy>;
 };
