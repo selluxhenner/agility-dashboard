@@ -1,5 +1,6 @@
-// LANDING. Hero with the 19-vs-3-days clock, the one metric, how it works, the three roles, closing line.
+// LANDING. Hero with the product shot, the 19-vs-3-days clock, the one metric, how it works, the three roles, closing line.
 // Each section has its own measure - a narrow column for reading, a wide one for the role table.
+import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import styles from "./page.module.css";
 
@@ -11,11 +12,11 @@ const STEPS = [
 
 const ROLES = [
   { who: "Team member", screen: "My cases", body: "What happened to what I sent. One field to raise the next one - anonymously if the company allows it.",
-    rows: [["", "Sent 3 days ago · read by T. Vogel"], ["", "Answered: yes · in build"], ["", "Shipped · 20 min saved per changeover"]] },
+    shot: "/screenshots/team.png", alt: "My cases: each case shows sent, read, decided and shipped, next to the one field for raising a problem" },
   { who: "Team leader", screen: "Inbox", body: "Open items addressed to me, oldest first. Empty by end of day is the whole ritual.",
-    rows: [["11d", "Changeover sheet duplicates MES"], ["4d", "Second forklift on late shift"], ["1d", "Move QA sign-off to line"]], age: true },
+    shot: "/screenshots/leader.png", alt: "Inbox: open cases sorted by age, each with its deadline, next to the selected case" },
   { who: "Manager", screen: "Overview", body: "Decisions waiting, the wait ledger, and the four reasons things stall.",
-    rows: [["38 h", "median to first answer"], ["81 %", "within the 14-day promise"], ["6", "decisions waiting on you"]] },
+    shot: "/screenshots/manager.png", alt: "Overview: decisions owed with their clocks, and the numbers that moved since the baseline" },
 ];
 
 export default function LandingPage() {
@@ -33,6 +34,20 @@ export default function LandingPage() {
           <Button href="/login" variant="ghost">Log in to your company</Button>
         </div>
       </section>
+
+      <figure className={styles.product}>
+        <div className={styles.frame}>
+          <div className={styles.frameBar} aria-hidden="true">
+            <span /><span /><span />
+            <p className="nh-mono">acme.nexthub.app/overview</p>
+          </div>
+          <Image
+            src="/screenshots/overview.png" width={2880} height={1800} preload
+            sizes="(max-width: 1240px) 100vw, 1240px"
+            alt="The manager overview: decisions waiting on you, the wait ledger, and where the waiting goes"
+          />
+        </div>
+      </figure>
 
       <figure className={styles.clock} aria-label="Typical wait today versus the work inside it">
         <div className={styles.clockRow}>
@@ -84,11 +99,9 @@ export default function LandingPage() {
                 <h3>{r.screen}</h3>
               </div>
               <p className={styles.roleBody}>{r.body}</p>
-              <ul className={styles.roleRows}>
-                {r.rows.map(([k, v]) => (
-                  <li key={v}>{k && <span className={`nh-mono ${r.age ? styles.age : ""}`}>{k}</span>}{v}</li>
-                ))}
-              </ul>
+              <div className={styles.roleShot}>
+                <Image src={r.shot} alt={r.alt} width={2348} height={1000} sizes="(max-width: 1240px) 100vw, 1130px" />
+              </div>
             </div>
           ))}
         </div>
