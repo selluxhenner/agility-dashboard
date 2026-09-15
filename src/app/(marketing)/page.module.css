@@ -1,117 +1,85 @@
-/* Landing page. Header/footer styles live with their components. */
+/* Landing page. Widths vary on purpose:
+   hero 880px · clock 720px · metric 720px · how 1040px · roles 1240px · close 560px. */
+
 .hero {
-  max-width: var(--nh-max); margin: 0 auto;
-  padding: clamp(56px, 9vw, 112px) var(--nh-page-x) 48px;
+  max-width: 880px; margin: 0 auto;
+  padding: clamp(56px, 9vw, 120px) var(--nh-page-x) 0;
   display: grid; gap: 22px; justify-items: start;
 }
 .hero h1 { font-size: clamp(40px, 6.5vw, 76px); font-weight: 800; max-width: 12ch; }
-.lead { font-size: clamp(16px, 1.6vw, 19px); color: var(--nh-ink-2); max-width: 56ch; line-height: 1.55; }
+.lead { font-size: clamp(16px, 1.6vw, 19px); color: var(--nh-ink-2); max-width: 52ch; line-height: 1.55; }
 .cta { display: flex; gap: 10px; flex-wrap: wrap; }
-.ctaNote { font-size: 11px; letter-spacing: 0.04em; color: var(--nh-mute); margin-top: -10px; }
 
+/* The clock: an open figure, no box - two rules and the bars. */
 .clock {
-  width: 100%; max-width: 760px; margin-top: 28px;
-  background: var(--nh-card); border: 1px solid var(--nh-line); border-radius: var(--nh-r-lg);
-  padding: 22px 24px; display: grid; gap: 14px;
+  max-width: 720px; margin: 56px auto 0;
+  padding: 0 var(--nh-page-x) clamp(56px, 8vw, 96px);
+  display: grid; gap: 18px;
 }
-.clockRow { display: grid; grid-template-columns: 220px 1fr 84px; align-items: center; gap: 16px; }
+.clockRow { display: grid; grid-template-columns: 220px 1fr 84px; align-items: center; gap: 20px; padding-top: 16px; border-top: 1px solid var(--nh-line); }
 .clockLabel { font-size: 13px; font-weight: 600; }
 .clockLabel span { display: block; font-weight: 400; color: var(--nh-mute); font-size: 12px; }
-.bar { height: 10px; background: var(--nh-line-soft); border-radius: 999px; overflow: hidden; }
+.bar { height: 8px; background: var(--nh-line-soft); border-radius: 999px; overflow: hidden; }
 .barFill { height: 100%; background: var(--nh-ink); border-radius: 999px; }
 .barAccent { background: var(--nh-accent); }
-.barMute { background: var(--nh-mute-2); }
 .clockVal { text-align: right; font-size: 14px; font-weight: 600; }
-.clockNote { font-size: 13px; color: var(--nh-mute); border-top: 1px solid var(--nh-line-soft); padding-top: 12px; }
+.clockNote { font-size: 14px; color: var(--nh-mute); max-width: 48ch; margin-top: 4px; }
 
-/* Dark band: the metric + the thesis */
+/* Metric: full-bleed dark, narrow text. */
 .metric { background: var(--nh-dark); color: var(--nh-on-dark); }
-.metricInner {
-  max-width: var(--nh-max); margin: 0 auto; padding: 64px var(--nh-page-x);
-  display: grid; grid-template-columns: 3fr 2fr; gap: 48px; align-items: end;
-}
-.metricInner > div { display: grid; gap: 12px; }
+.metricInner { max-width: 720px; margin: 0 auto; padding: clamp(56px, 8vw, 88px) var(--nh-page-x); display: grid; gap: 14px; }
 .metric :global(.nh-eyebrow) { color: var(--nh-on-dark-mute); }
-.metricBig { font-size: clamp(24px, 3.4vw, 38px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; max-width: 22ch; }
+.metricBig { font-size: clamp(26px, 3.6vw, 42px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
 .metricBig :global(.nh-mono) { color: var(--nh-accent); font-weight: 500; }
-.metricSub { color: var(--nh-on-dark-mute); max-width: 60ch; }
-.thesis { margin: 0; padding-left: 20px; border-left: 2px solid var(--nh-accent); }
-.thesis p { font-size: clamp(17px, 1.7vw, 21px); font-weight: 600; letter-spacing: -0.01em; line-height: 1.35; color: var(--nh-on-dark); }
+.metricSub { color: var(--nh-on-dark-mute); max-width: 52ch; }
 
-/* Generic section */
-.section { max-width: var(--nh-max); margin: 0 auto; padding: 72px var(--nh-page-x) 24px; display: grid; gap: 14px; }
-.section h2 { font-size: clamp(26px, 3.4vw, 38px); max-width: 20ch; }
-.sectionLead { color: var(--nh-ink-2); max-width: 62ch; font-size: 15px; }
-.inlineLink { color: var(--nh-ink); font-weight: 600; text-decoration: underline; text-decoration-color: var(--nh-line); text-underline-offset: 3px; }
-.inlineLink:hover { text-decoration-color: var(--nh-accent); }
-
-/* Steps */
-.steps { list-style: none; margin: 20px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-.steps li { background: var(--nh-card); border: 1px solid var(--nh-line); border-radius: var(--nh-r-lg); padding: 22px; display: grid; gap: 10px; align-content: start; }
-.stepN { color: var(--nh-accent); font-size: 12px; font-weight: 600; }
-.steps h3 { font-size: 18px; }
-.steps p { color: var(--nh-ink-2); font-size: 14px; }
-
-/* The four stall reasons */
-.stalls { list-style: none; margin: 20px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-.stalls li {
-  display: grid; gap: 12px; align-content: start; padding: 22px;
-  background: var(--nh-card); border: 1px solid var(--nh-line); border-radius: var(--nh-r-lg);
+/* How: heading column left, the three moves as a plain list right. */
+.how {
+  max-width: 1040px; margin: 0 auto;
+  padding: clamp(64px, 8vw, 104px) var(--nh-page-x) 0;
+  display: grid; grid-template-columns: minmax(200px, 5fr) 7fr; gap: 40px clamp(32px, 6vw, 96px); align-items: start;
 }
-.stallSaid { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; color: var(--nh-accent); }
-.stallIs { font-size: 14px; color: var(--nh-ink); line-height: 1.45; }
-.stallFix { font-size: 13px; color: var(--nh-ink-2); border-top: 1px solid var(--nh-line-soft); padding-top: 12px; display: grid; gap: 6px; }
+.howHead { display: grid; gap: 12px; position: sticky; top: 88px; }
+.howHead h2 { font-size: clamp(28px, 3.4vw, 40px); }
+.steps { display: grid; }
+.step { padding: 22px 0; border-top: 1px solid var(--nh-line); display: grid; gap: 8px; }
+.step:last-child { border-bottom: 1px solid var(--nh-line); }
+.step h3 { font-size: 19px; }
+.step p { color: var(--nh-ink-2); font-size: 15px; max-width: 52ch; }
 
-/* Roles */
-.roles { margin-top: 20px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-.role { background: var(--nh-card); border: 1px solid var(--nh-line); border-radius: var(--nh-r-lg); padding: 22px; display: grid; gap: 10px; align-content: start; }
-.role h3 { font-size: 22px; }
-.role > p:not(:global(.nh-eyebrow)) { color: var(--nh-ink-2); font-size: 14px; }
-.roleList { list-style: none; margin: 8px 0 0; padding: 12px 0 0; border-top: 1px solid var(--nh-line-soft); display: grid; gap: 8px; font-size: 13px; color: var(--nh-ink-2); }
-.roleList li { display: flex; gap: 10px; align-items: baseline; }
-.roleList :global(.nh-mono) { color: var(--nh-ink); font-weight: 600; }
+/* Roles: the widest section, one row per role, hairlines instead of boxes. */
+.roles { max-width: 1240px; margin: 0 auto; padding: clamp(64px, 8vw, 104px) var(--nh-page-x) 0; display: grid; gap: 14px; }
+.roles h2 { font-size: clamp(28px, 3.4vw, 40px); }
+.roleTable { margin-top: 24px; display: grid; }
+.roleRow {
+  display: grid; grid-template-columns: 200px minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 16px clamp(24px, 4vw, 64px); padding: 26px 0; border-top: 1px solid var(--nh-line); align-items: start;
+}
+.roleRow:last-child { border-bottom: 1px solid var(--nh-line); }
+.roleWho { display: grid; gap: 6px; }
+.roleWho h3 { font-size: 22px; }
+.roleBody { color: var(--nh-ink-2); font-size: 15px; max-width: 40ch; }
+.roleRows { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 13px; color: var(--nh-ink-2); }
+.roleRows li { display: flex; gap: 12px; align-items: baseline; padding-left: 12px; border-left: 2px solid var(--nh-line); }
+.roleRows :global(.nh-mono) { color: var(--nh-ink); font-weight: 600; }
 .age { min-width: 30px; color: var(--nh-accent) !important; }
 
-/* What a pilot needs: text + four facts */
-.trust {
-  display: grid; grid-template-columns: 3fr 2fr; gap: 40px; align-items: center;
-  padding: 36px; background: var(--nh-card); border: 1px solid var(--nh-line); border-radius: var(--nh-r-xl);
+/* Close: a short statement, centered, narrow. */
+.close {
+  max-width: 560px; margin: 0 auto; padding: clamp(80px, 10vw, 128px) var(--nh-page-x) 24px;
+  display: grid; gap: 14px; justify-items: start;
 }
-.trustText { display: grid; gap: 14px; }
-.trustText p:not(:global(.nh-eyebrow)) { color: var(--nh-ink-2); font-size: 15px; max-width: 58ch; }
-.trustText em { font-style: normal; color: var(--nh-ink); font-weight: 600; }
-.facts { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.facts div { padding: 18px 16px; background: var(--nh-surface); border: 1px solid var(--nh-line-soft); border-radius: var(--nh-r); }
-.facts dt { font-size: 32px; font-weight: 600; letter-spacing: -0.02em; line-height: 1; color: var(--nh-ink); }
-.facts dd { margin: 6px 0 0; font-size: 12px; color: var(--nh-mute); }
-
-/* Band */
-.band {
-  max-width: var(--nh-max); padding: 32px;
-  margin: 56px max(var(--nh-page-x), calc((100% - var(--nh-max)) / 2)) 0;
-  background: var(--nh-dark); color: var(--nh-on-dark); border-radius: var(--nh-r-xl);
-  display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;
-}
-.band h2 { font-size: 24px; margin-bottom: 6px; }
-.band p { color: var(--nh-on-dark-mute); max-width: 60ch; font-size: 14px; }
-
-/* Who is behind this */
-.about { grid-template-columns: 1fr 2fr; gap: 32px; padding-bottom: 8px; }
-.about > div:first-child { display: grid; gap: 14px; align-content: start; }
-.aboutBody { display: grid; gap: 14px; }
-.aboutBody p { color: var(--nh-ink-2); font-size: 15px; max-width: 62ch; }
-.aboutBody strong { color: var(--nh-ink); }
+.close h2 { font-size: clamp(26px, 3vw, 34px); }
+.close p { color: var(--nh-ink-2); font-size: 15px; }
+.close :global(.nh-btn) { margin-top: 8px; }
 
 @media (max-width: 900px) {
-  .steps, .roles { grid-template-columns: 1fr; }
-  .stalls { grid-template-columns: 1fr 1fr; }
-  .metricInner { grid-template-columns: 1fr; gap: 28px; }
-  .trust { grid-template-columns: 1fr; padding: 24px; }
-  .about { grid-template-columns: 1fr; }
+  .how { grid-template-columns: 1fr; gap: 24px; }
+  .howHead { position: static; }
+  .roleRow { grid-template-columns: 1fr; gap: 12px; }
+  .roleBody { max-width: none; }
 }
 @media (max-width: 640px) {
   .clockRow { grid-template-columns: 1fr 64px; }
   .clockRow .bar { grid-column: 1 / -1; order: 3; }
-  .stalls { grid-template-columns: 1fr; }
-  .facts { grid-template-columns: 1fr 1fr; }
 }
