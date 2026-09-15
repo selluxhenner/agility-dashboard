@@ -14,8 +14,8 @@ working as intended — you're on the wrong branch.
 ## First-time setup (once)
 
 ```bash
-git clone https://github.com/selluxhenner/agility-dashborad.git
-cd agility-dashborad
+git clone https://github.com/selluxhenner/nexthub.git
+cd nexthub
 git config user.name "Your Name"
 git config user.email "you@example.com"
 ```

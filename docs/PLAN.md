@@ -50,7 +50,7 @@ Each phase ends with something a teammate can open in a browser. One branch per 
 - [x] Landing, login step 1, login step 2 ported to React (visual only); AppShell rail + top bar
 - [x] `features/`: tenant (demo table), routing matcher, metrics, case event types; unit tests
 - [x] CI: lint, typecheck, test, build; CLAUDE.md / CONTRIBUTING.md / CODEOWNERS updated
-- [ ] Rename the GitHub repo `agility-dashborad` -> `nexthub` (Kevin); update the clone URL in CONTRIBUTING.md
+- [x] Rename the GitHub repo `agility-dashborad` -> `nexthub` (done 15 Sep)
 - [ ] Hosting: Vercel project on `main` (Kevin)
 
 ### Phase 1 - Finish the public side (2-3 days)
