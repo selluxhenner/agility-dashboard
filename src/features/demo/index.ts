@@ -4,7 +4,7 @@ import { SEED } from "./seed";
 import type { Seed } from "./types";
 
 export const EMPTY_SEED: Seed = {
-  ...SEED, depts: [], problems: [], ideas: [], initiatives: [], outcomes: [], cases: [], waitingOn: [], stall: [],
+  ...SEED, depts: [], people: [], problems: [], ideas: [], initiatives: [], outcomes: [], cases: [], waitingOn: [], stall: [],
 };
 
 export function seedFor(slug: string): Seed {

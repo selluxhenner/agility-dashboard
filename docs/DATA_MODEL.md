@@ -13,6 +13,7 @@ Phase 2 target (`prisma/schema.prisma`), each table with `companyId`:
 | - | `User` | `email (unique per company), name, passwordHash, role, handle, deptId` |
 | - | `Invite` | `token, email, role, expiresAt, acceptedAt` |
 | `DEPTS` | `Department` | |
+| `PEOPLE` | `User` | the org chart: `reportsTo` becomes `managerUserId?`; drawn on the collaboration page |
 | `ROUTES` | `Route` | the routing table: `label, ownerUserId, deputyUserId, buddyUserId?, keys[]` |
 | `CASES` | `Case` | `title, body, fromUserId, routeId, assigneeUserId, raisedAt, reason, upside` - status/assignee/clock are **derived** from events |
 | `store.js` log | `CaseEvent` | append-only: `caseId, actorUserId, type, payload, at` |
