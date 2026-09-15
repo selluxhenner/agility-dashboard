@@ -1,10 +1,7 @@
-// Shared view. Ideas by status; co-sign, approve, fund.
+// Shared view. Ideas: ?id= selects a row (search results and cross-links land here).
+import { IdeasView } from "@/components/dashboard/shared/IdeasView";
 export const metadata = { title: "Ideas" };
-export default function IdeasPage() {
-  return (
-    <>
-      <h1>Ideas</h1>
-      <p className="nh-hint">Shared view. Ideas by status; co-sign, approve, fund.</p>
-    </>
-  );
+export default async function IdeasPage({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
+  const { id } = await searchParams;
+  return <IdeasView key={id ?? ""} initialId={id} />;
 }

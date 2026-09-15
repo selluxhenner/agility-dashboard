@@ -1,10 +1,7 @@
-// Shared view. Cross-team initiatives and members.
+// Shared view. Cross-team initiatives and members: ?id= selects an initiative.
+import { CollaborationView } from "@/components/dashboard/shared/CollaborationView";
 export const metadata = { title: "Collaboration" };
-export default function CollaborationPage() {
-  return (
-    <>
-      <h1>Collaboration</h1>
-      <p className="nh-hint">Shared view. Cross-team initiatives and members.</p>
-    </>
-  );
+export default async function CollaborationPage({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
+  const { id } = await searchParams;
+  return <CollaborationView key={id ?? ""} initialId={id} />;
 }

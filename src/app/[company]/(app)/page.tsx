@@ -1,8 +1,7 @@
-// Role router: /[company] -> the role's home (ROLE_HOME). Reads the session in Phase 2; demo role until then.
-import { redirect } from "next/navigation";
-import { ROLE_HOME } from "@/config/roles";
+// Role router: /[company] -> the role's home (ROLE_HOME). Reads the session in Phase 2; until
+// then the role is the one the dev panel set in this browser (RoleRouter).
+import { RoleRouter } from "@/components/dashboard/RoleRouter";
 
-export default async function AppIndexPage({ params }: { params: Promise<{ company: string }> }) {
-  const { company } = await params;
-  redirect(`/${company}${ROLE_HOME.manager}`);
+export default function AppIndexPage() {
+  return <RoleRouter />;
 }

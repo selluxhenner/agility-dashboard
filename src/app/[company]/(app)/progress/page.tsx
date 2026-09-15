@@ -1,10 +1,6 @@
-// Shared view. Movement since baseline.
+// Shared view. Movement since baseline: funnel, outcomes, stalled, answered.
+import { ProgressView } from "@/components/dashboard/shared/ProgressView";
 export const metadata = { title: "Progress" };
 export default function ProgressPage() {
-  return (
-    <>
-      <h1>Progress</h1>
-      <p className="nh-hint">Shared view. Movement since baseline.</p>
-    </>
-  );
+  return <ProgressView />;
 }

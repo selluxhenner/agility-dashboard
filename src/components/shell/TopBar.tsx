@@ -84,7 +84,7 @@ export function TopBar() {
         </svg>
         <input id="nh-search" className={styles.searchInput} type="text" placeholder="Search problems, ideas, people" value={q}
           onChange={(e) => { setQ(e.target.value); setPop("search"); setCursor(0); }} onFocus={() => { setPop("search"); setMenu(false); }}
-          onKeyDown={onSearchKey} autoComplete="off" spellCheck={false} aria-label="Search" aria-expanded={searchOpen} />
+          onKeyDown={onSearchKey} autoComplete="off" spellCheck={false} aria-label="Search" />
         {toks.length > 0 && <button type="button" className={styles.searchClear} onClick={() => { setQ(""); setCursor(0); focusSearch(); }} title="Clear (esc)">×</button>}
         <span className={styles.kbd}>{searchOpen ? "esc" : "⌘K"}</span>
 
