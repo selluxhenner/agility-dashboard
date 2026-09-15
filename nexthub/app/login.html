@@ -1,0 +1,82 @@
+<!doctype html>
+<!-- STEP 2 of login: company-branded login. Visual only for now: shows the demo company and links on to index.html (role router). -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Log in to Acme · NextHub</title>
+  <link rel="icon" href="../assets/brand/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="../css/tokens.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/auth.css">
+</head>
+<body class="au">
+
+  <aside class="au-side">
+    <a class="au-logo" href="../index.html" aria-label="NextHub home">
+      <img src="../assets/brand/logo.png" alt="" width="28" height="28">
+      <span>NextHub</span>
+    </a>
+    <div class="au-side-body">
+      <p class="nh-eyebrow">This week at Acme</p>
+      <div class="au-stats">
+        <div><span class="nh-mono">38 h</span><small>median to first answer</small></div>
+        <div><span class="nh-mono">81 %</span><small>within the 14-day promise</small></div>
+        <div><span class="nh-mono">6</span><small>decisions waiting</small></div>
+      </div>
+      <p>Empty inbox by end of day is the whole ritual.</p>
+    </div>
+    <p class="au-side-foot nh-mono">Berlin · 2026</p>
+  </aside>
+
+  <main class="au-main">
+    <div class="au-card">
+      <div class="au-company">
+        <span class="au-company-mark" aria-hidden="true">A</span>
+        <div>
+          <p class="nh-eyebrow">Step 2 of 2</p>
+          <strong>Acme Maschinenbau GmbH</strong>
+        </div>
+        <a class="au-switch" href="../login.html">Not your company?</a>
+      </div>
+
+      <h1>Welcome back</h1>
+      <p class="au-sub">Log in with your Acme account.</p>
+
+      <form class="au-form" action="index.html" method="get" autocomplete="off">
+        <div class="nh-field">
+          <label class="nh-label" for="email">Email</label>
+          <input class="nh-input" id="email" type="email" placeholder="you@acme.example" value="t.vogel@acme.example" autocomplete="username">
+        </div>
+        <div class="nh-field">
+          <div class="au-label-row">
+            <label class="nh-label" for="password">Password</label>
+            <a class="nh-hint" href="../forgot-password.html">Forgot?</a>
+          </div>
+          <div class="nh-input-wrap">
+            <input class="nh-input" id="password" type="password" placeholder="••••••••" value="demo-demo" autocomplete="current-password">
+            <span class="nh-input-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            </span>
+          </div>
+        </div>
+        <label class="nh-check"><input type="checkbox" checked> Keep me logged in on this device</label>
+
+        <button class="nh-btn nh-btn-primary nh-btn-block" type="submit">Log in</button>
+
+        <div class="nh-divider">or</div>
+        <button class="nh-btn nh-btn-ghost nh-btn-block" type="button">
+          <svg width="16" height="16" viewBox="0 0 23 23" aria-hidden="true"><rect x="1" y="1" width="10" height="10" fill="#f35325"/><rect x="12" y="1" width="10" height="10" fill="#81bc06"/><rect x="1" y="12" width="10" height="10" fill="#05a6f0"/><rect x="12" y="12" width="10" height="10" fill="#ffba08"/></svg>
+          Continue with Microsoft
+        </button>
+      </form>
+
+      <p class="au-foot">No account at Acme yet? Ask your team leader for an invite.</p>
+    </div>
+  </main>
+
+</body>
+</html>

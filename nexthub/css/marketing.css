@@ -1,0 +1,102 @@
+/* Landing, pricing, contact. */
+.mk { background: var(--nh-surface); }
+
+/* Nav */
+.mk-nav {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; gap: 24px;
+  height: 64px; padding: 0 var(--nh-page-x);
+  background: rgba(250, 249, 247, 0.85); backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--nh-line-soft);
+}
+.mk-logo { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: -0.02em; font-size: 17px; }
+.mk-logo img { border-radius: 7px; }
+.mk-links { display: flex; gap: 22px; margin-left: 12px; font-size: 14px; font-weight: 500; color: var(--nh-ink-2); }
+.mk-links a:hover { color: var(--nh-ink); }
+.mk-actions { margin-left: auto; display: flex; gap: 8px; }
+
+/* Hero */
+.mk-hero {
+  max-width: var(--nh-max); margin: 0 auto;
+  padding: clamp(56px, 9vw, 112px) var(--nh-page-x) 48px;
+  display: grid; gap: 22px; justify-items: start;
+}
+.mk-hero h1 { font-size: clamp(40px, 6.5vw, 76px); font-weight: 800; max-width: 12ch; }
+.mk-lead { font-size: clamp(16px, 1.6vw, 19px); color: var(--nh-ink-2); max-width: 56ch; line-height: 1.55; }
+.mk-cta { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* The clock */
+.mk-clock {
+  width: 100%; max-width: 760px; margin-top: 28px;
+  background: var(--nh-card); border: 1px solid var(--nh-line); border-radius: var(--nh-r-lg);
+  padding: 22px 24px; display: grid; gap: 14px;
+}
+.mk-clock-row { display: grid; grid-template-columns: 200px 1fr 84px; align-items: center; gap: 16px; }
+.mk-clock-label { font-size: 13px; font-weight: 600; }
+.mk-clock-label span { display: block; font-weight: 400; color: var(--nh-mute); font-size: 12px; }
+.mk-bar { height: 10px; background: var(--nh-line-soft); border-radius: 999px; overflow: hidden; }
+.mk-bar-fill { height: 100%; background: var(--nh-ink); border-radius: 999px; }
+.mk-bar-accent { background: var(--nh-accent); }
+.mk-clock-val { text-align: right; font-size: 14px; font-weight: 600; }
+.mk-clock-note { font-size: 13px; color: var(--nh-mute); border-top: 1px solid var(--nh-line-soft); padding-top: 12px; }
+
+/* Metric band (dark) */
+.mk-metric { background: var(--nh-dark); color: var(--nh-on-dark); }
+.mk-metric-inner { max-width: var(--nh-max); margin: 0 auto; padding: 56px var(--nh-page-x); display: grid; gap: 12px; }
+.mk-metric .nh-eyebrow { color: var(--nh-on-dark-mute); }
+.mk-metric-big { font-size: clamp(24px, 3.4vw, 38px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; max-width: 22ch; }
+.mk-metric-big .nh-mono { color: var(--nh-accent); font-weight: 500; }
+.mk-metric-sub { color: var(--nh-on-dark-mute); max-width: 60ch; }
+
+/* Generic section */
+.mk-section { max-width: var(--nh-max); margin: 0 auto; padding: 72px var(--nh-page-x) 24px; display: grid; gap: 14px; }
+.mk-section h2 { font-size: clamp(26px, 3.4vw, 38px); max-width: 20ch; }
+
+/* Steps */
+.mk-steps { list-style: none; margin: 20px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; counter-reset: step; }
+.mk-steps li { background: var(--nh-card); border: 1px solid var(--nh-line); border-radius: var(--nh-r-lg); padding: 22px; display: grid; gap: 10px; align-content: start; }
+.mk-step-n { color: var(--nh-accent); font-size: 12px; font-weight: 600; }
+.mk-steps h3 { font-size: 18px; }
+.mk-steps p { color: var(--nh-ink-2); font-size: 14px; }
+
+/* Roles */
+.mk-roles { margin-top: 20px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.mk-role { background: var(--nh-card); border: 1px solid var(--nh-line); border-radius: var(--nh-r-lg); padding: 22px; display: grid; gap: 10px; align-content: start; }
+.mk-role h3 { font-size: 22px; }
+.mk-role > p:not(.nh-eyebrow) { color: var(--nh-ink-2); font-size: 14px; }
+.mk-role-list { list-style: none; margin: 8px 0 0; padding: 12px 0 0; border-top: 1px solid var(--nh-line-soft); display: grid; gap: 8px; font-size: 13px; color: var(--nh-ink-2); }
+.mk-role-list li { display: flex; gap: 10px; align-items: baseline; }
+.mk-role-list .nh-mono { color: var(--nh-ink); font-weight: 600; }
+.mk-age { min-width: 30px; color: var(--nh-accent) !important; }
+
+/* Band */
+.mk-band {
+  max-width: var(--nh-max); margin: 56px auto 0; padding: 32px; 
+  margin-left: max(var(--nh-page-x), calc((100% - var(--nh-max)) / 2));
+  margin-right: max(var(--nh-page-x), calc((100% - var(--nh-max)) / 2));
+  background: var(--nh-card); border: 1px solid var(--nh-line); border-radius: var(--nh-r-xl);
+  display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+}
+.mk-band h2 { font-size: 24px; margin-bottom: 6px; }
+.mk-band p { color: var(--nh-ink-2); max-width: 60ch; font-size: 14px; }
+
+/* Footer */
+.mk-footer {
+  max-width: var(--nh-max); margin: 0 auto; padding: 56px var(--nh-page-x) 40px;
+  display: flex; align-items: center; gap: 24px; flex-wrap: wrap; font-size: 13px; color: var(--nh-mute);
+}
+.mk-footer-brand { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--nh-ink); }
+.mk-footer-brand img { border-radius: 6px; }
+.mk-footer-links { display: flex; gap: 18px; }
+.mk-footer-note { margin-left: auto; font-size: 11px; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .mk-steps, .mk-roles { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .mk-links { display: none; }
+  .mk-clock-row { grid-template-columns: 1fr 64px; }
+  .mk-clock-row .mk-bar { grid-column: 1 / -1; order: 3; }
+  .mk-footer-note { margin-left: 0; }
+}

@@ -1,0 +1,153 @@
+<!doctype html>
+<!-- LANDING. Hero, the one metric (median hours to first human response), three roles, how it works, CTA. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NextHub - who owns this decision?</title>
+  <link rel="icon" href="assets/brand/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/marketing.css">
+</head>
+<body class="mk">
+
+  <header class="mk-nav">
+    <a class="mk-logo" href="index.html" aria-label="NextHub home">
+      <img src="assets/brand/logo.png" alt="" width="28" height="28">
+      <span>NextHub</span>
+    </a>
+    <nav class="mk-links" aria-label="Site">
+      <a href="#how">How it works</a>
+      <a href="#roles">Roles</a>
+      <a href="pricing.html">Pricing</a>
+    </nav>
+    <div class="mk-actions">
+      <a class="nh-btn nh-btn-ghost nh-btn-sm" href="login.html">Log in</a>
+      <a class="nh-btn nh-btn-primary nh-btn-sm" href="contact.html">Book a pilot</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="mk-hero">
+      <p class="nh-eyebrow">For companies that used to be faster</p>
+      <h1>Who owns this decision?</h1>
+      <p class="mk-lead">
+        An employee asks in one field. It lands in the right leader's inbox with a clock.
+        The leader answers. Everyone can see what is waiting on whom - and for how long.
+      </p>
+      <div class="mk-cta">
+        <a class="nh-btn nh-btn-primary" href="contact.html">Book a pilot</a>
+        <a class="nh-btn nh-btn-ghost" href="login.html">Log in to your company</a>
+      </div>
+
+      <div class="mk-clock" aria-label="Typical wait today versus with NextHub">
+        <div class="mk-clock-row">
+          <div class="mk-clock-label">Today <span>request to first human response</span></div>
+          <div class="mk-bar"><div class="mk-bar-fill" style="width:100%"></div></div>
+          <div class="mk-clock-val nh-mono">19 days</div>
+        </div>
+        <div class="mk-clock-row">
+          <div class="mk-clock-label">Of which actual work</div>
+          <div class="mk-bar"><div class="mk-bar-fill mk-bar-accent" style="width:16%"></div></div>
+          <div class="mk-clock-val nh-mono">3 days</div>
+        </div>
+        <p class="mk-clock-note">Nineteen working days. Three of them are work. The rest is waiting for someone to say yes, no, or "not me".</p>
+      </div>
+    </section>
+
+    <section class="mk-metric" id="metric">
+      <div class="mk-metric-inner">
+        <p class="nh-eyebrow">The only number that matters</p>
+        <div class="mk-metric-big"><span class="nh-mono">Median hours</span> from request to first human response</div>
+        <p class="mk-metric-sub">One metric, visible from day one, in the same currency your people already feel. Everything else is a dashboard.</p>
+      </div>
+    </section>
+
+    <section class="mk-section" id="how">
+      <p class="nh-eyebrow">How it works</p>
+      <h2>Three moves. No new meetings.</h2>
+      <ol class="mk-steps">
+        <li>
+          <span class="mk-step-n nh-mono">01</span>
+          <h3>Raise it in one field</h3>
+          <p>Describe what you need. The routing table names the owner, a deputy, and the typical wait - before you hit send.</p>
+        </li>
+        <li>
+          <span class="mk-step-n nh-mono">02</span>
+          <h3>It lands with a clock</h3>
+          <p>The owner sees an inbox sorted by age. One action each: yes, no and why, hand over to a name, or ask one question.</p>
+        </li>
+        <li>
+          <span class="mk-step-n nh-mono">03</span>
+          <h3>Waiting becomes visible</h3>
+          <p>Management sees the wait ledger: median time to first answer, share within the 14-day promise, and where the waiting goes.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section class="mk-section" id="roles">
+      <p class="nh-eyebrow">One case, seen from three sides</p>
+      <h2>A home screen per role.</h2>
+      <div class="mk-roles">
+        <article class="mk-role">
+          <p class="nh-eyebrow">Team member</p>
+          <h3>My cases</h3>
+          <p>What happened to what I sent. One field to raise the next one - anonymously if the company allows it.</p>
+          <ul class="mk-role-list">
+            <li>Sent 3 days ago · read by T. Vogel</li>
+            <li>Answered: yes · in build</li>
+            <li>Shipped · 20 min saved per changeover</li>
+          </ul>
+        </article>
+        <article class="mk-role">
+          <p class="nh-eyebrow">Team leader</p>
+          <h3>Inbox</h3>
+          <p>Open items addressed to me, oldest first. Empty by end of day is the whole ritual.</p>
+          <ul class="mk-role-list">
+            <li><span class="mk-age nh-mono">11d</span> Changeover sheet duplicates MES</li>
+            <li><span class="mk-age nh-mono">4d</span> Second forklift on late shift</li>
+            <li><span class="mk-age nh-mono">1d</span> Move QA sign-off to line</li>
+          </ul>
+        </article>
+        <article class="mk-role">
+          <p class="nh-eyebrow">Manager</p>
+          <h3>Overview</h3>
+          <p>Decisions waiting, the wait ledger, and the four reasons things stall.</p>
+          <ul class="mk-role-list">
+            <li><span class="nh-mono">38 h</span> median to first answer</li>
+            <li><span class="nh-mono">81 %</span> within the 14-day promise</li>
+            <li><span class="nh-mono">6</span> decisions waiting on you</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="mk-band">
+      <div>
+        <h2>Fifteen rows, filled in once.</h2>
+        <p>Not an org chart everyone maintains. A map of decision types: each with one owning role and one named deputy. A department head fills it in twenty minutes.</p>
+      </div>
+      <a class="nh-btn nh-btn-accent" href="contact.html">Book a pilot</a>
+    </section>
+  </main>
+
+  <footer class="mk-footer">
+    <div class="mk-footer-brand">
+      <img src="assets/brand/logo.png" alt="" width="22" height="22">
+      <span>NextHub</span>
+    </div>
+    <nav class="mk-footer-links" aria-label="Footer">
+      <a href="pricing.html">Pricing</a>
+      <a href="contact.html">Contact</a>
+      <a href="login.html">Log in</a>
+    </nav>
+    <p class="mk-footer-note nh-mono">Berlin · 2026</p>
+  </footer>
+
+  <script src="js/pages/landing.js"></script>
+</body>
+</html>

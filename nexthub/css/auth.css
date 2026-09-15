@@ -1,0 +1,71 @@
+/* Login / signup / invite / reset: dark side panel + centered card. */
+.au { min-height: 100dvh; display: grid; grid-template-columns: minmax(300px, 5fr) 7fr; background: var(--nh-surface); }
+
+/* Side panel */
+.au-side {
+  background: var(--nh-dark); color: var(--nh-on-dark);
+  padding: 28px 36px; display: flex; flex-direction: column; gap: 32px;
+}
+.au-logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 17px; letter-spacing: -0.02em; color: var(--nh-on-dark); }
+.au-logo:hover { color: #fff; }
+.au-logo img { border-radius: 7px; }
+.au-side-body { margin: auto 0; display: grid; gap: 16px; max-width: 34ch; }
+.au-side-body .nh-eyebrow { color: var(--nh-on-dark-mute); }
+.au-side-body h2 { font-size: clamp(26px, 3vw, 36px); font-weight: 800; }
+.au-side-body p:not(.nh-eyebrow) { color: var(--nh-on-dark-mute); font-size: 15px; }
+.au-side-foot { color: var(--nh-on-dark-mute); font-size: 11px; }
+
+.au-stats { display: grid; gap: 10px; }
+.au-stats div {
+  display: flex; align-items: baseline; gap: 12px;
+  padding: 12px 14px; background: var(--nh-dark-2); border: 1px solid var(--nh-dark-line); border-radius: var(--nh-r);
+}
+.au-stats span { font-size: 20px; font-weight: 600; color: var(--nh-on-dark); min-width: 64px; }
+.au-stats small { font-size: 13px; color: var(--nh-on-dark-mute); }
+
+/* Card */
+.au-main { display: grid; place-items: center; padding: 40px var(--nh-page-x); }
+.au-card {
+  width: 100%; max-width: 420px;
+  background: var(--nh-card); border: 1px solid var(--nh-line); border-radius: var(--nh-r-xl);
+  padding: 32px; display: grid; gap: 10px;
+}
+.au-card h1 { font-size: 28px; font-weight: 800; }
+.au-sub { color: var(--nh-ink-2); font-size: 14px; margin-bottom: 8px; }
+.au-form { display: grid; gap: 16px; margin-top: 6px; }
+.au-form .nh-btn-primary { margin-top: 4px; }
+.au-label-row { display: flex; justify-content: space-between; align-items: baseline; }
+.au-foot { margin-top: 10px; font-size: 13px; color: var(--nh-mute); text-align: center; }
+.au-foot a { color: var(--nh-ink); font-weight: 600; }
+
+/* Slug input */
+.au-slug { display: flex; align-items: stretch; }
+.au-slug .nh-input { border-radius: var(--nh-r) 0 0 var(--nh-r); }
+.au-slug-suffix {
+  display: flex; align-items: center; padding: 0 12px; font-size: 12px; color: var(--nh-mute);
+  background: var(--nh-surface); border: 1px solid var(--nh-line); border-left: 0; border-radius: 0 var(--nh-r) var(--nh-r) 0; white-space: nowrap;
+}
+
+/* Company header on step 2 */
+.au-company {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+  padding-bottom: 16px; border-bottom: 1px solid var(--nh-line-soft);
+}
+.au-company strong { display: block; font-size: 14px; }
+.au-company-mark {
+  width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center;
+  background: var(--nh-ink); color: var(--nh-on-dark); font-weight: 800; font-size: 18px; flex: none;
+}
+.au-switch { margin-left: auto; font-size: 12px; color: var(--nh-mute); white-space: nowrap; }
+.au-switch:hover { color: var(--nh-ink); }
+
+/* Responsive */
+@media (max-width: 860px) {
+  .au { grid-template-columns: 1fr; }
+  .au-side { padding: 20px var(--nh-page-x); gap: 18px; }
+  .au-side-body { margin: 0; }
+  .au-side-body h2 { font-size: 22px; }
+  .au-stats, .au-side-foot { display: none; }
+  .au-main { padding: 24px var(--nh-page-x) 40px; align-items: start; }
+  .au-card { padding: 24px; }
+}
