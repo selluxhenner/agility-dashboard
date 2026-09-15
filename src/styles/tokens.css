@@ -1,0 +1,31 @@
+/* Design tokens. Imported once by src/app/globals.css. Same palette as legacy/demo (warm greige, ink, one orange). */
+:root {
+  --nh-ground: #dcdbd6;      /* page background */
+  --nh-surface: #faf9f7;     /* panels */
+  --nh-card: #ffffff;        /* cards, inputs */
+  --nh-line: #e6e5e0;
+  --nh-line-soft: #eeede8;
+  --nh-ink: #141414;
+  --nh-ink-2: #5b5b5b;
+  --nh-mute: #8c8c88;
+  --nh-mute-2: #a3a29a;
+  --nh-dark: #1a1a17;        /* dark panel */
+  --nh-dark-2: #232320;
+  --nh-dark-line: #2c2c27;
+  --nh-on-dark: #fbfbf9;
+  --nh-on-dark-mute: #a0a099;
+  --nh-accent: #ff5a1f;
+  --nh-ok: #2f8f5b;
+
+  --nh-font: var(--font-sans, "Manrope"), system-ui, -apple-system, "Segoe UI", sans-serif;   /* --font-sans set by next/font in layout.tsx */
+  --nh-mono: var(--font-mono, "IBM Plex Mono"), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --nh-r-sm: 8px;
+  --nh-r: 11px;
+  --nh-r-lg: 14px;
+  --nh-r-xl: 22px;
+
+  --nh-space: 8px;
+  --nh-page-x: clamp(16px, 5vw, 56px);
+  --nh-max: 1120px;
+}
