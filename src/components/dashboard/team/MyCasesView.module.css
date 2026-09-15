@@ -1,6 +1,8 @@
-.cases { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-.emptyCard { padding: 26px 22px; }
-.caseCard { padding: 18px 18px 16px; }
+/* One surface for all cases; a hairline between them. The step bar gives each its shape. */
+.cases { padding: 4px 20px 6px; }
+.emptyCase { padding: 22px 2px; }
+.caseItem { padding: 18px 0 16px; border-top: 1px solid #f0efea; }
+.caseItem:first-child { border-top: 0; }
 .caseHead { min-width: 0; }
 .caseTitle { font-size: 15px; font-weight: 800; color: var(--nh-ink); letter-spacing: -0.015em; line-height: 1.3; }
 .submitted { font-size: 12px; color: var(--nh-on-dark-mute); margin-top: 5px; }
@@ -15,16 +17,19 @@
 .stepLabel[data-tone="todo"] { color: var(--nh-on-dark-mute); }
 .stepWhen { font-size: 10.5px; color: var(--nh-on-dark-mute); margin-top: 2px; line-height: 1.35; }
 
-.clock { font-size: 12px; font-weight: 600; line-height: 1.5; margin-top: 13px; padding: 9px 11px; border-radius: 9px; background: var(--nh-surface); border: 1px solid var(--nh-line-soft); color: var(--nh-ink-2); }
-.clock[data-overdue="true"] { background: #ffe7dc; border-color: #f7d6c5; color: #b23c07; }
+.clock { font-size: 12.5px; font-weight: 600; line-height: 1.5; margin-top: 14px; color: var(--nh-ink-2); }
+.clock[data-overdue="true"] { color: #b23c07; }
+.reply { margin-top: 8px; }
+.replyText { font-size: 12.5px; color: var(--nh-ink-2); line-height: 1.55; }
+.replyBy { font-size: 11px; color: var(--nh-on-dark-mute); margin-top: 4px; }
 .outcome { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-top: 14px; padding-top: 12px; border-top: 1px solid #f0efea; }
 .outcomeV { font-size: 12.5px; font-weight: 700; color: var(--nh-ink); }
 
 .intakeSub { margin-top: 6px; line-height: 1.55; }
 .intake { display: block; width: 100%; margin-top: 13px; background: var(--nh-dark-2); border: 1px solid #33332e; border-radius: 10px; padding: 10px 12px; font-family: inherit; font-size: 12.5px; line-height: 1.5; color: var(--nh-on-dark); resize: vertical; outline: 0; }
 .intake::placeholder { color: #7d7c73; }
-.intake:focus { border-color: #5b5b55; }
-.proposal { background: var(--nh-dark-2); border-radius: 11px; padding: 12px 13px; margin-top: 10px; }
+.intake:focus { border-color: var(--nh-brand); }
+.proposal { border-top: 1px solid #33332e; padding-top: 12px; margin-top: 12px; }
 .conf { font-family: var(--nh-mono); font-size: 10.5px; font-weight: 700; border-radius: 6px; padding: 3px 7px; background: #ffe7dc; color: #b23c07; }
 .conf[data-ok="true"] { background: #dcf3e3; color: #116634; }
 .ownerRow { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
@@ -39,14 +44,15 @@
 .wrong { display: inline-block; margin-top: 8px; font-size: 11.5px; font-weight: 600; color: #c9c8c0; cursor: pointer; border: 0; border-bottom: 1px solid #4a4a44; background: none; padding: 0; font-family: inherit; }
 .noMatch { font-size: 11.5px; color: var(--nh-mute-2); margin-top: 10px; line-height: 1.5; }
 .send { flex: 1; text-align: center; background: #33332e; color: #7d7c73; border-radius: 10px; padding: 10px 14px; font-size: 12.5px; font-weight: 800; cursor: default; border: 0; font-family: inherit; }
-.send[data-ready="true"] { background: var(--nh-accent); color: #1a1a17; cursor: pointer; }
+.send[data-ready="true"] { background: var(--nh-brand); color: #fff; cursor: pointer; }
+.send[data-ready="true"]:hover { background: var(--nh-brand-2); }
 .promises { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid #33332e; }
 .promise { display: flex; align-items: baseline; gap: 10px; }
 .promiseN { font-family: var(--nh-mono); font-size: 13px; font-weight: 700; color: var(--nh-on-dark); min-width: 52px; }
 .promiseL { font-size: 12.5px; color: #c9c8c0; line-height: 1.45; }
 
-.buddiesCard { padding: 18px 18px 12px; }
 .buddiesSub { margin-top: 5px; }
+.section { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--nh-line-soft); }
 .buddyName { font-size: 12.5px; font-weight: 700; color: var(--nh-ink); }
 .buddyDept { font-weight: 500; color: var(--nh-mute); }
 .buddyNote { font-size: 11px; color: var(--nh-on-dark-mute); margin-top: 2px; }

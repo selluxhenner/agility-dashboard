@@ -47,15 +47,15 @@ export function MyCasesView() {
     <>
       <ViewHead view="mine" />
       <div className={ui.split}>
-        <div className={styles.cases}>
+        <div className={`${ui.card} ${styles.cases}`}>
           {mine.length === 0 && (
-            <div className={`${ui.card} ${styles.emptyCard}`}>
+            <div className={styles.emptyCase}>
               <div className={ui.emptyTitle}>You have not sent anything yet</div>
               <div className={ui.emptySub}>Describe what you need in the box on the right. It names the person who owns it and the date they owe you an answer — and it stays here until they do.</div>
             </div>
           )}
           {mine.map((m) => (
-            <div key={m.kind + m.id} className={`${ui.card} ${styles.caseCard}`}>
+            <div key={m.kind + m.id} className={styles.caseItem}>
               <div className={ui.between}>
                 <div className={styles.caseHead}>
                   <div className={styles.caseTitle}>{m.title}</div>
@@ -76,9 +76,9 @@ export function MyCasesView() {
 
               <div className={styles.clock} data-overdue={m.overdue ? "true" : undefined}>{m.clock}</div>
 
-              <div className={`${ui.quote} ${ui.mt14}`}>
-                <div className={ui.quoteText}>{m.reply}</div>
-                <div className={ui.quoteBy}>{m.replyBy}</div>
+              <div className={styles.reply}>
+                <div className={styles.replyText}>{m.reply}</div>
+                <div className={styles.replyBy}>{m.replyBy}</div>
               </div>
               {m.canReply && (
                 <div className={`${ui.btnRow} ${ui.mt}`}>
@@ -141,7 +141,7 @@ export function MyCasesView() {
             </div>
           </div>
 
-          <div className={`${ui.card} ${styles.buddiesCard}`}>
+          <div className={ui.card}>
             <div className={ui.eyebrow}>Your buddies</div>
             <div className={`${ui.small} ${styles.buddiesSub}`}>Someone at your level in the next department you can ask directly, without going up the tree first.</div>
             <div className={`${ui.list} ${ui.mt8}`}>
@@ -155,19 +155,19 @@ export function MyCasesView() {
                 </div>
               ))}
             </div>
-          </div>
 
-          <div className={`${ui.card} ${ui.cardTight}`}>
-            <div className={ui.eyebrow}>Your contribution</div>
-            <div className={`${ui.grid2} ${styles.statsGrid}`}>
-              {stats.map((k) => (
-                <div key={k.l} className={ui.tile}>
-                  <div className={ui.statV}>{k.v}</div>
-                  <div className={ui.tileL}>{k.l}</div>
-                </div>
-              ))}
+            <div className={styles.section}>
+              <div className={ui.eyebrow}>Your contribution</div>
+              <div className={`${ui.grid2} ${styles.statsGrid}`}>
+                {stats.map((k) => (
+                  <div key={k.l} className={ui.tile}>
+                    <div className={ui.statV}>{k.v}</div>
+                    <div className={ui.tileL}>{k.l}</div>
+                  </div>
+                ))}
+              </div>
+              <div className={`${ui.note} ${ui.mt}`}>You post as <span className={styles.handle}>{who.handle ?? who.name}</span>. The handle stays yours, so credit still follows you.</div>
             </div>
-            <div className={`${ui.note} ${ui.mt}`}>You post as <span className={styles.handle}>{who.handle ?? who.name}</span>. The handle stays yours, so credit still follows you.</div>
           </div>
         </div>
       </div>

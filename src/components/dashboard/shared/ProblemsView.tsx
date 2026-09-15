@@ -61,7 +61,7 @@ export function ProblemsView({ initialId }: { initialId?: string }) {
         tools={<ListTools sort={sort} sortOptions={SORTS} onSort={(id) => setSort(id as ProblemSort)} facets={facets} filterCount={filterCount} onClearFilters={clearFilters} showingLabel={showing} />}
         strip={filtered ? <FilterStrip showingLabel={showing} chips={chips} onClearAll={clearAll} /> : undefined} />
       <div className={ui.split}>
-        <div className={ui.stack}>
+        <div className={`${ui.card} ${ui.cardList}`}>
           <div className={styles.discovery}>
             <div>
               <div className={ui.eyebrow}>Discovery round {demo ? seed.metrics.discovery.round : 1}</div>
@@ -74,7 +74,7 @@ export function ProblemsView({ initialId }: { initialId?: string }) {
             <div className={styles.discoveryHint}>Interviews run twice a year. Between rounds the same problems keep arriving through the app — that is what moves the trend.</div>
           </div>
 
-          <div className={`${ui.card} ${ui.cardList}`}>
+          <div>
             {sorted.length === 0 && (
               <Empty
                 title={filtered ? "No problems match" : demo ? "Nobody in " + (dept === "All" ? "the company" : deptName(dept)) + " has named a problem yet" : "No problems recorded yet"}
@@ -135,7 +135,7 @@ export function ProblemsView({ initialId }: { initialId?: string }) {
           <div className={styles.linked}>
             {(sp?.ideas ?? []).map((id) => D.ideas.find((i) => i.id === id)).filter((i) => !!i).map((i) => (
               <Link key={i.id} href={href("/ideas?id=" + i.id)} className={styles.linkedIdea}>
-                <span className={ui.tileTitle}>{i.title}</span>
+                <span className={`${ui.tileTitle} ${styles.linkedTitle}`}>{i.title}</span>
                 <Pill tone={statusTone(i.status)}>{i.status}</Pill>
               </Link>
             ))}

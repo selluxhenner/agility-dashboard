@@ -102,23 +102,23 @@ export function InboxView({ initialId }: { initialId?: string }) {
                   );
                 })}
               </div>
-            </div>
 
-            {cleared.length > 0 && (
-              <div className={`${ui.card} ${styles.clearedCard}`}>
-                <div className={ui.eyebrow}>Cleared today</div>
-                <div className={`${ui.list} ${ui.mt8}`}>
-                  {cleared.map(({ c, did }) => (
-                    <div key={c.id} className={styles.clearedRow}>
-                      <span className={styles.clearedTitle}>{c.title}</span>
-                      <Pill tone={did === "handed" ? "soft" : "ink"}>
-                        {did === "decided" && c.decided ? "Decided · " + c.decided.answer + (c.decided.reason && c.decided.answer === "no" ? " · " + c.decided.reason : "") : "Handed over · " + c.assignee}
-                      </Pill>
-                    </div>
-                  ))}
+              {cleared.length > 0 && (
+                <div className={styles.cleared}>
+                  <div className={ui.eyebrow}>Cleared today</div>
+                  <div className={`${ui.list} ${ui.mt8}`}>
+                    {cleared.map(({ c, did }) => (
+                      <div key={c.id} className={styles.clearedRow}>
+                        <span className={styles.clearedTitle}>{c.title}</span>
+                        <Pill tone={did === "handed" ? "soft" : "ink"}>
+                          {did === "decided" && c.decided ? "Decided · " + c.decided.answer + (c.decided.reason && c.decided.answer === "no" ? " · " + c.decided.reason : "") : "Handed over · " + c.assignee}
+                        </Pill>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             <div className={`${ui.card} ${styles.waitingCard}`}>
               <div className={ui.head}>

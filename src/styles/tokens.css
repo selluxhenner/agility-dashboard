@@ -1,4 +1,4 @@
-/* Design tokens. Imported once by src/app/globals.css. Same palette as legacy/demo (warm greige, ink, one orange). */
+/* Design tokens. Imported once by src/app/globals.css. Same palette as legacy/demo (warm greige, ink, one orange for time) plus the logo blue for actions. */
 :root {
   --nh-ground: #dcdbd6;      /* page background */
   --nh-surface: #faf9f7;     /* panels */
@@ -14,7 +14,10 @@
   --nh-dark-line: #2c2c27;
   --nh-on-dark: #fbfbf9;
   --nh-on-dark-mute: #a0a099;
-  --nh-accent: #ff5a1f;
+  --nh-accent: #ff5a1f;      /* time: due now, overdue, worsening */
+  --nh-brand: #1286fd;       /* the logo blue: actions and selection — send, approve, the picked row */
+  --nh-brand-2: #0b74e0;     /* hover */
+  --nh-brand-tint: #e6f1ff;
   --nh-ok: #2f8f5b;
 
   --nh-font: var(--font-sans, "Manrope"), system-ui, -apple-system, "Segoe UI", sans-serif;   /* --font-sans set by next/font in layout.tsx */
