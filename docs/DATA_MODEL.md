@@ -1,25 +1,30 @@
 # Data model
 
-Everything is keyed by company slug. Two stores:
+Everything is scoped by company. Today (Phase 1) the only store is
+`src/features/tenant/demo-companies.ts`: `slug, name, mark, anonymousHandles, users[]` with
+users `id, name, email, role (manager|leader|member), dept, handle?`. TypeScript types for the
+rest are in `src/types/index.ts`.
 
-- **`js/seed/companies.js`** - the tenants: `slug, name, logo, anonymousHandles, users[]`.
-  Users: `id, name, email, role (manager|leader|member), dept, handle?`.
-- **`js/seed/rows.js`** - `NH_SEED[slug]` = the demo rows for that company, same arrays as the
-  demo's `js/data.js`: `DEPTS, ROUTES, PROBLEMS, IDEAS, INITIATIVES, CASES, METRICS`.
+Phase 2 target (`prisma/schema.prisma`), each table with `companyId`:
 
-Plus the browser-side state:
+| Demo array (`legacy/demo/js/data.js`) | Table | Notes |
+|---|---|---|
+| - | `Company` | `id, slug (unique), name, logoUrl, anonymousHandles` |
+| - | `User` | `email (unique per company), name, passwordHash, role, handle, deptId` |
+| - | `Invite` | `token, email, role, expiresAt, acceptedAt` |
+| `DEPTS` | `Department` | |
+| `ROUTES` | `Route` | the routing table: `label, ownerUserId, deputyUserId, buddyUserId?, keys[]` |
+| `CASES` | `Case` | `title, body, fromUserId, routeId, assigneeUserId, raisedAt, reason, upside` - status/assignee/clock are **derived** from events |
+| `store.js` log | `CaseEvent` | append-only: `caseId, actorUserId, type, payload, at` |
+| `PROBLEMS` / `IDEAS` / `INITIATIVES` | `Problem` / `Idea` / `Initiative` | |
+| `METRICS` | - | computed by `features/metrics`; baseline values become `Company.baseline` |
 
-- **Session** - `localStorage['nexthub.session.v1']` = `{ companySlug, userId, role }` (`NHSession`).
-- **Event log** - `localStorage['nexthub.events.v1.<slug>']` = `{ events: [], day }` (`NHStore`).
-  Append-only. Event: `{ id, day, ts, actor, type, target, payload }`. Types as in the demo:
+Event types (`src/features/cases/events.ts`), as in the demo:
   `case.read, case.decided, case.handed, case.asked, case.answered, case.override, case.shipped,
   idea.cosigned, idea.approved, idea.funded` - plus, new here: `member.invited, member.role,
   route.upsert, dept.upsert` so settings pages also store facts, not edited copies of the seed.
 
-The page renders `NHStore.reduce(NH_SEED[slug], log)`. Rule carried over from the demo:
+Pages render `reduceCases(seed, events)` from `features/cases/reducer.ts`. Rule carried over from the demo:
 **never store display text as state.** Store who / which day / which route; build the sentence at
 render time. A case is one object seen from three sides: `from` = whose "My cases", `assignee` =
 whose Inbox (hand-over changes it), managers see all.
-
-Signup in the demo appends a company to `NH_COMPANIES` in memory and to
-`localStorage['nexthub.companies.v1']` so it survives reload; real backend later.

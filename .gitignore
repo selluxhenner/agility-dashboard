@@ -167,4 +167,4 @@ scratch/
 TODO.local.md
 NOTES.local.md
 .github/ci/out/
-/docs
+next-env.d.ts

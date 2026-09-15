@@ -1,129 +1,92 @@
 # NextHub - build plan
 
-> **Decision 15 Sep 2026: we move to Next.js.** This folder lives inside the `agility-dashborad`
-> repo (CI, CODEOWNERS and PR rules already configured there). The static HTML skeleton below is
-> the first cut and becomes the Next.js app in place - see "Moving to Next.js" at the bottom.
+> **Decision 15 Sep 2026: Next.js.** The repo is the Next.js app; the old static demo is
+> frozen in `legacy/demo/`. Folder rules: `docs/ARCHITECTURE.md`.
 
-The product: an employee raises a case in one field, it lands in the right leader's inbox with a
+The product: employees raise a case in one field, it lands in the right leader's inbox with a
 clock, the leader answers, the manager sees the wait ledger. Three roles, three home screens
-(`../PRODUCT_CONCEPT_ORG_OS.md` section 8). The demo in `../` proves the inbox
-loop for one company; this site adds everything around it: landing, login, company, roles.
-
-Today this is HTML + CSS + plain JS globals, served with `python -m http.server`. Landing and
-both login pages exist as static pages. The folders are cut the App Router way so the Next.js
-scaffold (Phase 0b) takes them over one by one instead of a rewrite.
+(the whiteboard concept, section 8). The demo in `legacy/demo/` proves the inbox loop for one
+company; this app adds everything around it: landing, login, company, roles, real data.
 
 ## The user journey
 
 ```
-index.html                         LANDING (public)
-  -> login.html                    step 1: work email or company slug -> finds the company
-      -> app/login.html?company=acme   step 2: company-branded login (demo users from companies.js)
-          -> app/index.html        role router: reads the session, redirects by role
-              manager  -> app/manager.html   Overview   decisions waiting, wait ledger, stall reasons
-              leader   -> app/leader.html    Inbox      open items by age; yes / no+why / hand over / ask
-              member   -> app/team.html      My cases   raise one field; see what happened to mine
-              shared      app/problems.html  ideas.html  collaboration.html  progress.html  case.html?id=
-              admin       app/settings/index.html  members.html  routing.html   (manager only)
-signup.html                        creates a company + its first manager -> app/login.html?company=<slug>
-invite.html?token=                 joins an existing company with the role on the invite
+/                                  LANDING (public)
+  -> /login                        step 1: work email or company slug -> finds the company
+      -> /acme/login               step 2: company-branded login
+          -> /acme                 role router: reads the session, redirects by role
+              manager  -> /acme/manager   Overview   decisions waiting, wait ledger, stall reasons
+              leader   -> /acme/leader    Inbox      open items by age; yes / no+why / hand over / ask
+              member   -> /acme/team      My cases   raise one field; see what happened to mine
+              shared      /acme/{problems,ideas,collaboration,progress,cases/[id]}
+              admin       /acme/settings/{company,members,routing}      (manager only)
+/signup                            creates a company + its first manager -> /[slug]/login
+/invite/[token]                    joins an existing company with the role on the invite
 ```
 
 Two logins are deliberate: the first only finds the tenant, the second authenticates inside it.
 That is what gives each company its own branding now and its own SSO later.
 
-"Company-specific" in a static site = `?company=<slug>` + `js/seed/companies.js`. The slug is
-saved in the session so app pages do not need it in the URL. Seed rows and the event log are
-both keyed by slug, so two demo companies never see each other's data.
+## Stack
 
-## Folder map
-
-```
-index.html pricing.html contact.html            marketing (public)
-login.html signup.html forgot-password.html invite.html   global auth (finds / creates a company)
-app/                                            company-specific, needs a session
-  login.html  index.html                        company login, role router
-  manager.html  leader.html  team.html          the three role homes
-  problems/ideas/collaboration/progress/case    shared views
-  settings/  index members routing              company admin
-css/      tokens base marketing auth shell dashboard
-js/core/  roles session tenant store routing metrics   the domain - pure, no DOM
-js/shell/ shell.js                              app chrome: guard, partials, nav per role
-js/pages/ one file per page                     DOM + events -> NHStore
-js/seed/  companies.js seed.js                  demo tenants + per-company seed rows
-js/runtime/                                     support.js (generated) if a page uses <x-dc>
-partials/ rail topbar sheet devpanel footer     shared HTML, injected by shell.js
-assets/brand/                                   logos, favicons
-tests/                                          node scripts (reducer, smoke, flow)
-docs/                                           ROUTES.md DATA_MODEL.md
-```
-
-Rule of thumb: **core decides, pages render, shell guards.** `js/core/*` never touches the DOM
-and never reads `location`/`localStorage` except through `NHSession` and `NHStore`. `js/pages/*`
-never mutates data - it appends events. Every list and figure is counted from rows.
+| Concern | Choice | Why |
+|---|---|---|
+| Framework | Next.js 16, App Router, TypeScript, `src/` | route groups map 1:1 onto the journey above |
+| Styling | tokens + CSS Modules, global `nh-*` primitives | ports the demo palette with least friction; no framework to learn |
+| Auth (Phase 2) | Auth.js v5: credentials + invite tokens; SSO providers later | per-tenant sessions, works in `proxy.ts` |
+| DB (Phase 2) | Postgres + Prisma | every table has `companyId`; `lib/db` enforces it |
+| Validation | zod (when forms go live) | shared between forms and server actions |
+| Tests | vitest (unit), Playwright (e2e, Phase 3) | reducer/metrics stay pure; the inbox loop e2e is ported from the demo |
+| Tenancy | path (`/acme/...`) first, subdomain via `proxy.ts` later | zero DNS work locally |
 
 ## Phases
 
 Each phase ends with something a teammate can open in a browser. One branch per task, PR to
-`main`, Kevin merges (same git rules as `../CLAUDE.md`).
+`main`, Kevin merges (`CONTRIBUTING.md`).
 
-### Phase 0a - Static skeleton (done 15 Sep)
-- [x] Every page exists as a stub with the right script includes
-- [x] `js/core/roles.js`: ROLE_HOME, PAGE_ACCESS, NAV
-- [x] `js/seed/companies.js`: one demo company, three users
-- [x] Landing (`index.html`), login step 1 (`login.html`), login step 2 (`app/login.html`) built, visual only
-- [x] Lives in the `agility-dashborad` repo as `nexthub/` on branch `feat/nexthub-site`
+### Phase 0 - Repo + scaffold (done 15 Sep)
+- [x] Next.js 16 app at the repo root; static demo moved to `legacy/demo/` (still in CI)
+- [x] Every route exists (`docs/ROUTES.md`); `src/config/roles.ts`: ROLE_HOME, ROLE_ACCESS, NAV
+- [x] Landing, login step 1, login step 2 ported to React (visual only); AppShell rail + top bar
+- [x] `features/`: tenant (demo table), routing matcher, metrics, case event types; unit tests
+- [x] CI: lint, typecheck, test, build; CLAUDE.md / CONTRIBUTING.md / CODEOWNERS updated
+- [ ] Rename the GitHub repo `agility-dashborad` -> `nexthub` (Kevin); update the clone URL in CONTRIBUTING.md
+- [ ] Hosting: Vercel project on `main` (Kevin)
 
-### Phase 0b - Next.js scaffold (next)
-- [ ] `npx create-next-app@latest` (TypeScript, App Router, `src/`, ESLint) into `nexthub/` - Kevin runs it, since it adds `package.json`
-- [ ] Port `index.html` -> `src/app/(marketing)/page.tsx`, `login.html` -> `(auth)/login/page.tsx`, `app/login.html` -> `[company]/login/page.tsx`; CSS becomes CSS Modules, tokens stay in `globals.css`
-- [ ] `js/core/*` -> `src/features/*` unchanged (no DOM in them); `js/seed/*` -> `prisma/seed`
-- [ ] Delete the static pages as each one is ported; `npm run dev` replaces `python -m http.server`
-- [ ] Add a `nexthub` job to `.github/workflows/ci.yml` (lint + build) - Kevin
+### Phase 1 - Finish the public side (2-3 days)
+- [ ] Pricing and contact pages with real copy; contact form (server action; email later)
+- [ ] Signup / invite / forgot-password as real forms that validate (zod) and redirect
+- [ ] Login step 1 looks up the tenant (`findTenantByEmail`) and redirects; unknown -> inline error
+- [ ] Mobile pass on every public page
 
-### Phase 1 - Landing + login flow, no dashboard yet (2-3 days)
-- [ ] `index.html`: hero, the one metric, CTA; copy from `../vision_frame_w7.html` / the deck
-- [ ] `login.html`: email or slug -> `NHTenant.findByEmail/find` -> redirect; unknown -> inline error
-- [ ] `app/login.html`: shows company name + logo, user picker or email; `NHSession.login` -> `app/index.html`
-- [ ] `app/index.html`: redirect by `ROLE_HOME`
-- [ ] `signup.html` / `invite.html` / `forgot-password.html`: forms that validate and redirect (demo)
-- [ ] `css/tokens.css` + `css/auth.css` + `css/marketing.css`; tokens ported from `dashboard.css`
-- [ ] Log out (user menu) clears the session and returns to `login.html`
+### Phase 2 - Sessions, tenant guard, role homes with seed data (1-2 weeks)
+- [ ] Prisma schema + seed (port `legacy/demo/js/data.js` into company `acme`)
+- [ ] Auth.js credentials; session `{userId, companySlug, role}`; `proxy.ts` enforces login + `ROLE_ACCESS`
+- [ ] Role router reads the session; AppShell shows the real user; log out
+- [ ] `features/cases/reducer.ts`: port `legacy/demo/js/store.js` + its 16 tests
+- [ ] **Member** `/team`: My cases + raise field with routing proposal
+- [ ] **Leader** `/leader`: Inbox by age; four actions through one input sheet -> server actions
+- [ ] **Manager** `/manager`: Overview - `features/metrics` computes the ledger from cases + events
+- [ ] Dev panel (dev only): switch role, demo data off (empty states, "measured in pilot"), reset
 
-### Phase 2 - App shell + role homes with seed data (1 week)
-- [ ] `shell.js`: inject partials, render NAV by role, active link, drawer < 760px, branding
-- [ ] `js/seed/rows.js`: port `../js/data.js` under `acme`
-- [ ] `js/core/store.js`: port the reducer from `js/store.js` + `tests/store.test.cjs`
-- [ ] **Member** `team.html`: My cases + raise field with routing proposal (`NHRouting.propose`)
-- [ ] **Leader** `leader.html`: Inbox by age; four actions through the one sheet -> events
-- [ ] **Manager** `manager.html`: Overview - `NHMetrics` computes the ledger from cases + events
-- [ ] Dev panel: switch role, demo data off (empty states, "measured in pilot"), reset
-
-### Phase 3 - Shared views + settings (1 week)
+### Phase 3 - Shared views, settings, e2e (1 week)
 - [ ] Problems, Ideas (co-sign / approve / fund), Collaboration, Progress, Case detail timeline
-- [ ] Settings: company (departments), members (invite, role), routing table editor -> saved as events
-- [ ] `tests/smoke.cjs` (every page, three roles, mobile) and `tests/flow.test.cjs` (the whole loop)
+- [ ] Settings: company (departments), members (invite, role), routing table editor
+- [ ] Playwright e2e: login flow; the whole inbox loop (port of `.github/ci/flow.test.cjs`)
 
-### Phase 4 - Second company + pilot polish
-- [ ] A second demo company in `companies.js` / `seed.js` to prove isolation
-- [ ] Per-company logo and accent colour
-- [ ] Hosting: any static host (GitHub Pages / Netlify); still no build step
+### Phase 4 - Pilot-ready
+- [ ] A second company in the seed to prove isolation; per-company logo and accent
+- [ ] Email: invites, password reset, "an item is older than N days"
+- [ ] SSO (Microsoft Entra first - the target list is mid-size German industry)
+- [ ] Subdomain tenancy via `proxy.ts`
+- [ ] Delete `legacy/demo/` and its two CI jobs once the port is complete
 
 ## Decisions to make before Phase 2
 1. Does a Leader also get "My cases"? (default: yes - everyone can raise; NAV already says so)
 2. Can a Manager act in the Inbox? (default: view yes; act = an `override` event, as in the demo)
-3. Anonymous handles per company or always on? (default: per company, `anonymousHandles` in companies.js)
-4. Pages built with the `<x-dc>` runtime (as the demo) or plain DOM? (default: plain DOM for
-   marketing/auth, `<x-dc>` for the dashboard pages so the demo logic ports unchanged)
-
-## Moving to Next.js
-The cut is already the App Router cut:
-`index/pricing/contact` -> `(marketing)/`, `login/signup/invite/forgot` -> `(auth)/`,
-`app/` -> `[company]/(app)/` with `manager|leader|team` as route folders, `js/core/*` -> `features/*`
-(unchanged, they have no DOM), `js/pages/*` -> page components, `partials/` -> `components/shell/`,
-`js/seed/*` -> `prisma/seed`, `NHSession` -> Auth.js, `?company=` -> `[company]` segment.
+3. Anonymous handles per company or always on? (default: per company, `anonymousHandles`)
+4. Tailwind or not? (decided: not - tokens + CSS Modules, fewer concepts for the team)
 
 ## What stays where
-- Repo root (`../`) - the static demo. Keep it for sales calls until Phase 2 replaces it; then archive.
-- `../../*.md` (outside the repo) - strategy, outreach, competitors. Untouched.
-- `nexthub/` (this folder) - the product.
+- `legacy/demo/` - the static demo. Keep it for sales calls until Phase 2 replaces it; then delete.
+- Strategy, outreach, competitor docs - outside the repo (Startup_speed root). Untouched.

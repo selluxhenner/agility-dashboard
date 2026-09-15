@@ -20,14 +20,15 @@ git config user.name "Your Name"
 git config user.email "you@example.com"
 ```
 
-Run the page:
+Install and run the app (needs Node 20+):
 
 ```bash
-python -m http.server 8765
+npm install
+npm run dev
 ```
 
-Open http://localhost:8765/index.html. (Opening `index.html` directly from the
-file explorer does **not** work — it has to be served.)
+Open http://localhost:3000. The old static demo still runs with `npm run demo`
+(http://localhost:8765/index.html) — it lives in `legacy/demo/`.
 
 If you use Claude Code: it reads `CLAUDE.md` automatically. Don't tell it to
 ignore those rules; they are the same rules as on this page.
@@ -63,8 +64,8 @@ git commit -m "feat: sort inbox by age, oldest first"
 Commit as often as you like. Messages: one line, say what and why.
 
 Before you commit, run `git status` and read it. If you see a file you didn't
-mean to change (especially `support.js`, `.gitignore`, anything in `.github/`,
-or a file ending in `.env`) — **don't add it**, and ask Kevin what happened.
+mean to change (especially `.gitignore`, anything in `.github/`, `package-lock.json`
+you didn't intend to touch, or a file ending in `.env`) — **don't add it**, and ask Kevin what happened.
 
 ### 4. Push the branch
 
@@ -128,8 +129,8 @@ person's code to make the error go away.
 | `git push --force` / `-f` | Overwrites other people's work. Never on a shared branch. |
 | `git add -f something` | Force-adding an ignored file. The ignore is on purpose. |
 | Edit `.gitignore`, `CLAUDE.md`, or anything in `.github/` | Kevin's. Ask. |
-| Edit `support.js` | Generated runtime. Any change will be reverted. |
-| Add npm, a bundler, a framework, new libraries | Changes how everyone runs the project. Ask first. |
+| Edit `legacy/demo/support.js` | Generated runtime. Any change will be reverted. |
+| Add a new dependency (`npm install something`) | Changes how everyone runs the project. Say why in the PR; Kevin decides. |
 | Reformat a whole file "to clean it up" | 400-line diffs hide the 3 lines that matter. |
 | Commit `.env`, keys, passwords, tokens | It's public the second it's pushed. Rotate it and tell Kevin. |
 | Click "bypass" on a push-protection warning | It's telling you there's a secret. Remove it instead. |
@@ -139,9 +140,9 @@ person's code to make the error go away.
 
 ## Before you open a PR — checklist
 
-- [ ] Page loads with no console errors
-- [ ] All three roles work (Dev button → Viewing as)
-- [ ] Demo data **off** still looks right (empty states)
+- [ ] `npm run lint`, `npm run typecheck`, `npm test` all pass
+- [ ] `npm run build` succeeds
+- [ ] The pages you touched load with no console errors
 - [ ] Below 760px still works (drag the window narrow)
 - [ ] `git status` shows only files you meant to change
 - [ ] PR description says what, why, and how you tested it

@@ -1,15 +1,14 @@
-# CI for the NextHub dashboard (static site, no build step).
+# CI for NextHub (Next.js app at the root, static demo in legacy/demo).
 #
-# Three jobs, all must pass before a PR can merge:
+# Four jobs, all must pass before a PR can merge:
 #   guard   — no secrets / forbidden files / edits to generated code
-#   syntax  — every JS file parses, index.html has its runtime wiring,
-#             the store reducer passes its unit tests
-#   smoke   — real Chromium loads the page: no JS errors, dashboard renders,
-#             all three roles switch, demo-data toggle works, mobile width OK;
-#             then the end-to-end flow test drives the whole inbox loop
+#   app     — npm ci, lint, typecheck, unit tests, production build
+#   syntax  — legacy demo: every JS file parses, index.html keeps its runtime
+#             wiring, the store reducer passes its unit tests
+#   smoke   — legacy demo in real Chromium: renders, roles switch, mobile OK,
+#             then the end-to-end inbox flow
 #
-# When a package.json arrives, add lint/typecheck/test jobs here and make
-# them required in the ruleset. Kevin owns this file.
+# Kevin owns this file.
 
 name: CI
 
@@ -65,8 +64,8 @@ jobs:
         shell: bash
         run: |
           fail=0
-          if grep -qx 'support.js' changed.txt; then
-            echo "::error file=support.js::support.js is generated. Do not edit it — ask Kevin. (Kevin: merge with bypass if this is an intended runtime update.)"
+          if grep -qx 'legacy/demo/support.js' changed.txt; then
+            echo "::error file=legacy/demo/support.js::support.js is generated. Do not edit it — ask Kevin. (Kevin: merge with bypass if this is an intended runtime update.)"
             fail=1
           fi
           # Author check is advisory, not security — the ruleset is the real gate.
@@ -99,8 +98,23 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  app:
+    name: app · lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
   syntax:
-    name: syntax · JS parses, HTML wiring intact
+    name: syntax · legacy demo JS parses, HTML wiring intact
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -112,6 +126,7 @@ jobs:
         shell: bash
         run: |
           set -e
+          cd legacy/demo
           for f in support.js js/*.js; do
             echo "node --check $f"
             node --check "$f"
@@ -121,7 +136,8 @@ jobs:
         shell: bash
         run: |
           set -e
-          need() { grep -qF -- "$1" index.html || { echo "::error file=index.html::missing: $1"; exit 1; }; }
+          cd legacy/demo
+          need() { grep -qF -- "$1" index.html || { echo "::error file=legacy/demo/index.html::missing: $1"; exit 1; }; }
           need '<script src="./support.js"></script>'
           need '<script src="./js/data.js"></script>'
           need '<script src="./js/store.js"></script>'
@@ -149,7 +165,7 @@ jobs:
           echo "ok"
 
   smoke:
-    name: smoke · page renders in Chromium
+    name: smoke · legacy demo renders in Chromium
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -172,7 +188,7 @@ jobs:
       - name: Serve the page
         shell: bash
         run: |
-          python -m http.server 8765 >server.log 2>&1 &
+          python -m http.server 8765 --directory legacy/demo >server.log 2>&1 &
           for i in $(seq 1 20); do
             curl -sf http://localhost:8765/index.html >/dev/null && break
             sleep 0.5

@@ -1,31 +1,31 @@
-# Page map
+# Route map
 
-| Page | Session | Role | Purpose |
-|---|---|---|---|
-| `index.html` | - | - | Landing |
-| `pricing.html` | - | - | Pricing |
-| `contact.html` | - | - | Contact / book a pilot |
-| `login.html` | - | - | Find your company (email or slug) -> `app/login.html?company=` |
-| `signup.html` | - | - | Create company + first manager |
-| `forgot-password.html` | - | - | Reset request |
-| `invite.html?token=` | - | - | Accept invite |
-| `app/login.html?company=` | - | - | Company-branded login |
-| `app/index.html` | yes | any | Redirect to `ROLE_HOME[role]` |
-| `app/manager.html` | yes | manager | Overview |
-| `app/leader.html` | yes | leader, manager | Inbox |
-| `app/team.html` | yes | any | My cases |
-| `app/problems.html` | yes | any | Problems |
-| `app/ideas.html` | yes | any | Ideas |
-| `app/collaboration.html` | yes | any | Initiatives |
-| `app/progress.html` | yes | any | Movement since baseline |
-| `app/case.html?id=` | yes | own / addressed / manager | Case detail |
-| `app/settings/index.html` | yes | manager | Company: name, slug, logo, departments |
-| `app/settings/members.html` | yes | manager | Members and roles |
-| `app/settings/routing.html` | yes | manager | Routing table |
+| URL | File (`src/app/`) | Session | Role | Purpose |
+|---|---|---|---|---|
+| `/` | `(marketing)/page.tsx` | - | - | Landing |
+| `/pricing` | `(marketing)/pricing/page.tsx` | - | - | Pricing |
+| `/contact` | `(marketing)/contact/page.tsx` | - | - | Contact / book a pilot |
+| `/login` | `(auth)/login/page.tsx` | - | - | Find your company -> `/[company]/login` |
+| `/signup` | `(auth)/signup/page.tsx` | - | - | Create company + first manager |
+| `/forgot-password` | `(auth)/forgot-password/page.tsx` | - | - | Reset request |
+| `/invite/[token]` | `(auth)/invite/[token]/page.tsx` | - | - | Accept invite |
+| `/[company]/login` | `[company]/login/page.tsx` | - | - | Company-branded login |
+| `/[company]` | `[company]/(app)/page.tsx` | yes | any | Redirect to `ROLE_HOME[role]` |
+| `/[company]/manager` | `.../(app)/manager/page.tsx` | yes | manager | Overview |
+| `/[company]/leader` | `.../(app)/leader/page.tsx` | yes | leader, manager | Inbox |
+| `/[company]/team` | `.../(app)/team/page.tsx` | yes | any | My cases |
+| `/[company]/problems` | `.../(app)/problems/page.tsx` | yes | any | Problems |
+| `/[company]/ideas` | `.../(app)/ideas/page.tsx` | yes | any | Ideas |
+| `/[company]/collaboration` | `.../(app)/collaboration/page.tsx` | yes | any | Initiatives |
+| `/[company]/progress` | `.../(app)/progress/page.tsx` | yes | any | Movement since baseline |
+| `/[company]/cases/[caseId]` | `.../(app)/cases/[caseId]/page.tsx` | yes | own / addressed / manager | Case detail |
+| `/[company]/settings/*` | `.../(app)/settings/{company,members,routing}/page.tsx` | yes | manager | Company admin |
+| `/api/health` | `api/health/route.ts` | - | - | Uptime check |
 
-Role rules are data in `js/core/roles.js` (`ROLE_HOME`, `PAGE_ACCESS`, `NAV`) and enforced by
-`NHSession.require()` which `NHShell.mount()` calls on every app page. The guard is client-side -
-fine for a demo, replaced by real auth later without touching pages.
+Role rules are data in `src/config/roles.ts` (`ROLE_HOME`, `ROLE_ACCESS`, `canAccess()`) and nav
+per role in `src/config/nav.ts`. Enforcement (`src/proxy.ts` + the `(app)` layout) arrives with
+sessions in Phase 2; until then every app page renders with the demo tenant as manager.
 
-Script order on an app page: `seed/*` -> `core/roles` -> `core/session` -> `core/tenant` ->
-`core/store` (+ `routing`/`metrics` as needed) -> `shell/shell` -> `pages/<page>`.
+Layouts nest: `app/layout.tsx` (html, fonts) -> `(marketing)/layout.tsx` (header, footer) or
+`[company]/layout.tsx` (resolve tenant, 404) -> `(app)/layout.tsx` (AppShell: rail + top bar)
+-> `settings/layout.tsx` (sub-nav). Auth pages compose `AuthShell` themselves.

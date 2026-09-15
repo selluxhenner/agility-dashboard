@@ -8,53 +8,43 @@ user to ask Kevin instead of working around it.
 
 ## What this project is
 
-NextHub agility dashboard — a **static demo page**, no build step, no backend
-(yet). Read `README.md` first; it explains the runtime, the roles, and how the
-data model in `js/data.js` drives every number on the page.
+NextHub — a Next.js 16 app (App Router, TypeScript, `src/`). Read `README.md`
+first, then `docs/ARCHITECTURE.md` for the folder rules. The product idea is
+in `docs/PLAN.md`; routes in `docs/ROUTES.md`; the data model in
+`docs/DATA_MODEL.md`.
 
 ```
-index.html          markup template (<x-dc> … </x-dc>) + editable props
-css/dashboard.css   page styles + responsive rules at the bottom
-js/data.js          seed data — rows never change at runtime
-js/store.js         EVENT LOG + REDUCER — Kevin only (see below)
-js/dashboard.js     component logic (state, view models, this.act.*)
-support.js          GENERATED RUNTIME — never edit, never reformat
-docs/ACTIONS_PLAN.md how the action buttons work and who builds what
+src/app/            routes only: layouts, pages, route handlers. Thin.
+src/components/     React. Props in, JSX out. No fetching, no business rules.
+src/features/       domain logic per entity. No React, no DOM. Pages import from here.
+src/config/         roles, nav, site constants — data, not code.
+src/lib/            db client, small utils.   src/server/actions/  server actions.
+legacy/demo/        the old static dashboard. Frozen. Read it to port logic; do not develop in it.
 ```
 
-## How state works (read before touching any button)
+## How to work here
 
-Nothing in the browser mutates `js/data.js`. Every action appends an event
-to `NHStore` (`js/store.js`); the page renders `reduce(seed, events)`.
-
-- **You change state only by calling `this.act.something(...)`** in
-  `js/dashboard.js` — `raise`, `read`, `decide`, `hand`, `ask`, `answer`,
-  `override`, `cosign`, `askIdea`, `approve`, `fund`, `advanceDay`.
-- **You never edit `js/store.js`.** If the event you need does not exist, or
-  a derived field is missing, describe it in the PR and Kevin adds it.
-- **Never store display text as state** (`'Sent to X. They owe…'`). Store the
-  facts (who, which day, which route); build the sentence at render time —
-  see `mineRow()` / `cosignRow()` for the pattern.
-- **Never call `localStorage` directly.** The store owns persistence.
-- **Need input from the user (a reason, a line of text, people)? Use the
-  sheet.** `this.openSheet('yourKind', id)` + a branch in `sheetVals()` that
-  returns title / options / text / people and an `onConfirm` that calls
-  `this.act.*`. Do not add a second modal, popover or inline form; the one in
-  `index.html` (`.nh-sheet`) already handles keyboard, scrim and mobile.
-- Do not `setState` new keys for domain data. Component state is for UI only
-  (which tab, which row is selected, what is typed in a field, `sheet`, `leadAs`).
-- **Who is looking / acting comes from `this.persona()`**, never from `ROLES`
-  directly. The team-leader role can be viewed as any desk holder (dev panel
-  "Inbox of"), and `this.actor()` records events under that name.
-- **"Is this case mine?" is `NHStore.onDesk(c, name)`** — assigned to me *or*
-  escalated to me. Don't compare `c.assignee === name` in UI code.
-- Time is `S.day` (the demo clock). Never use `Date.now()` for anything the
-  page shows; `this.fmtDay(dayOffset, S)` turns an offset into a label.
-- Tests: `.github/ci/store.test.cjs` (reducer), `.github/ci/smoke.cjs`
-  (renders), `.github/ci/flow.test.cjs` (the whole inbox loop through the UI).
-  All run in CI. If your change makes one fail, the change is wrong, not the
-  test — unless you changed copy the test asserts on; then update the
-  assertion in the same PR and say so.
+- **Pages fetch, components render, features decide.** A page calls
+  `features/*`, hands plain props to `components/*`. A component never calls
+  the database or a feature action directly; mutations go through
+  `src/server/actions/`.
+- **Roles are data.** `ROLE_HOME`, `ROLE_ACCESS`, `NAV` in `src/config/`. Do not
+  hard-code a role check in a page; extend the config and use `canAccess()`.
+- **Tenant is the `[company]` segment.** Everything under `src/app/[company]/`
+  gets the company from `params`; every query is scoped by company. Never read
+  the slug from anywhere else.
+- **Events, not edits.** When the case store lands (`features/cases`), state
+  changes by appending an event and re-reducing — the same rule the demo had.
+  Never store display text as state; store facts, build sentences at render.
+- **Styling:** tokens in `src/styles/tokens.css`, shared primitives (`nh-*`) in
+  `src/app/globals.css`, page/component styles in a sibling `*.module.css`.
+  No Tailwind, no styled-components, no inline style objects beyond a one-off.
+- **Tests:** `tests/unit/*.test.ts` (vitest) for anything in `features/`.
+  If your change breaks a test, the change is wrong, not the test — unless
+  you changed behaviour deliberately; then update the test in the same PR and
+  say so.
+- Before you say a change is done: `npm run lint && npm run typecheck && npm test && npm run build`
+  all pass, the page loads with no console errors, and it still works below 760px.
 
 ## Git rules (non-negotiable)
 
@@ -67,7 +57,7 @@ to `NHStore` (`js/store.js`); the page renders `reduce(seed, events)`.
 4. **Never `git add -f`** and **never edit `.gitignore` to un-ignore a file.**
    If a file you need is ignored, that is deliberate — tell the user to ask Kevin.
 5. **Never commit** `.env*` (except `.env.example`), keys, tokens, certificates,
-   credentials JSON, database files, `node_modules/`, `uploads/`, or anything
+   credentials JSON, database files, `node_modules/`, `.next/`, or anything
    under `.claude/` except files Kevin has explicitly committed.
 6. **Never change or disable** anything under `.github/` (workflows, CODEOWNERS,
    PR template). Ask Kevin.
@@ -80,61 +70,48 @@ to `NHStore` (`js/store.js`); the page renders `reduce(seed, events)`.
 
 ## Code rules
 
-- **`support.js` is generated. Do not edit it, do not reformat it, do not
-  "fix" it.** If the runtime seems to be the problem, stop and report to Kevin.
-- **Do not add dependencies, a build step, a bundler, a framework, npm,
-  TypeScript, Tailwind, or a package.json** without Kevin's explicit OK in the
-  PR description. The page runs by opening `index.html` over HTTP — keep it so.
+- **Do not add a dependency** (`npm install x`) without saying why in the PR
+  description. Kevin decides. Prefer what is already there: Next, React,
+  vitest. No UI kits, no CSS frameworks, no state libraries.
+- **Do not edit `package-lock.json` by hand**, and do not commit a lockfile
+  change your PR did not need.
 - **Do not reformat files you did not need to change.** No whitespace-only
-  diffs, no re-indenting a whole file, no "cleanup" passes across the codebase.
-  Match the existing style of the file you are in.
-- **Data lives in `js/data.js`, logic in `js/dashboard.js`, markup in
-  `index.html`, styles in `css/dashboard.css`.** Don't hard-code numbers in the
-  template that should be counted from data — the README explains which arrays
-  drive which counts.
-- New figures that have no underlying rows go in `METRICS` in `js/data.js`,
-  so they read "measured in pilot" when demo data is off.
-- The page must keep working with **Demo data off** (empty states) and at
-  **< 760px** (mobile drawer). Check both before saying you are done.
-- Responsive rules stay at the bottom of `css/dashboard.css`; DOM hooks are the
-  `nh-*` classes. Don't rename existing `nh-*` classes.
-- No external requests other than the React CDN that is already there. No
-  analytics, no fonts from new origins, no fetch to third-party APIs.
-- No secrets in code, ever — not even "just for testing". That includes API
-  keys inside `data-props`, `localStorage` seeds, or comments.
+  diffs, no re-indenting a whole file, no "cleanup" passes. Match the style of
+  the file you are in.
+- No `any`. No `// @ts-ignore`. If the types fight you, the shape is wrong —
+  fix the shape or ask.
+- No external requests except Google Fonts (already there). No analytics, no
+  third-party scripts, no fetch to outside APIs.
+- No secrets in code, ever — not even "just for testing".
+- `legacy/demo/support.js` is generated. Do not edit it.
 
 ## Ownership — who changes what
 
 | Area | Who | Rule for you |
 |---|---|---|
-| `support.js`, runtime wiring in `index.html` (`<script>` tags, `<script data-dc-script>`, props block) | Kevin | Don't touch. Report instead. |
-| `js/store.js` (event types, reducer, migration), `.github/ci/store.test.cjs` | Kevin | Don't touch. Ask for the event you need in the PR. |
-| Shape of the data model (new arrays, renamed fields, new `METRICS` keys) | Kevin | Propose in PR description; add rows freely, don't restructure. |
-| `.github/`, `.gitignore`, `CLAUDE.md`, `CONTRIBUTING.md`, deploy/hosting | Kevin | Don't touch. |
-| UI features, copy, styles, demo data rows, new views | anyone | Normal branch + PR flow. |
+| `.github/`, `.gitignore`, `CLAUDE.md`, `CONTRIBUTING.md`, hosting | Kevin | Don't touch. |
+| `package.json` dependencies, `next.config.ts`, `tsconfig.json`, `eslint.config.mjs` | Kevin | Propose in the PR description. |
+| `src/config/roles.ts`, `src/proxy.ts`, `src/features/auth`, `prisma/schema.prisma` | Kevin | Propose; add rows/fields in the PR text, don't restructure. |
+| `src/features/cases/reducer.ts` and its tests | Kevin | Ask for the event you need in the PR. |
+| Pages, components, styles, copy, other features, tests | anyone | Normal branch + PR flow. |
 
 ## Run and verify
 
-Serve the folder over HTTP — `file://` does not work:
-
 ```bash
-python -m http.server 8765
+npm install
+npm run dev        # http://localhost:3000   demo company: /acme
 ```
 
-then open http://localhost:8765/index.html. Internet is needed (React CDN).
-
 Before you say a change is done:
-- Reload the page — no errors in the browser console.
-- Switch all three roles via the **Dev** button (bottom right).
-- Toggle **Demo data** off and back on.
+- `npm run lint && npm run typecheck && npm test && npm run build` pass.
+- The pages you touched load — no errors in the browser console.
 - Resize below 760px once.
 - `git status` shows only the files you meant to change.
 
 ## When to stop and ask instead of doing
 
-- The task needs a new dependency, build tool, backend, or hosting change.
-- The task needs a change to `support.js`, `js/store.js`, or the data model's shape.
-- You want to store something new — ask for an event type instead of adding state.
+- The task needs a new dependency, a config change, or a hosting change.
+- The task needs a new event type, a schema change, a new role, or a change to auth.
 - Something in `.github/` is failing and you're tempted to edit the workflow.
 - You'd need to force-push, rewrite history, or touch `main` directly.
 - You found a committed secret or a file that looks like one.
