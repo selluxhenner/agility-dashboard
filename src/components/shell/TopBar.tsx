@@ -14,7 +14,7 @@ const KIND_TONE: Record<SearchItem["kind"], Tone> = { Problem: "soft", Idea: "ac
 
 export function TopBar() {
   const ctx = useDemo();
-  const { seed, S, D, role, persona, demo, q, setQ, pop, setPop, togglePop, setMenu, href } = ctx;
+  const { seed, S, D, role, persona, actor, email, demo, q, setQ, pop, setPop, togglePop, setMenu, href, logout } = ctx;
   const router = useRouter();
   const [cursor, setCursor] = useState(0);
   const P = seed.promiseDays;
@@ -70,6 +70,7 @@ export function TopBar() {
   const waiting = decisionsWaiting(D);
   const goDecisions = () => { setPop(null); router.push(href(isManager ? "/ideas?id=" + (waiting[0]?.id ?? "i1") : isLead ? "/leader" : "/team")); };
   const go = (to: string) => { setPop(null); router.push(href(to)); };
+  const anon = actor !== persona.who.name; // the employee posts under a handle
 
   return (
     <header className={styles.topbar}>
@@ -125,7 +126,7 @@ export function TopBar() {
           <span className={styles.dLong}>{decisionLabel}</span>
           <span className={styles.dShort}>{!demo && !n ? "0" : n}</span>
         </button>
-        <button type="button" className={styles.avatar} data-open={pop === "me" ? "true" : undefined} onClick={() => togglePop("me")} aria-label="You">{persona.who.ini}</button>
+        <button type="button" className={styles.avatar} data-open={pop === "me" ? "true" : undefined} onClick={() => togglePop("me")} aria-label="You" title={persona.who.name + " · " + persona.who.line}>{persona.who.ini}</button>
 
         {pop === "decisions" && (
           <div className={`${styles.pop} ${styles.decisions}`}>
@@ -155,12 +156,30 @@ export function TopBar() {
               <span className={styles.meText}>
                 <span className={styles.meName}>{persona.who.name}</span>
                 <span className={styles.meLine}>{persona.who.line}</span>
+                {email && <span className={styles.meEmail}>{email}</span>}
               </span>
             </div>
             <div className={styles.meRows}>
               <div className={styles.meRow}><span>Role</span><strong>{persona.role.label}</strong></div>
               <div className={styles.meRow}><span>Scope</span><strong>{persona.role.dept === "All" ? "All departments" : ctx.deptName(persona.role.dept)}</strong></div>
-              <div className={styles.meRow}><span>You post as</span><span className={styles.meHandle}>{persona.who.handle ?? "posts under your name"}</span></div>
+              <div className={styles.meRow}><span>Company</span><strong>{ctx.tenant.name}</strong></div>
+            </div>
+            {/* Profile preview: the card others see next to what you post - the handle for an anonymous employee, the name otherwise. */}
+            <div className={styles.mePreview}>
+              <span className={styles.mePreviewLabel}>How others see you</span>
+              <div className={styles.mePreviewCard}>
+                <span className={styles.mePreviewAvatar} data-anon={anon ? "true" : undefined}>{anon ? "#" : persona.who.ini}</span>
+                <span className={styles.meText}>
+                  <span className={styles.mePreviewName}>{actor}</span>
+                  <span className={styles.meLine}>{anon ? "Anonymous · name and role hidden" : persona.who.line}</span>
+                </span>
+              </div>
+            </div>
+            <div className={styles.meFoot}>
+              <button type="button" className={styles.logout} onClick={logout}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></svg>
+                Log out
+              </button>
             </div>
           </div>
         )}

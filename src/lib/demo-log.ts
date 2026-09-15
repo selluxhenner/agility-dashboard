@@ -63,3 +63,9 @@ export function setPrefs(slug: string, patch: DemoPrefs) {
   write(prefsKey(slug), prefs);
   emit();
 }
+// Log out: forget who was looking (role, desk, scope). The event log stays - it is the company's, not the user's.
+export function clearPrefs(slug: string) {
+  remove(prefsKey(slug));
+  cache.set(slug, { ...getSnapshot(slug), prefs: {} });
+  emit();
+}
